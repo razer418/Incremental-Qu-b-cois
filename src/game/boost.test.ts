@@ -52,7 +52,7 @@ describe('le boost x2', () => {
     const s = newGame(0);
     s.noAds = true;
     s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: true };
-    s.totalEarned = 300e9;
+    s.totalEarned = 1.2e12;
     prestige(s, 1);
     expect(s.noAds).toBe(true);
   });

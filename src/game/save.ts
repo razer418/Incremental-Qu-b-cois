@@ -1,5 +1,6 @@
 import { TUTO_FINI, newGame, type GameState } from './state';
 import { BUILDINGS } from './buildings';
+import { FETES } from './fetes';
 
 const num = (v: unknown) => Math.max(0, Number(v) || 0);
 
@@ -33,6 +34,7 @@ export function load(storage: Storage, now: number): GameState {
         Object.entries(data.magasin ?? {}).filter(([, v]) => typeof v === 'number' && v > 0),
       ),
       succes: Array.isArray(data.succes) ? data.succes.filter((x) => typeof x === 'string') : [],
+      fetes: Array.isArray(data.fetes) ? data.fetes.filter((x) => FETES.some((f) => f.id === x)) : [],
       stats: {
         secondes: num(data.stats?.secondes),
         // Vieilles parties : on part des chiffres de la partie en cours.

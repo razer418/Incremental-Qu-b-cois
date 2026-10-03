@@ -73,26 +73,26 @@ describe('le garage pis le concessionnaire', () => {
 });
 
 describe('le prestige', () => {
-  it('points = racine carrée des dizaines de milliards gagnés', () => {
-    expect(prestigePointsFor(9_999_999_999)).toBe(0);
-    expect(prestigePointsFor(250e9)).toBe(5);
-    expect(prestigePointsFor(1000e9)).toBe(10);
+  it('points : 5 à 1 T$, 10 à 4 T$', () => {
+    expect(prestigePointsFor(39_999_999_999)).toBe(0);
+    expect(prestigePointsFor(1e12)).toBe(5);
+    expect(prestigePointsFor(4e12)).toBe(10);
   });
 
-  it("seulement avec l'aréna pis 250 G$ de gagné", () => {
+  it("seulement avec l'aréna pis 1 T$ de gagné", () => {
     const s = avecBazouQuiRoule(100_000_000_000);
-    s.totalEarned = 300e9;
+    s.totalEarned = 1.2e12;
     expect(canPrestige(s)).toBe(false);
     for (const b of BUILDINGS) buyBuilding(s, b.id);
     expect(canPrestige(s)).toBe(true);
-    s.totalEarned = 200e9;
+    s.totalEarned = 0.9e12;
     expect(canPrestige(s)).toBe(false);
   });
 
   it('repart à zéro mais garde la réputation qui donne +10 % par point', () => {
     const s = avecBazouQuiRoule(100_000_000_000);
     for (const b of BUILDINGS) buyBuilding(s, b.id);
-    s.totalEarned = 360e9;
+    s.totalEarned = 1.44e12;
     expect(prestige(s, 123)).toBe(6);
     expect(s.cash).toBe(0);
     expect(s.car.owned).toBe(false);

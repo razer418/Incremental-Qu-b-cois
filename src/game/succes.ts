@@ -1,5 +1,6 @@
 // Les succès : des petits trophées qui restent pour toujours, même après le prestige.
 // Chacun donne un petit bonus sur tous tes gains (voir SUCCES_BONUS dans state.ts).
+import { FETES } from './fetes';
 import { QUESTS } from './quests';
 import { UPGRADES } from './upgrades';
 import { PROJETS } from './chars';
@@ -34,6 +35,7 @@ export const SUCCES: readonly Succes[] = [
   { id: 'boost', nom: 'Double ou rien', description: 'Partir un boost x2.', atteint: (s) => s.stats.boosts >= 1 },
   { id: 'boost-10', nom: 'Accro au boost', description: 'Partir 10 boosts x2.', atteint: (s) => s.stats.boosts >= 10 },
   { id: 'rejean', nom: 'Client régulier', description: 'Acheter 10 affaires chez Réjean.', atteint: (s) => s.stats.articles >= 10 },
+  { id: 'fetard', nom: 'Fêtard', description: 'Fêter les quatre fêtes du rang.', atteint: (s) => FETES.every((f) => s.fetes.includes(f.id)) },
   { id: 'heure', nom: 'Une bonne heure', description: 'Jouer une heure au total.', atteint: (s) => s.stats.secondes >= 3600 },
   { id: 'retape', nom: 'Patenteux', description: 'Retaper un char au complet.', atteint: (s) => PROJETS.some((p) => projetFini(s, p)) },
   { id: 'retape-tous', nom: 'Collectionneur', description: 'Retaper tous les chars.', atteint: (s) => PROJETS.every((p) => projetFini(s, p)) },

@@ -948,6 +948,10 @@ dialog p.resume {
   border: 1px solid var(--line);
   cursor: pointer;
 }
+.saison.fete {
+  color: var(--gold);
+  border-color: var(--gold);
+}
 
 /* Événement du rang */
 .evenement {

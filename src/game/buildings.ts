@@ -29,30 +29,30 @@ export const BUILDINGS: readonly Building[] = [
     id: 'concession',
     name: 'Le concessionnaire',
     description: "Un lot de chars usagés avec des fanions. Le rêve du bonhomme Gagnon.",
-    cost: 150_000_000,
+    cost: 200_000_000,
     message: "Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend.",
   },
   {
     id: 'bar',
     name: 'Le bar du village',
     description: 'Le Bar chez Rollande, avec sa table de pool pis son juke-box. Rollande veut prendre sa retraite.',
-    cost: 2000000000,
+    cost: 4_000_000_000,
     message: 'Rollande : « Prends soin de mes habitués. » Le bar du village est à toé.',
   },
   {
     id: 'arena',
     name: "L'aréna",
     description: "L'aréna du village, avec sa Zamboni de 1974 pis ses estrades en bois. Le conseil municipal la vend.",
-    cost: 8000000000,
+    cost: 25_000_000_000,
     message: "Le maire : « Le hockey du samedi est sauvé! » L'aréna est à toé.",
   },
 ];
 
 /** Prestige : vendre l'empire pis repartir avec de la réputation. */
-export const PRESTIGE_MIN_EARNED = 250_000_000_000;
+export const PRESTIGE_MIN_EARNED = 1_000_000_000_000;
 export const PRESTIGE_BONUS_PER_POINT = 0.1;
 
-/** Points de réputation gagnés pour une partie : racine carrée des dizaines de milliards gagnés (5 points à 250 G $). */
+/** Points de réputation gagnés pour une partie : 5 points à 1 T $, 10 points à 4 T $ (racine carrée). */
 export function prestigePointsFor(totalEarned: number): number {
-  return Math.floor(Math.sqrt(totalEarned / 1e10));
+  return Math.floor(Math.sqrt(totalEarned / 4e10));
 }

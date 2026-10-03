@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { BuildingId } from '../game/buildings';
+import type { FeteId } from '../game/fetes';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
 export const PAL = {
@@ -25,6 +26,8 @@ export const PAL = {
   neigeOmbre: 0xa9aca3,
   boue: 0x5f6342,
   foin: 0x7d7448,
+  // Le bleu du drapeau, juste pour la Saint-Jean
+  bleu: 0x3c4a6e,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -77,6 +80,8 @@ export interface Rang {
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
   setSaison(s: SaisonId): void;
+  /** Le décor de la fête (null : pas de fête). */
+  setFete(f: FeteId | null): void;
   setPixelScale(scale: number): void;
   dispose(): void;
 }
@@ -471,13 +476,76 @@ export function createRang(
   arena.scale.setScalar(1.5);
   scene.add(arena);
   part(arena, B(7, 2.4, 5), PAL.declin, 0, 1.2, 0);
-  const toitArena = G(new THREE.CylinderGeometry(3.5, 3.5, 5.2, 10, 1, false, -Math.PI / 2, Math.PI));
+  const toitArena = G(new THREE.CylinderGeometry(3.5, 3.5, 5.2, 10, 1, false, Math.PI / 2, Math.PI));
   part(arena, toitArena, PAL.tole, 0, 2.4, 0, { rx: Math.PI / 2, s: [1, 1, 0.45] });
   part(arena, B(1.8, 2, 0.08), PAL.tole, 0, 1, 2.52);
   part(arena, B(3, 0.5, 0.1), PAL.rougeGrange, 0, 2.7, 2.55);
   part(arena, B(1.2, 0.8, 0.9), PAL.declin, 3.4, 0.5, 3.6);
   part(arena, B(0.6, 0.5, 0.8), PAL.vitre, 3.4, 1.15, 3.6);
   arena.visible = false;
+
+  // Les fêtes : le même petit décor devant chaque endroit, caché le reste du temps.
+  const fetes: Record<FeteId, THREE.Group> = {
+    sucres: new THREE.Group(),
+    stjean: new THREE.Group(),
+    halloween: new THREE.Group(),
+    noel: new THREE.Group(),
+  };
+  const buche = G(new THREE.CylinderGeometry(0.12, 0.12, 1.2, 5));
+  const flamme = G(new THREE.ConeGeometry(0.45, 1.1, 5));
+  const citrouille = G(new THREE.IcosahedronGeometry(0.32, 1));
+  const lumiere = B(0.2, 0.24, 0.2);
+  for (const ox of Object.values(ORIGINE)) {
+    // Un coin de décor devant chaque endroit, un peu plus gros pour qu'on le voie.
+    const coin = (g: THREE.Group) => {
+      const c = new THREE.Group();
+      c.position.set(ox - 3.4, 0, 3.4);
+      c.scale.setScalar(1.6);
+      g.add(c);
+      return c;
+    };
+    // Temps des sucres : le chaudron qui bout sur le feu pis la table de tire sur la neige.
+    const su = coin(fetes.sucres);
+    for (const dx of [-0.6, 0.6]) part(su, buche, PAL.tronc, dx, 0.6, 0, { rz: dx * 0.5 });
+    part(su, G(new THREE.CylinderGeometry(0.42, 0.32, 0.5, 7)), PAL.pneu, 0, 0.75, 0);
+    part(su, boucane, PAL.neigeOmbre, 0, 1.4, 0, { s: [0.8, 0.6, 0.8] });
+    part(su, B(1.6, 0.6, 0.7), PAL.bois, 2, 0.3, 0.4);
+    part(su, B(1.5, 0.12, 0.6), PAL.neige, 2, 0.66, 0.4);
+    // Saint-Jean : le feu de joie pis le drapeau.
+    const sj = coin(fetes.stjean);
+    for (let i = 0; i < 5; i++) part(sj, buche, PAL.tronc, 0, 0.45, 0, { ry: (i * Math.PI) / 5, rz: 0.9 });
+    part(sj, flamme, PAL.rouille, 0, 0.85, 0);
+    part(sj, flamme, PAL.erables[1], 0, 1.1, 0, { s: [0.6, 0.8, 0.6] });
+    part(sj, G(new THREE.CylinderGeometry(0.05, 0.05, 3.4, 5)), PAL.poteau, 2.4, 1.7, -0.6);
+    part(sj, B(1.3, 0.85, 0.04), PAL.bleu, 3.05, 3, -0.6);
+    part(sj, B(1.3, 0.12, 0.05), PAL.declin, 3.05, 3, -0.6);
+    part(sj, B(0.12, 0.85, 0.05), PAL.declin, 3.05, 3, -0.6);
+    // Halloween : des citrouilles sur le bord du chemin.
+    const ha = coin(fetes.halloween);
+    [
+      [0, 0, 1.2],
+      [0.8, 0.3, 0.9],
+      [1.7, -0.1, 1.1],
+    ].forEach(([dx, dz, k]) => {
+      part(ha, citrouille, PAL.rouille, dx, 0.24 * k, dz, { s: [k, 0.75 * k, k] });
+      part(ha, B(0.06, 0.14, 0.06), PAL.tronc, dx, 0.5 * k, dz);
+    });
+    // Party de Noël : un petit sapin avec des lumières.
+    const no = coin(fetes.noel);
+    part(no, troncSapin, PAL.tronc, 0, 0.3, 0, { s: [1, 0.6, 1] });
+    part(no, sapinBas, PAL.sapin, 0, 1.3, 0, { s: [0.7, 0.7, 0.7] });
+    part(no, sapinHaut, PAL.sapin, 0, 2.2, 0, { s: [0.7, 0.7, 0.7] });
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2.1;
+      const y = 0.8 + i * 0.18;
+      const r = 0.95 - i * 0.08;
+      part(no, lumiere, [PAL.rougeGrange, PAL.erables[1], PAL.bleu][i % 3], Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+  }
+  for (const g of Object.values(fetes)) {
+    g.visible = false;
+    scene.add(g);
+  }
 
   // Caméra : même angle partout, centrée sur l'endroit.
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
@@ -693,6 +761,10 @@ export function createRang(
     setSaison(x) {
       (M(PAL.herbe) as THREE.MeshPhongMaterial).color.setHex(SOL[x][0]);
       (M(PAL.herbeSombre) as THREE.MeshPhongMaterial).color.setHex(SOL[x][1]);
+      if (!raf) renderer.render(scene, camera);
+    },
+    setFete(f) {
+      for (const [id, g] of Object.entries(fetes)) g.visible = id === f;
       if (!raf) renderer.render(scene, camera);
     },
     setPixelScale(scale) {

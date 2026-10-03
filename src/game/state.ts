@@ -3,6 +3,7 @@ import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
 import { saisonA } from './saisons';
+import { bonusFete, feteA, type FeteId } from './fetes';
 import { PROJETS, getProjet, type Projet } from './chars';
 import {
   BUILDINGS,
@@ -32,6 +33,8 @@ export interface GameState {
   magasin: Record<string, number>;
   /** Succès débloqués (ids). Gardés au prestige. */
   succes: string[];
+  /** Les fêtes que t'as déjà vécues (gardé au prestige). */
+  fetes: FeteId[];
   /** Stats de jeu. Gardées au prestige (à vie). */
   stats: Stats;
   /** Étape du tuto; TUTO_FINI quand c'est fini. */
@@ -75,6 +78,7 @@ export function newGame(now: number): GameState {
     noAds: false,
     magasin: {},
     succes: [],
+    fetes: [],
     stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0 },
     tuto: 0,
     projets: {},
@@ -107,6 +111,7 @@ export function multiplier(state: GameState): number {
   mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
   mult *= 1 + state.succes.length * SUCCES_BONUS;
   for (const p of PROJETS) if (projetFini(state, p)) mult *= p.bonus;
+  mult *= bonusFete(state.lastTick);
   return mult;
 }
 
@@ -228,6 +233,8 @@ export function tick(state: GameState, now: number): number {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
   state.stats.secondes += seconds;
+  const fete = feteA(now);
+  if (fete && !state.fetes.includes(fete.id)) state.fetes.push(fete.id);
   const gained = passiveOver(state, seconds);
   earn(state, gained);
   return gained;
@@ -374,6 +381,7 @@ export function prestige(state: GameState, now: number): number {
     prestige: kept,
     noAds: state.noAds,
     succes: state.succes,
+    fetes: state.fetes,
     stats: state.stats,
     tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.

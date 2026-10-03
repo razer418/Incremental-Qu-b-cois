@@ -54,8 +54,9 @@ import {
 } from './game/state';
 import { load, save, wipe } from './game/save';
 import { saisonA } from './game/saisons';
+import { bonusFete, feteA, grosseFeteA } from './game/fetes';
 import { PROJETS } from './game/chars';
-import { EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
+import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
 import { cite, facteur, langue, t } from './game/i18n';
@@ -860,14 +861,26 @@ const saisonBtn = $<HTMLButtonElement>('saison');
 let lastSaison = '';
 saisonBtn.addEventListener('click', () => {
   const x = saisonA(state.lastTick);
-  showMessage(`${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes.')}`);
+  const f = feteA(state.lastTick);
+  showMessage(
+    f
+      ? `${t(f.nom)} : ${t(f.description)} ${t('Gains {x}.', { x: facteur(bonusFete(state.lastTick)) })} ${t(grosseFeteA(state.lastTick) ? "C'est la vraie date : la fête dure toute la journée!" : 'La fête dure 3 minutes.')}`
+      : `${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes, pis finit avec une fête.')}`,
+  );
 });
 function renderSaison(): void {
   const x = saisonA(state.lastTick);
-  if (x.id === lastSaison) return;
-  saisonBtn.textContent = t(x.nom);
+  const f = feteA(state.lastTick);
+  const cle = `${x.id}/${f?.id ?? ''}`;
+  if (cle === lastSaison) return;
+  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom);
+  saisonBtn.classList.toggle('fete', !!f);
   rang?.setSaison(x.id);
-  lastSaison = x.id;
+  rang?.setFete(f?.id ?? null);
+  // La fête commence : son invitation arrive tout de suite (pas au premier chargement).
+  const fe = f && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
+  if (fe && !evenement && state.tuto === TUTO_FINI) montrerEvenement(fe, Date.now());
+  lastSaison = cle;
 }
 
 // --- Événements du rang : aux 3 à 6 minutes, une affaire à prendre ou à laisser ---

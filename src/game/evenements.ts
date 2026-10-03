@@ -4,6 +4,7 @@ import { CHARACTERS } from './quests';
 import { saisonA, type Saison } from './saisons';
 import { carRuns, earn, payer, revenuRef, type GameState } from './state';
 import { formatMoney } from './format';
+import { t } from './i18n';
 
 export interface Choix {
   label: string;
@@ -42,13 +43,13 @@ export const EVENEMENTS: readonly Evenement[] = [
     texte: "Mon ami, ton silencieux est percé. Ça s'entend jusqu'au village.",
     si: carRuns,
     choix: [
-      { label: "Payer l'amende", faire: (s) => `Tu paies ${perd(s, 30)}. L'agent te souhaite une bonne journée.` },
+      { label: "Payer l'amende", faire: (s) => t("Tu paies {x}. L'agent te souhaite une bonne journée.", { x: perd(s, 30) }) },
       {
         label: 'Jaser de hockey',
         faire: (s, r) =>
           r < 0.5
-            ? "Y'é fan de la même équipe que toé. Y te laisse partir avec un clin d'œil."
-            : `Mauvaise équipe. Amende double : ${perd(s, 60)}.`,
+            ? t("Y'é fan de la même équipe que toé. Y te laisse partir avec un clin d'œil.")
+            : t('Mauvaise équipe. Amende double : {x}.', { x: perd(s, 60) }),
       },
     ],
   },
@@ -62,11 +63,11 @@ export const EVENEMENTS: readonly Evenement[] = [
         faire: (s, r) => {
           const prix = perd(s, 20);
           return r < 0.6
-            ? `Y'avait une vieille carte de hockey de collection dedans! Tu la revends ${gagne(s, 120)}.`
-            : `Des vieux catalogues pis une lampe à l'huile. Ça valait ${prix}, mettons.`;
+            ? t("Y'avait une vieille carte de hockey de collection dedans! Tu la revends {x}.", { x: gagne(s, 120) })
+            : t("Des vieux catalogues pis une lampe à l'huile. Ça valait {x}, mettons.", { x: prix });
         },
       },
-      { label: 'Non merci', faire: () => 'Tu continues ton chemin.' },
+      { label: 'Non merci', faire: () => t('Tu continues ton chemin.') },
     ],
   },
   {
@@ -74,8 +75,8 @@ export const EVENEMENTS: readonly Evenement[] = [
     qui: 'touriste',
     texte: "Excuse me... le chemin du chalet, c'est par où?",
     choix: [
-      { label: "L'aider", faire: (s) => `Y te donne ${gagne(s, 60)} de pourboire. « Thank you! »` },
-      { label: 'Le niaiser', faire: () => "Tu l'envoies dans le rang d'en face. Pas de pourboire, mais t'as ri." },
+      { label: "L'aider", faire: (s) => t('Y te donne {x} de pourboire. « Thank you! »', { x: gagne(s, 60) }) },
+      { label: 'Le niaiser', faire: () => t("Tu l'envoies dans le rang d'en face. Pas de pourboire, mais t'as ri.") },
     ],
   },
   {
@@ -87,10 +88,10 @@ export const EVENEMENTS: readonly Evenement[] = [
         label: 'Jouer',
         faire: (s, r) => {
           const carte = perd(s, 10);
-          return r < 0.3 ? `BINGO! Tu gagnes ${gagne(s, 100)}.` : `Pas chanceux. La carte t'a coûté ${carte}.`;
+          return r < 0.3 ? t('BINGO! Tu gagnes {x}.', { x: gagne(s, 100) }) : t("Pas chanceux. La carte t'a coûté {x}.", { x: carte });
         },
       },
-      { label: 'Pas à soir', faire: () => 'Ginette : « Une autre fois, mon chou. »' },
+      { label: 'Pas à soir', faire: () => t('Ginette : « Une autre fois, mon chou. »') },
     ],
   },
   {
@@ -98,14 +99,14 @@ export const EVENEMENTS: readonly Evenement[] = [
     qui: 'oncle',
     texte: "J'ai besoin d'un coup de main à la cabane à sucre. Je paye en cash pis en tire.",
     si: en('printemps'),
-    choix: [{ label: 'Y aller', faire: (s) => `Tu fais bouillir toute la journée. Ton oncle te donne ${gagne(s, 90)}.` }],
+    choix: [{ label: 'Y aller', faire: (s) => t('Tu fais bouillir toute la journée. Ton oncle te donne {x}.', { x: gagne(s, 90) }) }],
   },
   {
     id: 'festival',
     qui: 'voisin',
     texte: 'Festival de la gibelotte au village! Y a des canettes vides partout.',
     si: en('ete'),
-    choix: [{ label: 'Ramasser', faire: (s) => `Trois sacs de canettes. Ça fait ${gagne(s, 60)}.` }],
+    choix: [{ label: 'Ramasser', faire: (s) => t('Trois sacs de canettes. Ça fait {x}.', { x: gagne(s, 60) }) }],
   },
   {
     id: 'chasse',
@@ -117,10 +118,10 @@ export const EVENEMENTS: readonly Evenement[] = [
         label: 'Y aller',
         faire: (s, r) =>
           r < 0.5
-            ? `Ti-Guy le rate, mais un chasseur de la ville vous paye ${gagne(s, 90)} pour la place.`
-            : 'Vous voyez rien pantoute. Une belle journée dans le bois pareil.',
+            ? t('Ti-Guy le rate, mais un chasseur de la ville vous paye {x} pour la place.', { x: gagne(s, 90) })
+            : t('Vous voyez rien pantoute. Une belle journée dans le bois pareil.'),
       },
-      { label: 'Rester en dedans', faire: () => 'Ti-Guy : « Pas grave, je vais y aller avec mon beau-frère. »' },
+      { label: 'Rester en dedans', faire: () => t('Ti-Guy : « Pas grave, je vais y aller avec mon beau-frère. »') },
     ],
   },
   {
@@ -128,7 +129,7 @@ export const EVENEMENTS: readonly Evenement[] = [
     qui: 'tiguy',
     texte: 'Tempête de verglas! Tout le rang est dans le fossé.',
     si: (s) => en('hiver')(s) && carRuns(s),
-    choix: [{ label: 'Sortir la chaîne', faire: (s) => `Tu sors six chars du fossé. Ça fait ${gagne(s, 120)}.` }],
+    choix: [{ label: 'Sortir la chaîne', faire: (s) => t('Tu sors six chars du fossé. Ça fait {x}.', { x: gagne(s, 120) }) }],
   },
 ];
 

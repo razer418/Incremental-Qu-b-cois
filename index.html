@@ -23,10 +23,10 @@
           <div id="scan" class="scan"></div>
         </section>
         <nav id="lieux" class="lieux" aria-label="Endroits du rang" hidden>
-          <button type="button" data-lieu="maison" aria-pressed="true">MAISON</button>
-          <button type="button" data-lieu="magasin" aria-pressed="false">MAGASIN</button>
-          <button type="button" data-lieu="garage" aria-pressed="false">GARAGE</button>
-          <button type="button" data-lieu="concession" aria-pressed="false">LOT</button>
+          <button type="button" data-lieu="maison" aria-pressed="true" data-t>MAISON</button>
+          <button type="button" data-lieu="magasin" aria-pressed="false" data-t>MAGASIN</button>
+          <button type="button" data-lieu="garage" aria-pressed="false" data-t>GARAGE</button>
+          <button type="button" data-lieu="concession" aria-pressed="false" data-t>LOT</button>
         </nav>
 
         <button id="tap" class="tap" type="button">
@@ -55,7 +55,7 @@
         <div class="quest">
           <div id="m-portrait" class="portrait" aria-hidden="true">RJ</div>
           <div class="quest-body">
-            <p class="quest-who">RÉJEAN DU MAGASIN GÉNÉRAL</p>
+            <p class="quest-who" data-t>RÉJEAN DU MAGASIN GÉNÉRAL</p>
             <p id="m-line" class="quest-line"></p>
           </div>
         </div>
@@ -72,29 +72,29 @@
             <span id="q-goal"></span>
             <span id="q-reward" class="quest-reward"></span>
           </div>
-          <button id="q-claim" class="buy-car" type="button" hidden>[ RÉCLAMER ]</button>
+          <button id="q-claim" class="buy-car" type="button" hidden data-t>[ RÉCLAMER ]</button>
         </div>
       </section>
 
       <section id="goal" class="goal">
         <div class="goal-label">
-          <span>PROCHAIN : TON PREMIER BAZOU</span>
+          <span data-t>PROCHAIN : TON PREMIER BAZOU</span>
           <span id="goal-text"></span>
         </div>
         <div class="bar"><div id="goal-bar" class="bar-fill"></div></div>
-        <button id="buy-car" class="buy-car" type="button" hidden>[ ACHETER LE BAZOU ]</button>
+        <button id="buy-car" class="buy-car" type="button" hidden data-t>[ ACHETER LE BAZOU ]</button>
       </section>
 
       <section id="garage" class="garage" hidden>
         <div class="garage-head">
-          <h2>TON BAZOU</h2>
+          <h2 data-t>TON BAZOU</h2>
           <span id="car-status" class="car-status"></span>
         </div>
         <ul id="parts" class="upgrades"></ul>
       </section>
 
       <section id="empire" class="garage" hidden>
-        <h2>TON EMPIRE</h2>
+        <h2 data-t>TON EMPIRE</h2>
         <ul class="upgrades">
           <li id="bat" class="upgrade">
             <div class="upgrade-info">
@@ -105,34 +105,34 @@
           </li>
           <li id="prestige" class="upgrade prestige" hidden>
             <div class="upgrade-info">
-              <strong>Vendre l'empire</strong>
+              <strong data-t>Vendre l'empire</strong>
               <small id="prestige-desc"></small>
             </div>
-            <button id="prestige-btn" type="button" class="buy">VENDRE</button>
+            <button id="prestige-btn" type="button" class="buy" data-t>VENDRE</button>
           </li>
         </ul>
       </section>
 
       <section id="projets" class="garage" hidden>
-        <h2>CHARS À RETAPER</h2>
+        <h2 data-t>CHARS À RETAPER</h2>
         <ul id="projets-liste" class="upgrades"></ul>
       </section>
 
       <section>
         <div class="achats-head">
-          <h2>ACHATS</h2>
+          <h2 data-t>ACHATS</h2>
           <button id="lot-mode" class="lot-mode" type="button" aria-label="Quantité par achat">x1</button>
         </div>
         <ul id="upgrades" class="upgrades"></ul>
       </section>
 
       <section id="boutique" class="garage">
-        <h2>BOUTIQUE</h2>
+        <h2 data-t>BOUTIQUE</h2>
         <ul class="upgrades">
           <li id="noads" class="upgrade">
             <div class="upgrade-info">
-              <strong>Pas de pubs</strong>
-              <small>Le boost x2 devient gratuit, sans pub. Pour toujours, même après le prestige.</small>
+              <strong data-t>Pas de pubs</strong>
+              <small data-t>Le boost x2 devient gratuit, sans pub. Pour toujours, même après le prestige.</small>
             </div>
             <button id="noads-buy" type="button" class="buy"></button>
           </li>
@@ -144,9 +144,9 @@
 
     <dialog id="options-dlg" class="options-dlg">
       <nav class="onglets" aria-label="Menu">
-        <button type="button" data-onglet="succes" aria-pressed="false">SUCCÈS</button>
-        <button type="button" data-onglet="stats" aria-pressed="false">STATS</button>
-        <button type="button" data-onglet="reglages" aria-pressed="true">OPTIONS</button>
+        <button type="button" data-onglet="succes" aria-pressed="false" data-t>SUCCÈS</button>
+        <button type="button" data-onglet="stats" aria-pressed="false" data-t>STATS</button>
+        <button type="button" data-onglet="reglages" aria-pressed="true" data-t>OPTIONS</button>
       </nav>
       <div data-panneau="succes" hidden>
         <p id="succes-resume" class="resume"></p>
@@ -157,17 +157,18 @@
       </div>
       <div data-panneau="reglages">
       <ul class="reglages">
-        <li><span>Son</span><button id="son" type="button" class="bascule" aria-pressed="true"></button></li>
-        <li><span>Lignes VHS</span><button id="vhs" type="button" class="bascule" aria-pressed="true"></button></li>
-        <li><span>Chiffres</span><button id="nombres" type="button" class="bascule"></button></li>
-        <li><span>Sauvegarde</span><span class="paire"><button id="exporter" type="button" class="bascule">COPIER</button><button id="importer" type="button" class="bascule">COLLER</button></span></li>
+        <li><span data-t>Son</span><button id="son" type="button" class="bascule" aria-pressed="true"></button></li>
+        <li><span data-t>Lignes VHS</span><button id="vhs" type="button" class="bascule" aria-pressed="true"></button></li>
+        <li><span data-t>Langue</span><button id="langue" type="button" class="bascule"></button></li>
+        <li><span data-t>Chiffres</span><button id="nombres" type="button" class="bascule"></button></li>
+        <li><span data-t>Sauvegarde</span><span class="paire"><button id="exporter" type="button" class="bascule" data-t>COPIER</button><button id="importer" type="button" class="bascule" data-t>COLLER</button></span></li>
       </ul>
       <textarea id="code" class="code" rows="3" spellcheck="false" hidden aria-label="Code de sauvegarde"></textarea>
       <p id="code-aide" class="code-aide" hidden></p>
-      <button id="code-ok" type="button" class="bascule" hidden>[ CHARGER CE CODE ]</button>
-      <button id="reset" type="button" class="danger">Recommencer à zéro</button>
+      <button id="code-ok" type="button" class="bascule" hidden data-t>[ CHARGER CE CODE ]</button>
+      <button id="reset" type="button" class="danger" data-t>Recommencer à zéro</button>
       </div>
-      <form method="dialog"><button type="submit">[ FERMER ]</button></form>
+      <form method="dialog"><button type="submit" data-t>[ FERMER ]</button></form>
     </dialog>
 
     <button id="toast" class="toast" type="button" hidden></button>
@@ -175,19 +176,19 @@
     <dialog id="confirm">
       <p id="confirm-text"></p>
       <div class="paire">
-        <button id="confirm-non" type="button">[ NON ]</button>
-        <button id="confirm-oui" type="button">[ OUI ]</button>
+        <button id="confirm-non" type="button" data-t>[ NON ]</button>
+        <button id="confirm-oui" type="button" data-t>[ OUI ]</button>
       </div>
     </dialog>
 
     <dialog id="message">
       <p id="message-text"></p>
-      <form method="dialog"><button type="submit">[ ENVOYE DONC ]</button></form>
+      <form method="dialog"><button type="submit" data-t>[ ENVOYE DONC ]</button></form>
     </dialog>
 
     <dialog id="ad" class="ad">
-      <p class="ad-tag">PUB DE DÉMO</p>
-      <p class="ad-body">Ici, une vraie pub va jouer dans l'app Android. Pour l'instant, on fait semblant.</p>
+      <p class="ad-tag" data-t>PUB DE DÉMO</p>
+      <p class="ad-body" data-t>Ici, une vraie pub va jouer dans l'app Android. Pour l'instant, on fait semblant.</p>
       <p id="ad-count" class="ad-count"></p>
       <button id="ad-close" type="button"></button>
     </dialog>

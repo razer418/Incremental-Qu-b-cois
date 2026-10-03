@@ -51,8 +51,8 @@ describe('le boost x2', () => {
   it('l’achat « pas de pubs » survit au prestige', () => {
     const s = newGame(0);
     s.noAds = true;
-    s.buildings = { garage: true, concession: true };
-    s.totalEarned = 30_000_000;
+    s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: true };
+    s.totalEarned = 1.2e12;
     prestige(s, 1);
     expect(s.noAds).toBe(true);
   });

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { BuildingId } from '../game/buildings';
+import type { FeteId } from '../game/fetes';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
 export const PAL = {
@@ -24,6 +26,8 @@ export const PAL = {
   neigeOmbre: 0xa9aca3,
   boue: 0x5f6342,
   foin: 0x7d7448,
+  // Le bleu du drapeau, juste pour la Saint-Jean
+  bleu: 0x3c4a6e,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -58,8 +62,8 @@ const TARD = {
 };
 
 export interface CarLook {
-  garage: boolean;
-  concession: boolean;
+  /** Les endroits achetés (garage, cabane, lot, bar, aréna). */
+  lieux: Record<BuildingId, boolean>;
   owned: boolean;
   wheels: boolean;
   clean: boolean;
@@ -72,7 +76,7 @@ export interface CarLook {
   flaps: number | null;
 }
 
-export type Lieu = 'maison' | 'magasin' | 'garage' | 'concession';
+export type Lieu = 'maison' | 'magasin' | BuildingId;
 
 export interface Rang {
   setCar(look: CarLook): void;
@@ -81,12 +85,22 @@ export interface Rang {
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
   setSaison(s: SaisonId): void;
+  /** Le décor de la fête (null : pas de fête). */
+  setFete(f: FeteId | null): void;
   setPixelScale(scale: number): void;
   dispose(): void;
 }
 
 // Chaque endroit est sa propre scène, loin sur le même rang : la brume cache les autres.
-const ORIGINE: Record<Lieu, number> = { maison: 0, magasin: 150, garage: 300, concession: 450 };
+const ORIGINE: Record<Lieu, number> = {
+  maison: 0,
+  magasin: 150,
+  garage: 300,
+  concession: 450,
+  cabane: 600,
+  bar: 750,
+  arena: 900,
+};
 // Où le bazou se stationne, par rapport à l'origine de l'endroit (face à la route).
 const STATIONNEMENT = { x: 4.6, z: 2.4, ry: -0.55 };
 const ROUTE_Z = 6.4;
@@ -154,8 +168,8 @@ export function createRang(
     part(scene, G(new THREE.PlaneGeometry(w, d)), c, x, y, z, { rx: -Math.PI / 2 });
 
   // Sol pis route : une longue bande pour tous les endroits.
-  plan(800, 160, PAL.herbe, 225, 0, 0);
-  plan(800, 3.8, PAL.gravier, 225, 0.02, ROUTE_Z);
+  plan(1300, 160, PAL.herbe, 450, 0, 0);
+  plan(1300, 3.8, PAL.gravier, 450, 0.02, ROUTE_Z);
   plan(30, 14, PAL.champ, -6, 0.01, -14);
 
   // Décor commun à chaque endroit : collines, arbres, poteaux d'Hydro.
@@ -242,6 +256,9 @@ export function createRang(
   decorAilleurs(ORIGINE.magasin);
   decorAilleurs(ORIGINE.garage);
   decorAilleurs(ORIGINE.concession);
+  decorAilleurs(ORIGINE.cabane);
+  decorAilleurs(ORIGINE.bar);
+  decorAilleurs(ORIGINE.arena);
 
   // Maison de rang
   const maison = new THREE.Group();
@@ -463,6 +480,127 @@ export function createRang(
   part(lot, B(1.4, 0.16, 0.12), PAL.rougeGrange, 3.2, 3.2, -2);
   lot.visible = false;
 
+  // La cabane à sucre : en bois, avec la cheminée qui boucane pis des chaudières aux érables.
+  const cabane = new THREE.Group();
+  cabane.position.set(ORIGINE.cabane - 2, 0, -1.6);
+  cabane.scale.setScalar(1.5);
+  scene.add(cabane);
+  part(cabane, B(4.6, 2.4, 3.6), PAL.bois, 0, 1.2, 0);
+  part(cabane, B(5, 0.18, 2.3), PAL.tole, 0, 2.95, 0.95, { rx: 0.55 });
+  part(cabane, B(5, 0.18, 2.3), PAL.tole, 0, 2.95, -0.95, { rx: -0.55 });
+  part(cabane, B(1.4, 0.7, 3.8), PAL.bois, 0, 3.6, 0);
+  part(cabane, B(1, 1.9, 0.08), PAL.tronc, 0.6, 0.95, 1.82);
+  part(cabane, B(0.7, 0.6, 0.08), PAL.vitre, -1.3, 1.5, 1.82);
+  part(cabane, G(new THREE.CylinderGeometry(0.16, 0.16, 1.6, 6)), PAL.poteau, -1.6, 3.6, -0.6);
+  const boucane = G(new THREE.IcosahedronGeometry(0.4, 0));
+  for (let i = 0; i < 3; i++)
+    part(cabane, boucane, PAL.neigeOmbre, -1.6 + i * 0.25, 4.7 + i * 0.6, -0.6, { s: [1 + i * 0.3, 0.8, 1] });
+  const chaudiere = G(new THREE.CylinderGeometry(0.16, 0.12, 0.3, 6));
+  for (const [x, z] of [
+    [3.6, -1.4],
+    [4.4, 1.2],
+    [-3.4, 1.6],
+  ]) {
+    part(cabane, tronc, PAL.tronc, x, 1.1, z);
+    part(cabane, chaudiere, PAL.chrome, x, 0.9, z + 0.28);
+  }
+  part(cabane, B(1.6, 0.5, 0.6), PAL.bois, 2.6, 0.25, 2.6);
+  cabane.visible = false;
+
+  // Le bar du village : la bâtisse en brique, l'enseigne pis les chars des habitués.
+  const bar = new THREE.Group();
+  bar.position.set(ORIGINE.bar - 2, 0, -1.6);
+  bar.scale.setScalar(1.5);
+  scene.add(bar);
+  part(bar, B(5.2, 2.8, 3.8), PAL.brique, 0, 1.4, 0);
+  part(bar, B(5.4, 0.25, 4), PAL.tole, 0, 2.9, 0);
+  part(bar, B(1, 2, 0.08), PAL.tronc, -1.4, 1, 1.92);
+  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 0.6, 1.5, 1.92);
+  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 2.1, 1.5, 1.92);
+  part(bar, B(3, 0.6, 0.12), PAL.declin, 0.4, 3.4, 1.9);
+  part(bar, B(2.4, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.5, 1.97);
+  part(bar, B(1.6, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.28, 1.97);
+  miniChar(bar, PAL.rougeGrange, 4, 2.6, 0.5);
+  miniChar(bar, PAL.chrome, -4.2, 2.4, 0.5);
+  bar.visible = false;
+
+  // L'aréna : un grand hangar au toit de tôle arrondi, avec la Zamboni qui attend devant.
+  const arena = new THREE.Group();
+  arena.position.set(ORIGINE.arena - 2, 0, -3);
+  arena.scale.setScalar(1.5);
+  scene.add(arena);
+  part(arena, B(7, 2.4, 5), PAL.declin, 0, 1.2, 0);
+  const toitArena = G(new THREE.CylinderGeometry(3.5, 3.5, 5.2, 10, 1, false, Math.PI / 2, Math.PI));
+  part(arena, toitArena, PAL.tole, 0, 2.4, 0, { rx: Math.PI / 2, s: [1, 1, 0.45] });
+  part(arena, B(1.8, 2, 0.08), PAL.tole, 0, 1, 2.52);
+  part(arena, B(3, 0.5, 0.1), PAL.rougeGrange, 0, 2.7, 2.55);
+  part(arena, B(1.2, 0.8, 0.9), PAL.declin, 3.4, 0.5, 3.6);
+  part(arena, B(0.6, 0.5, 0.8), PAL.vitre, 3.4, 1.15, 3.6);
+  arena.visible = false;
+
+  // Les fêtes : le même petit décor devant chaque endroit, caché le reste du temps.
+  const fetes: Record<FeteId, THREE.Group> = {
+    sucres: new THREE.Group(),
+    stjean: new THREE.Group(),
+    halloween: new THREE.Group(),
+    noel: new THREE.Group(),
+  };
+  const buche = G(new THREE.CylinderGeometry(0.12, 0.12, 1.2, 5));
+  const flamme = G(new THREE.ConeGeometry(0.45, 1.1, 5));
+  const citrouille = G(new THREE.IcosahedronGeometry(0.32, 1));
+  const lumiere = B(0.2, 0.24, 0.2);
+  for (const ox of Object.values(ORIGINE)) {
+    // Un coin de décor devant chaque endroit, un peu plus gros pour qu'on le voie.
+    const coin = (g: THREE.Group) => {
+      const c = new THREE.Group();
+      c.position.set(ox - 3.4, 0, 3.4);
+      c.scale.setScalar(1.6);
+      g.add(c);
+      return c;
+    };
+    // Temps des sucres : le chaudron qui bout sur le feu pis la table de tire sur la neige.
+    const su = coin(fetes.sucres);
+    for (const dx of [-0.6, 0.6]) part(su, buche, PAL.tronc, dx, 0.6, 0, { rz: dx * 0.5 });
+    part(su, G(new THREE.CylinderGeometry(0.42, 0.32, 0.5, 7)), PAL.pneu, 0, 0.75, 0);
+    part(su, boucane, PAL.neigeOmbre, 0, 1.4, 0, { s: [0.8, 0.6, 0.8] });
+    part(su, B(1.6, 0.6, 0.7), PAL.bois, 2, 0.3, 0.4);
+    part(su, B(1.5, 0.12, 0.6), PAL.neige, 2, 0.66, 0.4);
+    // Saint-Jean : le feu de joie pis le drapeau.
+    const sj = coin(fetes.stjean);
+    for (let i = 0; i < 5; i++) part(sj, buche, PAL.tronc, 0, 0.45, 0, { ry: (i * Math.PI) / 5, rz: 0.9 });
+    part(sj, flamme, PAL.rouille, 0, 0.85, 0);
+    part(sj, flamme, PAL.erables[1], 0, 1.1, 0, { s: [0.6, 0.8, 0.6] });
+    part(sj, G(new THREE.CylinderGeometry(0.05, 0.05, 3.4, 5)), PAL.poteau, 2.4, 1.7, -0.6);
+    part(sj, B(1.3, 0.85, 0.04), PAL.bleu, 3.05, 3, -0.6);
+    part(sj, B(1.3, 0.12, 0.05), PAL.declin, 3.05, 3, -0.6);
+    part(sj, B(0.12, 0.85, 0.05), PAL.declin, 3.05, 3, -0.6);
+    // Halloween : des citrouilles sur le bord du chemin.
+    const ha = coin(fetes.halloween);
+    [
+      [0, 0, 1.2],
+      [0.8, 0.3, 0.9],
+      [1.7, -0.1, 1.1],
+    ].forEach(([dx, dz, k]) => {
+      part(ha, citrouille, PAL.rouille, dx, 0.24 * k, dz, { s: [k, 0.75 * k, k] });
+      part(ha, B(0.06, 0.14, 0.06), PAL.tronc, dx, 0.5 * k, dz);
+    });
+    // Party de Noël : un petit sapin avec des lumières.
+    const no = coin(fetes.noel);
+    part(no, troncSapin, PAL.tronc, 0, 0.3, 0, { s: [1, 0.6, 1] });
+    part(no, sapinBas, PAL.sapin, 0, 1.3, 0, { s: [0.7, 0.7, 0.7] });
+    part(no, sapinHaut, PAL.sapin, 0, 2.2, 0, { s: [0.7, 0.7, 0.7] });
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2.1;
+      const y = 0.8 + i * 0.18;
+      const r = 0.95 - i * 0.08;
+      part(no, lumiere, [PAL.rougeGrange, PAL.erables[1], PAL.bleu][i % 3], Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+  }
+  for (const g of Object.values(fetes)) {
+    g.visible = false;
+    scene.add(g);
+  }
+
   // Caméra : même angle partout, centrée sur l'endroit.
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
   let lieuActuel: Lieu = 'maison';
@@ -602,10 +740,13 @@ export function createRang(
 
   return {
     setCar(look) {
-      garage.visible = look.garage;
-      lot.visible = look.concession;
+      garage.visible = look.lieux.garage;
+      lot.visible = look.lieux.concession;
+      cabane.visible = look.lieux.cabane;
+      bar.visible = look.lieux.bar;
+      arena.visible = look.lieux.arena;
       // La pile de pneus déménage dans le garage, la pancarte disparaît avec la vente.
-      pilePneus.forEach((p) => (p.visible = !look.concession));
+      pilePneus.forEach((p) => (p.visible = !look.lieux.concession));
       pancarte.visible = !look.owned;
       roues.forEach((r) => (r.visible = look.wheels));
       blocs.forEach((b) => (b.visible = !look.wheels));
@@ -683,6 +824,10 @@ export function createRang(
     setSaison(x) {
       (M(PAL.herbe) as THREE.MeshPhongMaterial).color.setHex(SOL[x][0]);
       (M(PAL.herbeSombre) as THREE.MeshPhongMaterial).color.setHex(SOL[x][1]);
+      if (!raf) renderer.render(scene, camera);
+    },
+    setFete(f) {
+      for (const [id, g] of Object.entries(fetes)) g.visible = id === f;
       if (!raf) renderer.render(scene, camera);
     },
     setPixelScale(scale) {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PARTS } from './car';
 import { QUESTS } from './quests';
-import { prestigePointsFor } from './buildings';
+import { BUILDINGS, prestigePointsFor } from './buildings';
 import { saisonA } from './saisons';
 import {
   buy,
@@ -35,14 +35,24 @@ describe('le garage pis le concessionnaire', () => {
     expect(buyBuilding(s, 'garage')).toBe(false);
   });
 
-  it('le garage avant le concessionnaire', () => {
-    const s = avecBazouQuiRoule(1_000_000_000);
+  it('un endroit à la fois : garage, cabane, lot, bar, aréna', () => {
+    const s = avecBazouQuiRoule(100_000_000_000);
     expect(buyBuilding(s, 'concession')).toBe(false);
     expect(buyBuilding(s, 'garage')).toBe(true);
-    expect(s.cash).toBe(997_300_000);
-    expect(nextBuilding(s)?.id).toBe('concession');
-    expect(buyBuilding(s, 'concession')).toBe(true);
+    expect(s.cash).toBe(99_997_300_000);
+    expect(nextBuilding(s)?.id).toBe('cabane');
+    expect(buyBuilding(s, 'concession')).toBe(false);
+    for (const id of ['cabane', 'concession', 'bar', 'arena'] as const) expect(buyBuilding(s, id)).toBe(true);
     expect(nextBuilding(s)).toBeNull();
+  });
+
+  it('chaque endroit débloque ses jobs', () => {
+    const s = avecBazouQuiRoule(100_000_000_000);
+    expect(buy(s, 'chaudieres')).toBe(false);
+    buyBuilding(s, 'garage');
+    buyBuilding(s, 'cabane');
+    expect(buy(s, 'chaudieres')).toBe(true);
+    expect(buy(s, 'chansonnier')).toBe(false);
   });
 
   it('les achats du garage sont barrés tant que t’as pas le garage', () => {
@@ -54,36 +64,35 @@ describe('le garage pis le concessionnaire', () => {
   });
 
   it('le rang est au plus chaud avec tout', () => {
-    const s = avecBazouQuiRoule(1_000_000_000);
+    const s = avecBazouQuiRoule(100_000_000_000);
     s.totalEarned = 1e9;
     repair(s, 'carrosserie');
-    buyBuilding(s, 'garage');
-    buyBuilding(s, 'concession');
+    for (const b of BUILDINGS) buyBuilding(s, b.id);
     expect(warmth(s)).toBeCloseTo(1);
   });
 });
 
 describe('le prestige', () => {
-  it('points = racine carrée des milliards gagnés', () => {
-    expect(prestigePointsFor(999_999_999)).toBe(0);
-    expect(prestigePointsFor(25e9)).toBe(5);
-    expect(prestigePointsFor(100e9)).toBe(10);
+  it('points : 5 à 1 T$, 10 à 4 T$', () => {
+    expect(prestigePointsFor(39_999_999_999)).toBe(0);
+    expect(prestigePointsFor(1e12)).toBe(5);
+    expect(prestigePointsFor(4e12)).toBe(10);
   });
 
-  it('seulement avec le concessionnaire pis 25 G$ de gagné', () => {
-    const s = avecBazouQuiRoule(1_000_000_000);
-    s.totalEarned = 30e9;
+  it("seulement avec l'aréna pis 1 T$ de gagné", () => {
+    const s = avecBazouQuiRoule(100_000_000_000);
+    s.totalEarned = 1.2e12;
     expect(canPrestige(s)).toBe(false);
-    buyBuilding(s, 'garage');
-    buyBuilding(s, 'concession');
+    for (const b of BUILDINGS) buyBuilding(s, b.id);
     expect(canPrestige(s)).toBe(true);
+    s.totalEarned = 0.9e12;
+    expect(canPrestige(s)).toBe(false);
   });
 
   it('repart à zéro mais garde la réputation qui donne +10 % par point', () => {
-    const s = avecBazouQuiRoule(1_000_000_000);
-    buyBuilding(s, 'garage');
-    buyBuilding(s, 'concession');
-    s.totalEarned = 36e9;
+    const s = avecBazouQuiRoule(100_000_000_000);
+    for (const b of BUILDINGS) buyBuilding(s, b.id);
+    s.totalEarned = 1.44e12;
     expect(prestige(s, 123)).toBe(6);
     expect(s.cash).toBe(0);
     expect(s.car.owned).toBe(false);
@@ -107,6 +116,6 @@ describe('le prestige', () => {
     storage.setItem('incremental-quebecois-save', JSON.stringify(s));
     const loaded = load(storage, 0);
     expect(loaded.prestige).toEqual({ points: 3, count: 1 });
-    expect(loaded.buildings).toEqual({ garage: true, concession: false });
+    expect(loaded.buildings).toEqual({ garage: true, cabane: false, concession: false, bar: false, arena: false });
   });
 });

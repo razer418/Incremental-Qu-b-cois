@@ -2,6 +2,7 @@
 // Les montants suivent tes revenus, pis une perte dépasse jamais une minute de revenus.
 import { CHARACTERS } from './quests';
 import { saisonA, type Saison } from './saisons';
+import type { FeteId } from './fetes';
 import { carRuns, earn, payer, revenuRef, type GameState } from './state';
 import { formatMoney } from './format';
 import { t } from './i18n';
@@ -17,6 +18,8 @@ export interface Evenement {
   qui: keyof typeof CHARACTERS;
   texte: string;
   si?: (s: GameState) => boolean;
+  /** Arrive juste au début de cette fête (jamais au hasard). */
+  fete?: FeteId;
   choix: readonly Choix[];
 }
 
@@ -131,11 +134,68 @@ export const EVENEMENTS: readonly Evenement[] = [
     si: (s) => en('hiver')(s) && carRuns(s),
     choix: [{ label: 'Sortir la chaîne', faire: (s) => t('Tu sors six chars du fossé. Ça fait {x}.', { x: gagne(s, 120) }) }],
   },
+  // Les fêtes : chacune arrive avec son invitation.
+  {
+    id: 'fete-sucres',
+    qui: 'oncle',
+    fete: 'sucres',
+    texte: "C'est le temps des sucres! Viens manger à la cabane, y'a du jambon pis de la tire pour tout le monde.",
+    choix: [
+      { label: 'Aller se sucrer le bec', faire: (s) => t('Tu vends du sirop aux visiteurs entre deux oreilles de crisse. Ça fait {x}.', { x: gagne(s, 90) }) },
+      { label: 'Rester travailler', faire: () => t('Ton oncle : « Je te garde un pot de sirop. »') },
+    ],
+  },
+  {
+    id: 'fete-stjean',
+    qui: 'voisin',
+    fete: 'stjean',
+    texte: 'Bonne Saint-Jean! On fait un feu de joie dans le champ. Tu fournis la bière?',
+    choix: [
+      {
+        label: 'Fournir la bière',
+        faire: (s, r) => {
+          const caisse = perd(s, 15);
+          return r < 0.7
+            ? t('Le monde est content, pis tout le village passe acheter chez vous. Tu fais {x}.', { x: gagne(s, 120) })
+            : t("Gens du pays jusqu'à trois heures du matin. La bière t'a coûté {x}, mais quelle soirée.", { x: caisse });
+        },
+      },
+      { label: 'Juste regarder le feu', faire: () => t('Monsieur Tremblay : « La prochaine fois! »') },
+    ],
+  },
+  {
+    id: 'fete-halloween',
+    qui: 'ginette',
+    fete: 'halloween',
+    texte: "Les enfants passent l'Halloween dans le rang à soir. T'as-tu des bonbons?",
+    choix: [
+      { label: 'Donner des chips', faire: (s) => t('Les parents sont contents pis reviennent au dépanneur. Ça te rapporte {x}.', { x: gagne(s, 60) }) },
+      { label: 'Éteindre les lumières', faire: () => t('Le lendemain, ta boîte aux lettres est pleine de papier de toilette.') },
+    ],
+  },
+  {
+    id: 'fete-noel',
+    qui: 'mere',
+    fete: 'noel',
+    texte: "Le party de Noël est chez nous cette année. Tu fais l'échange de cadeaux?",
+    choix: [
+      {
+        label: "Faire l'échange",
+        faire: (s, r) => {
+          const cadeau = perd(s, 10);
+          return r < 0.5
+            ? t("Tu pioches le billet de loto de mononc. Y'é gagnant : {x}!", { x: gagne(s, 150) })
+            : t('Tu pioches des bas de laine. Ton cadeau à toé a coûté {x}.', { x: cadeau });
+        },
+      },
+      { label: 'Manger de la tourtière', faire: () => t('Trois pointes de tourtière plus tard, tu fais une sieste sur le divan.') },
+    ],
+  },
 ];
 
 /** Un événement au hasard parmi ceux qui peuvent arriver en ce moment. */
 export function tirerEvenement(state: GameState, r: number): Evenement | null {
-  const possibles = EVENEMENTS.filter((e) => !e.si || e.si(state));
+  const possibles = EVENEMENTS.filter((e) => !e.fete && (!e.si || e.si(state)));
   return possibles[Math.floor(r * possibles.length)] ?? null;
 }
 

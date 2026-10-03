@@ -3,6 +3,7 @@ import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
 import { saisonA } from './saisons';
+import { bonusFete, feteA, type FeteId } from './fetes';
 import { PROJETS, getProjet, type Projet } from './chars';
 import {
   BUILDINGS,
@@ -32,6 +33,8 @@ export interface GameState {
   magasin: Record<string, number>;
   /** Succès débloqués (ids). Gardés au prestige. */
   succes: string[];
+  /** Les fêtes que t'as déjà vécues (gardé au prestige). */
+  fetes: FeteId[];
   /** Stats de jeu. Gardées au prestige (à vie). */
   stats: Stats;
   /** Étape du tuto; TUTO_FINI quand c'est fini. */
@@ -74,12 +77,13 @@ export function newGame(now: number): GameState {
     upgrades: {},
     car: { owned: false, parts: {} },
     questIndex: 0,
-    buildings: { garage: false, concession: false },
+    buildings: { garage: false, cabane: false, concession: false, bar: false, arena: false },
     prestige: { points: 0, count: 0 },
     boostSeconds: 0,
     noAds: false,
     magasin: {},
     succes: [],
+    fetes: [],
     stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0, minijeux: 0 },
     tuto: 0,
     projets: {},
@@ -114,6 +118,7 @@ export function multiplier(state: GameState): number {
   mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
   mult *= 1 + state.succes.length * SUCCES_BONUS;
   for (const p of PROJETS) if (projetFini(state, p)) mult *= p.bonus;
+  mult *= bonusFete(state.lastTick);
   return mult;
 }
 
@@ -235,6 +240,8 @@ export function tick(state: GameState, now: number): number {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
   state.stats.secondes += seconds;
+  const fete = feteA(now);
+  if (fete && !state.fetes.includes(fete.id)) state.fetes.push(fete.id);
   const gained = passiveOver(state, seconds);
   earn(state, gained);
   return gained;
@@ -343,8 +350,7 @@ export function warmth(state: GameState): number {
   return (
     Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 +
     repairedFraction(state) * 0.2 +
-    (state.buildings.garage ? 0.2 : 0) +
-    (state.buildings.concession ? 0.3 : 0)
+    (BUILDINGS.filter((b) => state.buildings[b.id]).length / BUILDINGS.length) * 0.5
   );
 }
 
@@ -370,7 +376,7 @@ export function buyBuilding(state: GameState, id: BuildingId): boolean {
 // --- Prestige ---
 
 export function canPrestige(state: GameState): boolean {
-  return state.buildings.concession && state.totalEarned >= PRESTIGE_MIN_EARNED;
+  return state.buildings.arena && state.totalEarned >= PRESTIGE_MIN_EARNED;
 }
 
 /** Vend l'empire : tout repart à zéro sauf la réputation. Retourne les points gagnés. */
@@ -382,6 +388,7 @@ export function prestige(state: GameState, now: number): number {
     prestige: kept,
     noAds: state.noAds,
     succes: state.succes,
+    fetes: state.fetes,
     stats: state.stats,
     look: state.look,
     tuto: TUTO_FINI,

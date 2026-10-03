@@ -11,7 +11,7 @@ import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
-import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
+import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
@@ -54,8 +54,9 @@ import {
 } from './game/state';
 import { load, save, wipe } from './game/save';
 import { saisonA } from './game/saisons';
+import { bonusFete, feteA, grosseFeteA } from './game/fetes';
 import { PROJETS } from './game/chars';
-import { EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
+import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
 import { cite, facteur, langue, t } from './game/i18n';
@@ -528,11 +529,7 @@ batBuy.addEventListener('click', () => {
   sons.jouer('achat');
   save(localStorage, state);
   allerA(b.id);
-  showMessage(
-    b.id === 'garage'
-      ? t('Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués.')
-      : t("Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend."),
-  );
+  showMessage(t(b.message));
   render();
 });
 
@@ -782,8 +779,7 @@ function render(): void {
   jobEl.textContent = t(roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES');
   tapLabel.textContent = t(roule ? '[ LIVRER ]' : '[ RAMASSER ]');
   const look = {
-    garage: state.buildings.garage,
-    concession: state.buildings.concession,
+    lieux: { ...state.buildings },
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
@@ -791,10 +787,9 @@ function render(): void {
     ...perso.look(),
   };
   lieuxEl.hidden = !rang;
-  lieuBtn('garage').hidden = !look.garage;
-  lieuBtn('concession').hidden = !look.concession;
+  for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];
   // Après le prestige, les bâtiments sont partis : on revient à la maison.
-  if ((lieu === 'garage' || lieu === 'concession') && !state.buildings[lieu]) allerA('maison');
+  if (lieu !== 'maison' && lieu !== 'magasin' && !state.buildings[lieu]) allerA('maison');
   const lookKey = JSON.stringify(look);
   if (rang && lookKey !== lastLook) {
     rang.setCar(look);
@@ -868,8 +863,8 @@ function renderEmpire(roule: boolean): void {
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
   }
-  prestigeEl.hidden = !state.buildings.concession;
-  if (state.buildings.concession) {
+  prestigeEl.hidden = !state.buildings.arena;
+  if (state.buildings.arena) {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
     prestigeDesc.textContent = ready
@@ -899,14 +894,26 @@ const saisonBtn = $<HTMLButtonElement>('saison');
 let lastSaison = '';
 saisonBtn.addEventListener('click', () => {
   const x = saisonA(state.lastTick);
-  showMessage(`${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes.')}`);
+  const f = feteA(state.lastTick);
+  showMessage(
+    f
+      ? `${t(f.nom)} : ${t(f.description)} ${t('Gains {x}.', { x: facteur(bonusFete(state.lastTick)) })} ${t(grosseFeteA(state.lastTick) ? "C'est la vraie date : la fête dure toute la journée!" : 'La fête dure 3 minutes.')}`
+      : `${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes, pis finit avec une fête.')}`,
+  );
 });
 function renderSaison(): void {
   const x = saisonA(state.lastTick);
-  if (x.id === lastSaison) return;
-  saisonBtn.textContent = t(x.nom);
+  const f = feteA(state.lastTick);
+  const cle = `${x.id}/${f?.id ?? ''}`;
+  if (cle === lastSaison) return;
+  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom);
+  saisonBtn.classList.toggle('fete', !!f);
   rang?.setSaison(x.id);
-  lastSaison = x.id;
+  rang?.setFete(f?.id ?? null);
+  // La fête commence : son invitation arrive tout de suite (pas au premier chargement).
+  const fe = f && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
+  if (fe && !evenement && state.tuto === TUTO_FINI) montrerEvenement(fe, Date.now());
+  lastSaison = cle;
 }
 
 // --- Événements du rang : aux 3 à 6 minutes, une affaire à prendre ou à laisser ---

@@ -167,6 +167,7 @@ p {
 /* Endroits du rang */
 .lieux {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: -10px;
 }
@@ -175,7 +176,8 @@ p {
   display: none;
 }
 .lieux button {
-  flex: 1;
+  /* Quatre par rangée au max : sur un téléphone, les sept endroits prennent deux rangées. */
+  flex: 1 1 22%;
   min-width: 0;
   min-height: 44px;
   font: 400 20px/1 var(--pixel);
@@ -945,6 +947,10 @@ dialog p.resume {
   background: none;
   border: 1px solid var(--line);
   cursor: pointer;
+}
+.saison.fete {
+  color: var(--gold);
+  border-color: var(--gold);
 }
 
 /* Événement du rang */

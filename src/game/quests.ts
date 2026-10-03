@@ -1,4 +1,4 @@
-import { PRESTIGE_MIN_EARNED } from './buildings';
+import { PRESTIGE_MIN_EARNED, type BuildingId } from './buildings';
 
 export interface Character {
   id: string;
@@ -19,6 +19,9 @@ export const CHARACTERS: Record<string, Character> = {
   voisin: { id: 'voisin', name: 'Monsieur Tremblay, le voisin', initials: 'MT', color: '#7a6650' },
   touriste: { id: 'touriste', name: 'Un touriste perdu', initials: '??', color: '#a47a3c' },
   oncle: { id: 'oncle', name: 'Ton oncle Gérald', initials: 'OG', color: '#50573c' },
+  // Les nouveaux endroits
+  rollande: { id: 'rollande', name: 'Rollande du bar', initials: 'RO', color: '#6e4a3e' },
+  maire: { id: 'maire', name: 'Le maire Bouchard', initials: 'MB', color: '#4f463c' },
 };
 
 export type Objective =
@@ -28,7 +31,7 @@ export type Objective =
   | { kind: 'ownCar' }
   | { kind: 'repair'; part: string }
   | { kind: 'carRuns' }
-  | { kind: 'building'; id: 'garage' | 'concession' };
+  | { kind: 'building'; id: BuildingId };
 
 export interface Quest {
   id: string;
@@ -154,21 +157,48 @@ export const QUESTS: readonly Quest[] = [
     reward: 2_000_000,
   },
   {
+    id: 'sucres',
+    giver: 'oncle',
+    ask: "Ma vieille cabane à sucre dort dans le bois depuis dix ans. 20 millions pis a l'est à toé, mais faut la faire bouillir!",
+    thanks: "Sens-tu ça? C'est l'odeur du printemps, mon neveu.",
+    goal: 'Acheter la cabane à sucre',
+    objective: { kind: 'building', id: 'cabane' },
+    reward: 2_000_000,
+  },
+  {
     id: 'heritage',
     giver: 'gagnon',
-    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 150 millions, pis y'é à toé.",
+    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 200 millions, pis y'é à toé.",
     thanks: "« Chez Gagnon pis fils ». J'ai pas de fils, mais toé, t'es comme.",
     goal: 'Acheter le concessionnaire',
     objective: { kind: 'building', id: 'concession' },
-    reward: 15_000_000,
+    reward: 20_000_000,
+  },
+  {
+    id: 'habitues',
+    giver: 'rollande',
+    ask: "Trente ans que je sers des draffes au village. Mon bar est à vendre, 4 milliards, mais tu gardes la table de pool!",
+    thanks: "Les habitués t'ont adopté. Ça veut dire qu'y vont te demander du crédit.",
+    goal: 'Acheter le bar du village',
+    objective: { kind: 'building', id: 'bar' },
+    reward: 400_000_000,
+  },
+  {
+    id: 'hockey',
+    giver: 'maire',
+    ask: "La ville peut pu payer l'aréna. 25 milliards pis le hockey du samedi est sauvé. Le village compte sur toé!",
+    thanks: "Le conseil va te nommer citoyen de l'année. Y'a même pas eu de vote.",
+    goal: "Acheter l'aréna",
+    objective: { kind: 'building', id: 'arena' },
+    reward: 2_500_000_000,
   },
   {
     id: 'empire',
     giver: 'mere',
     ask: "Mon gars, un empire! Mais t'as l'air fatigué. Vends toute un jour, pis recommence plus grand.",
     thanks: "Je l'ai toujours dit que t'irais loin.",
-    goal: 'Gagner 25 G $ au total',
+    goal: 'Gagner 1 T $ au total',
     objective: { kind: 'earned', target: PRESTIGE_MIN_EARNED },
-    reward: 1_000_000_000,
+    reward: 40_000_000_000,
   },
 ];

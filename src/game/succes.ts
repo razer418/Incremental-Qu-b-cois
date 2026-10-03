@@ -1,5 +1,6 @@
 // Les succès : des petits trophées qui restent pour toujours, même après le prestige.
 // Chacun donne un petit bonus sur tous tes gains (voir SUCCES_BONUS dans state.ts).
+import { FETES } from './fetes';
 import { QUESTS } from './quests';
 import { UPGRADES } from './upgrades';
 import { PROJETS } from './chars';
@@ -24,13 +25,17 @@ export const SUCCES: readonly Succes[] = [
   { id: 'vroum', nom: 'Vroum vroum', description: 'Faire rouler le bazou.', atteint: carRuns },
   { id: 'propre', nom: 'Beau comme un char neuf', description: 'Débosser pis peinturer le bazou.', atteint: (s) => s.car.parts.carrosserie === true },
   { id: 'garage', nom: 'En affaires', description: 'Acheter le garage à Ti-Guy.', atteint: (s) => s.buildings.garage },
+  { id: 'cabane', nom: 'Sucrier', description: 'Acheter la cabane à sucre.', atteint: (s) => s.buildings.cabane },
   { id: 'concession', nom: 'Le rêve à Gagnon', description: 'Acheter le concessionnaire.', atteint: (s) => s.buildings.concession },
+  { id: 'bar', nom: 'Pilier de taverne', description: 'Acheter le bar du village.', atteint: (s) => s.buildings.bar },
+  { id: 'arena', nom: "Citoyen de l'année", description: "Acheter l'aréna.", atteint: (s) => s.buildings.arena },
   { id: 'quetes', nom: 'Bon garçon', description: 'Finir toutes les quêtes.', atteint: (s) => s.questIndex >= QUESTS.length },
   { id: 'niveau-10', nom: 'Ça commence à rouler', description: 'Monter un achat au niveau 10.', atteint: (s) => UPGRADES.some((u) => levelOf(s, u.id) >= 10) },
   { id: 'au-max', nom: 'Au boutte', description: 'Monter un achat au max.', atteint: (s) => UPGRADES.some((u) => levelOf(s, u.id) >= u.maxLevel) },
   { id: 'boost', nom: 'Double ou rien', description: 'Partir un boost x2.', atteint: (s) => s.stats.boosts >= 1 },
   { id: 'boost-10', nom: 'Accro au boost', description: 'Partir 10 boosts x2.', atteint: (s) => s.stats.boosts >= 10 },
   { id: 'rejean', nom: 'Client régulier', description: 'Acheter 10 affaires chez Réjean.', atteint: (s) => s.stats.articles >= 10 },
+  { id: 'fetard', nom: 'Fêtard', description: 'Fêter les quatre fêtes du rang.', atteint: (s) => FETES.every((f) => s.fetes.includes(f.id)) },
   { id: 'heure', nom: 'Une bonne heure', description: 'Jouer une heure au total.', atteint: (s) => s.stats.secondes >= 3600 },
   { id: 'retape', nom: 'Patenteux', description: 'Retaper un char au complet.', atteint: (s) => PROJETS.some((p) => projetFini(s, p)) },
   { id: 'retape-tous', nom: 'Collectionneur', description: 'Retaper tous les chars.', atteint: (s) => PROJETS.every((p) => projetFini(s, p)) },

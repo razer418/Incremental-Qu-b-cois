@@ -10,6 +10,7 @@ import { CHARACTERS, QUESTS } from './quests';
 import { ARTICLES, REJEAN } from './magasin';
 import { SUCCES } from './succes';
 import { SAISONS } from './saisons';
+import { FETES } from './fetes';
 import { PROJETS } from './chars';
 import { EVENEMENTS } from './evenements';
 import { LOOK } from './look';
@@ -22,13 +23,14 @@ function cles(): string[] {
   const k: string[] = [
     ...UPGRADES.flatMap((u) => [u.name, u.description]),
     ...PARTS.flatMap((p) => [p.name, p.description]),
-    ...BUILDINGS.flatMap((b) => [b.name, b.description]),
+    ...BUILDINGS.flatMap((b) => [b.name, b.description, b.message]),
     ...Object.values(CHARACTERS).map((c) => c.name),
     ...QUESTS.flatMap((q) => [q.ask, q.thanks, q.goal]),
     ...ARTICLES.flatMap((a) => [a.name, a.description]),
     ...REJEAN,
     ...SUCCES.flatMap((x) => [x.nom, x.description]),
     ...SAISONS.flatMap((x) => [x.nom, x.description]),
+    ...FETES.flatMap((x) => [x.nom, x.description]),
     ...PROJETS.flatMap((p) => [p.nom, p.description, ...p.pieces.map((x) => x.nom)]),
     ...EVENEMENTS.flatMap((e) => [e.texte, ...e.choix.map((c) => c.label)]),
     ...Object.values(LOOK).flatMap((c) => [c.nom, ...c.options.map((o) => o.nom)]),

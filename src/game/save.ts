@@ -1,4 +1,6 @@
 import { TUTO_FINI, newGame, type GameState } from './state';
+import { BUILDINGS } from './buildings';
+import { FETES } from './fetes';
 
 const num = (v: unknown) => Math.max(0, Number(v) || 0);
 
@@ -21,7 +23,7 @@ export function load(storage: Storage, now: number): GameState {
       ...data,
       upgrades: { ...(data.upgrades ?? {}) },
       car: { owned: data.car?.owned === true, parts: { ...(data.car?.parts ?? {}) } },
-      buildings: { garage: data.buildings?.garage === true, concession: data.buildings?.concession === true },
+      buildings: Object.fromEntries(BUILDINGS.map((b) => [b.id, data.buildings?.[b.id] === true])) as GameState['buildings'],
       prestige: {
         points: Math.max(0, Number(data.prestige?.points) || 0),
         count: Math.max(0, Number(data.prestige?.count) || 0),
@@ -32,6 +34,7 @@ export function load(storage: Storage, now: number): GameState {
         Object.entries(data.magasin ?? {}).filter(([, v]) => typeof v === 'number' && v > 0),
       ),
       succes: Array.isArray(data.succes) ? data.succes.filter((x) => typeof x === 'string') : [],
+      fetes: Array.isArray(data.fetes) ? data.fetes.filter((x) => FETES.some((f) => f.id === x)) : [],
       stats: {
         secondes: num(data.stats?.secondes),
         // Vieilles parties : on part des chiffres de la partie en cours.

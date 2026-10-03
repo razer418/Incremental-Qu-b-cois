@@ -38,6 +38,10 @@ export interface GameState {
   tuto: number;
   /** Chars à retaper achetés : id du char -> pièces réparées. */
   projets: Record<string, string[]>;
+  /** Le look du bazou (voir look.ts) : options achetées (« peinture:rouge ») pis celles posées. Gardé au prestige. */
+  look: { achetes: string[]; choix: Record<'peinture' | 'collant' | 'mags' | 'flaps', string> };
+  /** Mini-jeux : quand chacun est prêt à rejouer (ms, heure de l'appareil). */
+  minijeux: Record<string, number>;
   lastTick: number;
 }
 
@@ -49,6 +53,7 @@ export interface Stats {
   boosts: number;
   articles: number;
   evenements: number;
+  minijeux: number;
 }
 
 export const TUTO_FINI = 99;
@@ -75,9 +80,11 @@ export function newGame(now: number): GameState {
     noAds: false,
     magasin: {},
     succes: [],
-    stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0 },
+    stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0, minijeux: 0 },
     tuto: 0,
     projets: {},
+    look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun' } },
+    minijeux: {},
     lastTick: now,
   };
 }
@@ -376,6 +383,7 @@ export function prestige(state: GameState, now: number): number {
     noAds: state.noAds,
     succes: state.succes,
     stats: state.stats,
+    look: state.look,
     tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,

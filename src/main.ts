@@ -59,6 +59,8 @@ import { EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './g
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
 import { cite, facteur, langue, t } from './game/i18n';
+import { createPerso } from './perso';
+import { createMiniJeux } from './minijeux-ui';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -576,6 +578,32 @@ $('reset').addEventListener('click', async () => {
   allerA('maison');
 });
 
+// --- Le look du bazou pis les mini-jeux ---
+
+const perso = createPerso({
+  liste: $('look-liste'),
+  etat: () => state,
+  achete: () => {
+    sons.jouer('achat');
+    save(localStorage, state);
+    render();
+  },
+  // Un bazou qui roule pas reste dans la cour : on y retourne pour voir l'aperçu.
+  apercu: () => (rang && !carRuns(state) && lieu !== 'maison' ? allerA('maison') : render()),
+});
+const minijeux = createMiniJeux({
+  liste: $('minijeux-liste'),
+  section: $('minijeux'),
+  dialog: $<HTMLDialogElement>('minijeu'),
+  etat: () => state,
+  fini: (msg) => {
+    sons.jouer('quete');
+    save(localStorage, state);
+    showMessage(msg);
+    render();
+  },
+});
+
 // --- Succès ---
 
 const badge = $('badge');
@@ -640,6 +668,7 @@ function renderMenu(): void {
       [t('Boosts x2'), String(st.boosts)],
       [t('Achats chez Réjean'), String(st.articles)],
       [t('Événements'), String(st.evenements)],
+      [t('Mini-jeux joués'), String(st.minijeux)],
       [t('Quêtes finies'), String(state.questIndex)],
       [t('Empires vendus'), String(state.prestige.count)],
       [t('Réputation'), `${state.prestige.points} (+${Math.round(state.prestige.points * PRESTIGE_BONUS_PER_POINT * 100)} %)`],
@@ -759,6 +788,7 @@ function render(): void {
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
+    ...perso.look(),
   };
   lieuxEl.hidden = !rang;
   lieuBtn('garage').hidden = !look.garage;
@@ -776,6 +806,9 @@ function render(): void {
   renderEvenement();
   renderProjets();
   renderMagasin();
+  $('look').hidden = !state.car.owned;
+  if (state.car.owned) perso.render();
+  minijeux.render();
   celebrer(verifierSucces(state));
   renderTuto();
   renderMenu();

@@ -157,10 +157,10 @@ export function addBoost(state: GameState): boolean {
   return true;
 }
 
-/** Les articles du magasin qui sont encore actifs multiplient tes tapes ou ton passif. */
-export function magasinFactor(state: GameState, boosts: Article['boosts']): number {
+/** Le meilleur article encore actif multiplie tes tapes ou ton passif. Ils se cumulent pas entre eux. */
+export function magasinFactor(state: GameState, boosts: Article['boosts'], apres = 0): number {
   let f = 1;
-  for (const a of ARTICLES) if (a.boosts === boosts && (state.magasin[a.id] ?? 0) > 0) f *= a.factor;
+  for (const a of ARTICLES) if (a.boosts === boosts && (state.magasin[a.id] ?? 0) > apres) f = Math.max(f, a.factor);
   return f;
 }
 
@@ -192,16 +192,13 @@ export function buyArticle(state: GameState, id: string): boolean {
 
 /** Revenu passif sur une durée, en consommant le boost pis les articles qui restent. */
 function passiveOver(state: GameState, seconds: number): number {
-  const timers = [{ left: state.boostSeconds, factor: BOOST_FACTOR }];
-  for (const a of ARTICLES) {
-    if (a.boosts === 'idle') timers.push({ left: state.magasin[a.id] ?? 0, factor: a.factor });
-  }
+  const fins = [state.boostSeconds, ...ARTICLES.map((a) => (a.boosts === 'idle' ? (state.magasin[a.id] ?? 0) : 0))];
   // Par bouts : chaque fois qu'un boost finit, le facteur change.
-  const cuts = [...new Set([0, seconds, ...timers.map((t) => Math.min(seconds, Math.max(0, t.left)))])].sort((a, b) => a - b);
+  const cuts = [...new Set([0, seconds, ...fins.map((f) => Math.min(seconds, Math.max(0, f)))])].sort((a, b) => a - b);
   let weighted = 0;
   for (let i = 0; i < cuts.length - 1; i++) {
-    const factor = timers.reduce((f, t) => (t.left > cuts[i] ? f * t.factor : f), 1);
-    weighted += (cuts[i + 1] - cuts[i]) * factor;
+    const boost = state.boostSeconds > cuts[i] ? BOOST_FACTOR : 1;
+    weighted += (cuts[i + 1] - cuts[i]) * boost * magasinFactor(state, 'idle', cuts[i]);
   }
   state.boostSeconds = Math.max(0, state.boostSeconds - seconds);
   for (const id of Object.keys(state.magasin)) {

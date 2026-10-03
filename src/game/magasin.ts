@@ -108,4 +108,5 @@ export const REJEAN = [
   "Ta mère est passée tantôt. A m'a dit que tu travaillais fort, astheure.",
   "Le vin est en spécial. Ben, y'est toujours en spécial.",
   "Si tu vas à la pêche, prends des vers. Les miens sont frais d'à matin.",
+  "Un à la fois pour tes tapes, un à la fois pour la gang. Deux cafés, ça réveille pas deux fois plus.",
 ];

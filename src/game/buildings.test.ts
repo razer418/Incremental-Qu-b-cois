@@ -36,17 +36,17 @@ describe('le garage pis le concessionnaire', () => {
   });
 
   it('le garage avant le concessionnaire', () => {
-    const s = avecBazouQuiRoule(100_000_000);
+    const s = avecBazouQuiRoule(1_000_000_000);
     expect(buyBuilding(s, 'concession')).toBe(false);
     expect(buyBuilding(s, 'garage')).toBe(true);
-    expect(s.cash).toBe(98_500_000);
+    expect(s.cash).toBe(997_300_000);
     expect(nextBuilding(s)?.id).toBe('concession');
     expect(buyBuilding(s, 'concession')).toBe(true);
     expect(nextBuilding(s)).toBeNull();
   });
 
   it('les achats du garage sont barrés tant que t’as pas le garage', () => {
-    const s = avecBazouQuiRoule(10_000_000);
+    const s = avecBazouQuiRoule(100_000_000);
     expect(buy(s, 'baie')).toBe(false);
     buyBuilding(s, 'garage');
     expect(buy(s, 'baie')).toBe(true);
@@ -54,7 +54,7 @@ describe('le garage pis le concessionnaire', () => {
   });
 
   it('le rang est au plus chaud avec tout', () => {
-    const s = avecBazouQuiRoule(100_000_000);
+    const s = avecBazouQuiRoule(1_000_000_000);
     s.totalEarned = 1e9;
     repair(s, 'carrosserie');
     buyBuilding(s, 'garage');
@@ -66,12 +66,12 @@ describe('le garage pis le concessionnaire', () => {
 describe('le prestige', () => {
   it('points = racine carrée des milliards gagnés', () => {
     expect(prestigePointsFor(999_999_999)).toBe(0);
-    expect(prestigePointsFor(30e9)).toBe(5);
+    expect(prestigePointsFor(25e9)).toBe(5);
     expect(prestigePointsFor(100e9)).toBe(10);
   });
 
-  it('seulement avec le concessionnaire pis 30 G$ de gagné', () => {
-    const s = avecBazouQuiRoule(100_000_000);
+  it('seulement avec le concessionnaire pis 25 G$ de gagné', () => {
+    const s = avecBazouQuiRoule(1_000_000_000);
     s.totalEarned = 30e9;
     expect(canPrestige(s)).toBe(false);
     buyBuilding(s, 'garage');
@@ -80,7 +80,7 @@ describe('le prestige', () => {
   });
 
   it('repart à zéro mais garde la réputation qui donne +10 % par point', () => {
-    const s = avecBazouQuiRoule(100_000_000);
+    const s = avecBazouQuiRoule(1_000_000_000);
     buyBuilding(s, 'garage');
     buyBuilding(s, 'concession');
     s.totalEarned = 36e9;

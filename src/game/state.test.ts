@@ -42,7 +42,7 @@ describe('boucle de base', () => {
     expect(s.cash).toBeCloseTo(5);
     expect(s.upgrades.velo).toBe(1);
     expect(passiveRate(s)).toBeCloseTo(0.25);
-    expect(nextCost(s, 'velo')).toBeCloseTo(7.25);
+    expect(nextCost(s, 'velo')).toBeCloseTo(7.75);
   });
 
   it("refuse d'acheter sans assez de cash", () => {

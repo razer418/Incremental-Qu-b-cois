@@ -89,11 +89,11 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     for (; dette >= 1; dette--) tap(s);
     while (activeQuest(s) && claimQuest(s));
 
-    // Quand le prochain jalon est à moins de 5 minutes de revenus, on ramasse pour,
+    // Quand le prochain jalon est à moins de 15 minutes de revenus, on ramasse pour,
     // en se permettant juste des petits achats (10 % du prix du jalon).
     for (;;) {
       const jalon = prochainJalon(s);
-      const onRamasse = jalon !== null && jalon.cost <= revenuRef(s) * 300;
+      const onRamasse = jalon !== null && jalon.cost <= revenuRef(s) * 900;
       if (onRamasse && assez(s, jalon.cost) && jalon.faire()) continue;
       const achat = meilleurAchat(s);
       if (!achat || !assez(s, achat.cost) || (onRamasse && achat.cost > jalon.cost * 0.1)) break;

@@ -44,10 +44,17 @@ import {
   tick,
   warmth,
   assez,
+  buyProjet,
+  projetDebloque,
+  projetFini,
+  reparerProjet,
   SUCCES_BONUS,
   TUTO_FINI,
 } from './game/state';
 import { load, save, wipe } from './game/save';
+import { saisonA } from './game/saisons';
+import { PROJETS } from './game/chars';
+import { EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, notation } from './game/format';
 
@@ -562,6 +569,7 @@ function renderMenu(): void {
       ['Tapes à vie', st.tapsVie.toLocaleString('fr-CA')],
       ['Boosts x2', String(st.boosts)],
       ['Achats chez Réjean', String(st.articles)],
+      ['Événements', String(st.evenements)],
       ['Quêtes finies', String(state.questIndex)],
       ['Empires vendus', String(state.prestige.count)],
       ['Réputation', `${state.prestige.points} (+${Math.round(state.prestige.points * PRESTIGE_BONUS_PER_POINT * 100)} %)`],
@@ -694,6 +702,9 @@ function render(): void {
   }
 
   renderQuest();
+  renderSaison();
+  renderEvenement();
+  renderProjets();
   renderMagasin();
   celebrer(verifierSucces(state));
   renderTuto();
@@ -729,7 +740,8 @@ function render(): void {
     const max = nextCost(state, u.id) === null;
     const lot = bulkCost(state, u.id, LOTS[lotMode]);
     row.li.classList.toggle('max', max);
-    row.level.textContent = level > 0 ? `NIV. ${level}` : '';
+    const bonus = saisonA(state.lastTick).bonus[u.id];
+    row.level.textContent = (level > 0 ? `NIV. ${level}` : '') + (bonus ? ` ${saisonA(state.lastTick).nom} x${String(bonus).replace('.', ',')}` : '');
     row.cost.textContent = max ? 'AU MAX' : formatMoney(lot.cost);
     row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} NIV.`;
     row.btn.disabled = max || !assez(state, lot.cost);
@@ -776,6 +788,130 @@ function renderBoost(): void {
     left > 0 ? `x2 ACTIF : ${mm}:${ss}` : sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
   noAdsBuy.textContent = state.noAds ? 'ACHETÉ' : NO_ADS_PRICE;
   noAdsBuy.disabled = state.noAds;
+}
+
+// --- Saisons ---
+
+const saisonBtn = $<HTMLButtonElement>('saison');
+let lastSaison = '';
+saisonBtn.addEventListener('click', () => {
+  const x = saisonA(state.lastTick);
+  showMessage(`${x.nom} : ${x.description} Chaque saison dure 10 minutes.`);
+});
+function renderSaison(): void {
+  const x = saisonA(state.lastTick);
+  if (x.id === lastSaison) return;
+  saisonBtn.textContent = x.nom;
+  rang?.setSaison(x.id);
+  lastSaison = x.id;
+}
+
+// --- Événements du rang : aux 3 à 6 minutes, une affaire à prendre ou à laisser ---
+
+const evenementEl = $('evenement');
+const prochainDelai = () => (3 + Math.random() * 3) * 60_000;
+let evenement: { e: Evenement; fin: number } | null = null;
+let prochainEvenement = Date.now() + prochainDelai();
+function montrerEvenement(e: Evenement, now: number): void {
+  evenement = { e, fin: now + EVENEMENT_SECONDES * 1000 };
+  const who = CHARACTERS[e.qui];
+  $('e-portrait').textContent = who.initials;
+  $('e-portrait').style.background = who.color;
+  $('e-who').textContent = who.name.toUpperCase();
+  $('e-line').textContent = `« ${e.texte} »`;
+  const choixEl = $('e-choix');
+  choixEl.replaceChildren(
+    ...e.choix.map((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'buy-car';
+      b.textContent = `[ ${c.label.toUpperCase()} ]`;
+      b.addEventListener('click', () => {
+        evenement = null;
+        const msg = choisir(state, e, i, Math.random());
+        save(localStorage, state);
+        showMessage(msg);
+        render();
+      });
+      return b;
+    }),
+  );
+  sons.jouer('quete');
+}
+function renderEvenement(): void {
+  const now = Date.now();
+  // Pas d'événement pendant le tuto.
+  if (!evenement && now >= prochainEvenement && state.tuto === TUTO_FINI) {
+    const e = tirerEvenement(state, Math.random());
+    if (e) montrerEvenement(e, now);
+  }
+  if (evenement && now >= evenement.fin) evenement = null;
+  if (evenement) prochainEvenement = now + prochainDelai();
+  evenementEl.hidden = !evenement;
+  if (evenement) $('e-bar').style.width = `${((evenement.fin - now) / (EVENEMENT_SECONDES * 1000)) * 100}%`;
+}
+
+// --- Chars à retaper ---
+
+const projetRows = PROJETS.map((p) => {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong></strong>
+      <small></small>
+    </div>
+    <button type="button" class="buy"><span class="cost"></span></button>`;
+  li.querySelector('strong')!.textContent = p.nom;
+  li.querySelector('small')!.textContent = `${p.description} Une fois retapé : x${String(p.bonus).replace('.', ',')} sur tous tes gains.`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    if (!buyProjet(state, p.id)) return;
+    sons.jouer('achat');
+    save(localStorage, state);
+    render();
+  });
+  const pieces = p.pieces.map((x) => {
+    const pli = document.createElement('li');
+    pli.className = 'upgrade piece';
+    pli.innerHTML = `<div class="upgrade-info"><strong></strong></div><button type="button" class="buy"><span class="cost"></span></button>`;
+    pli.querySelector('strong')!.textContent = x.nom;
+    const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
+    pbtn.addEventListener('click', () => {
+      if (!reparerProjet(state, p.id, x.id)) return;
+      sons.jouer('achat');
+      save(localStorage, state);
+      if (projetFini(state, p)) showMessage(`${p.nom} est retapé! Il reste dans ta cour : x${String(p.bonus).replace('.', ',')} sur tous tes gains.`);
+      render();
+    });
+    return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
+  });
+  $('projets-liste').append(li, ...pieces.map((x) => x.li));
+  return { p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
+});
+function renderProjets(): void {
+  let visible = false;
+  for (const row of projetRows) {
+    const ouvert = projetDebloque(state, row.p);
+    const faites = state.projets[row.p.id];
+    const fini = projetFini(state, row.p);
+    visible ||= ouvert;
+    row.li.hidden = !ouvert;
+    row.li.classList.toggle('done', fini);
+    row.cost.textContent = fini ? 'RETAPÉ' : faites ? 'À TOÉ' : formatMoney(row.p.prix);
+    row.btn.disabled = !!faites || !assez(state, row.p.prix);
+    if (!faites) progres(row.btn, row.p.prix);
+    for (const pc of row.pieces) {
+      // Les pièces s'affichent quand le char est à toé, pis disparaissent quand il est fini.
+      pc.li.hidden = !faites || fini;
+      const faite = !!faites?.includes(pc.x.id);
+      pc.li.classList.toggle('done', faite);
+      pc.cost.textContent = faite ? 'RÉPARÉ' : formatMoney(pc.x.cost);
+      pc.btn.disabled = faite || !assez(state, pc.x.cost);
+      if (!faite) progres(pc.btn, pc.x.cost);
+    }
+  }
+  $('projets').hidden = !visible;
 }
 
 let lastQuestId = '';

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PARTS } from './car';
 import { QUESTS } from './quests';
 import { prestigePointsFor } from './buildings';
+import { saisonA } from './saisons';
 import {
   buy,
   buyBuilding,
@@ -49,7 +50,7 @@ describe('le garage pis le concessionnaire', () => {
     expect(buy(s, 'baie')).toBe(false);
     buyBuilding(s, 'garage');
     expect(buy(s, 'baie')).toBe(true);
-    expect(passiveRate(s)).toBeCloseTo(400);
+    expect(passiveRate(s)).toBeCloseTo(400 * (saisonA(s.lastTick).bonus.baie ?? 1));
   });
 
   it('le rang est au plus chaud avec tout', () => {

@@ -2,7 +2,8 @@
 // Chacun donne un petit bonus sur tous tes gains (voir SUCCES_BONUS dans state.ts).
 import { QUESTS } from './quests';
 import { UPGRADES } from './upgrades';
-import { carRuns, levelOf, type GameState } from './state';
+import { PROJETS } from './chars';
+import { carRuns, levelOf, projetFini, type GameState } from './state';
 
 export interface Succes {
   id: string;
@@ -31,6 +32,9 @@ export const SUCCES: readonly Succes[] = [
   { id: 'boost-10', nom: 'Accro au boost', description: 'Partir 10 boosts x2.', atteint: (s) => s.stats.boosts >= 10 },
   { id: 'rejean', nom: 'Client régulier', description: 'Acheter 10 affaires chez Réjean.', atteint: (s) => s.stats.articles >= 10 },
   { id: 'heure', nom: 'Une bonne heure', description: 'Jouer une heure au total.', atteint: (s) => s.stats.secondes >= 3600 },
+  { id: 'retape', nom: 'Patenteux', description: 'Retaper un char au complet.', atteint: (s) => PROJETS.some((p) => projetFini(s, p)) },
+  { id: 'retape-tous', nom: 'Collectionneur', description: 'Retaper tous les chars.', atteint: (s) => PROJETS.every((p) => projetFini(s, p)) },
+  { id: 'evenements', nom: 'Toujours de quoi dans le rang', description: 'Répondre à 10 événements.', atteint: (s) => s.stats.evenements >= 10 },
   { id: 'prestige', nom: 'On recommence', description: "Vendre l'empire une première fois.", atteint: (s) => s.prestige.count >= 1 },
 ];
 

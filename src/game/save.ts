@@ -39,7 +39,11 @@ export function load(storage: Storage, now: number): GameState {
         gagneVie: num(data.stats?.gagneVie ?? data.totalEarned),
         boosts: num(data.stats?.boosts),
         articles: num(data.stats?.articles),
+        evenements: num(data.stats?.evenements),
       },
+      projets: Object.fromEntries(
+        Object.entries(data.projets ?? {}).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.filter((x) => typeof x === 'string')]),
+      ),
       // Une partie déjà commencée saute le tuto.
       tuto: Number.isInteger(data.tuto) ? data.tuto! : (data.taps ?? 0) > 0 ? TUTO_FINI : 0,
       questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,

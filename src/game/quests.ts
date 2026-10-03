@@ -12,6 +12,11 @@ export const CHARACTERS: Record<string, Character> = {
   tiguy: { id: 'tiguy', name: 'Ti-Guy', initials: 'TG', color: '#50573c' },
   gagnon: { id: 'gagnon', name: 'Le bonhomme Gagnon', initials: 'BG', color: '#5d5f60' },
   rejean: { id: 'rejean', name: 'Réjean du magasin général', initials: 'RJ', color: '#7a6650' },
+  // Les événements du rang
+  police: { id: 'police', name: "L'agent Lapointe", initials: 'AL', color: '#5d5f60' },
+  voisin: { id: 'voisin', name: 'Monsieur Tremblay, le voisin', initials: 'MT', color: '#7a6650' },
+  touriste: { id: 'touriste', name: 'Un touriste perdu', initials: '??', color: '#a47a3c' },
+  oncle: { id: 'oncle', name: 'Ton oncle Gérald', initials: 'OG', color: '#50573c' },
 };
 
 export type Objective =

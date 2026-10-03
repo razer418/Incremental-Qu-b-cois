@@ -13,7 +13,7 @@
         <div class="hud">
           <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
-          <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span></p>
+          <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span> <button id="saison" class="saison" type="button"></button></p>
         </div>
         <button id="options" class="options" type="button" aria-label="Menu : succès, stats pis options">MENU<span id="badge" class="badge" hidden></span></button>
       </header>
@@ -41,6 +41,16 @@
       </div>
 
       <div class="col-listes">
+      <section id="evenement" class="quest evenement" aria-live="polite" hidden>
+        <div id="e-portrait" class="portrait" aria-hidden="true"></div>
+        <div class="quest-body">
+          <p id="e-who" class="quest-who"></p>
+          <p id="e-line" class="quest-line"></p>
+          <div class="bar"><div id="e-bar" class="bar-fill"></div></div>
+          <div id="e-choix" class="choix"></div>
+        </div>
+      </section>
+
       <section id="magasin" class="magasin" hidden>
         <div class="quest">
           <div id="m-portrait" class="portrait" aria-hidden="true">RJ</div>
@@ -101,6 +111,11 @@
             <button id="prestige-btn" type="button" class="buy">VENDRE</button>
           </li>
         </ul>
+      </section>
+
+      <section id="projets" class="garage" hidden>
+        <h2>CHARS À RETAPER</h2>
+        <ul id="projets-liste" class="upgrades"></ul>
       </section>
 
       <section>

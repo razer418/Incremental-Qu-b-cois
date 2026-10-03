@@ -902,3 +902,34 @@ dialog p.resume {
     animation: none;
   }
 }
+
+/* Saison : dans la barre du haut, on tape dessus pour voir ce qu'elle donne */
+.saison {
+  padding: 0 6px;
+  font: 400 20px/1 var(--pixel);
+  color: var(--fg);
+  background: none;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+/* Événement du rang */
+.evenement {
+  border-color: var(--gold);
+}
+
+.choix {
+  display: flex;
+  gap: 8px;
+}
+
+.choix .buy-car {
+  flex: 1;
+  margin-top: 4px;
+  font-size: 24px;
+}
+
+/* Chars à retaper : les pièces sous leur char */
+.upgrade.piece {
+  margin-left: 16px;
+}

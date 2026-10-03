@@ -1,3 +1,5 @@
+import { PRESTIGE_MIN_EARNED } from './buildings';
+
 export interface Character {
   id: string;
   name: string;
@@ -12,6 +14,11 @@ export const CHARACTERS: Record<string, Character> = {
   tiguy: { id: 'tiguy', name: 'Ti-Guy', initials: 'TG', color: '#50573c' },
   gagnon: { id: 'gagnon', name: 'Le bonhomme Gagnon', initials: 'BG', color: '#5d5f60' },
   rejean: { id: 'rejean', name: 'Réjean du magasin général', initials: 'RJ', color: '#7a6650' },
+  // Les événements du rang
+  police: { id: 'police', name: "L'agent Lapointe", initials: 'AL', color: '#5d5f60' },
+  voisin: { id: 'voisin', name: 'Monsieur Tremblay, le voisin', initials: 'MT', color: '#7a6650' },
+  touriste: { id: 'touriste', name: 'Un touriste perdu', initials: '??', color: '#a47a3c' },
+  oncle: { id: 'oncle', name: 'Ton oncle Gérald', initials: 'OG', color: '#50573c' },
 };
 
 export type Objective =
@@ -122,20 +129,20 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'garage',
     giver: 'tiguy',
-    ask: "J'ai une idée de fou : on ouvre un garage. Mais faut du cash. Mettons... 50 000 $ de gagné.",
+    ask: "J'ai une idée de fou : on ouvre un garage. Mais faut du cash. Mettons... 2,7 millions de gagné.",
     thanks: "On a le cash! Astheure, faut juste l'acheter, ce garage-là.",
-    goal: 'Gagner 50 000 $ au total',
-    objective: { kind: 'earned', target: 50000 },
-    reward: 5000,
+    goal: 'Gagner 2,7 M $ au total',
+    objective: { kind: 'earned', target: 2_700_000 },
+    reward: 100_000,
   },
   {
     id: 'ouverture',
     giver: 'tiguy',
-    ask: "Le vieux garage au coin du rang est à vendre. 50 000 $. On le prend-tu?",
+    ask: "Le vieux garage au coin du rang est à vendre. 2,7 millions. On le prend-tu?",
     thanks: "On est ouverts! J'ai déjà accroché le calendrier de pneus.",
     goal: 'Acheter le garage',
     objective: { kind: 'building', id: 'garage' },
-    reward: 10_000,
+    reward: 300_000,
   },
   {
     id: 'clientele',
@@ -144,24 +151,24 @@ export const QUESTS: readonly Quest[] = [
     thanks: "Ma Corolla est réparée en deux jours. Je te fais de la pub, mon chou.",
     goal: 'Ajouter une baie',
     objective: { kind: 'upgrade', id: 'baie', target: 1 },
-    reward: 25_000,
+    reward: 2_000_000,
   },
   {
     id: 'heritage',
     giver: 'gagnon',
-    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 1 000 000 $, pis y'é à toé.",
+    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 150 millions, pis y'é à toé.",
     thanks: "« Chez Gagnon pis fils ». J'ai pas de fils, mais toé, t'es comme.",
     goal: 'Acheter le concessionnaire',
     objective: { kind: 'building', id: 'concession' },
-    reward: 100_000,
+    reward: 15_000_000,
   },
   {
     id: 'empire',
     giver: 'mere',
     ask: "Mon gars, un empire! Mais t'as l'air fatigué. Vends toute un jour, pis recommence plus grand.",
     thanks: "Je l'ai toujours dit que t'irais loin.",
-    goal: 'Gagner 25 000 000 $ au total',
-    objective: { kind: 'earned', target: 25_000_000 },
-    reward: 1_000_000,
+    goal: 'Gagner 25 G $ au total',
+    objective: { kind: 'earned', target: PRESTIGE_MIN_EARNED },
+    reward: 1_000_000_000,
   },
 ];

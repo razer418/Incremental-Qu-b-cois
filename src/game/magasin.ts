@@ -100,3 +100,12 @@ export const ARTICLES: readonly Article[] = [
 export function getArticle(id: string): Article | undefined {
   return ARTICLES.find((a) => a.id === id);
 }
+
+/** Ce que Réjean te dit quand t'arrives au magasin. */
+export const REJEAN = [
+  "Salut mon gars! Y'a de la frette dans le frigidaire pis du café sur le rond.",
+  "Cash seulement, la machine à cartes est encore brisée.",
+  "Ta mère est passée tantôt. A m'a dit que tu travaillais fort, astheure.",
+  "Le vin est en spécial. Ben, y'est toujours en spécial.",
+  "Si tu vas à la pêche, prends des vers. Les miens sont frais d'à matin.",
+];

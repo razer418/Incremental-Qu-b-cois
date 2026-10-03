@@ -46,6 +46,10 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Le rang passe du gris brumeux à une lumière plus chaude à mesure que tu gagnes du cash
 - Interface nette par-dessus : VT323 pour les chiffres, IBM Plex Mono pour les textes
 
+## Sons
+
+Faits à la main avec Web Audio (`src/platform/sons.ts`), aucun fichier à télécharger : canette ou sonnette quand tu tapes, ka-ching quand tu achètes, trois notes country pour une quête, le moteur du bazou pis la neige VHS pendant les trajets. Le bouton SON en haut à droite les coupe (choix gardé sur l'appareil).
+
 ## Lancer le jeu
 
 ```bash

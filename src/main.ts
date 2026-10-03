@@ -4,6 +4,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang, type Lieu } from './scene/rang';
 import { ARTICLES } from './game/magasin';
+import { createSons } from './platform/sons';
 import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
@@ -97,7 +98,34 @@ let state = load(localStorage, Date.now());
 
 // Le rang en 3D, style Bazou VHS. Si WebGL marche pas, le jeu roule pareil.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const rang = createRang($('ecran'), { pixelScale: 3, reduceMotion });
+// Sons : on peut les couper, choix gardé sur l'appareil.
+const SON_KEY = 'incremental-quebecois-son';
+const sons = createSons();
+const sonBtn = $<HTMLButtonElement>('son');
+const setSon = (on: boolean) => {
+  sons.actif = on;
+  sonBtn.setAttribute('aria-pressed', String(on));
+  sonBtn.setAttribute('aria-label', on ? 'Son : oui' : 'Son : non');
+};
+try {
+  setSon(localStorage.getItem(SON_KEY) !== 'off');
+} catch {
+  setSon(true);
+}
+sonBtn.addEventListener('click', () => {
+  setSon(!sons.actif);
+  try {
+    localStorage.setItem(SON_KEY, sons.actif ? 'on' : 'off');
+  } catch {
+    // rien à faire
+  }
+});
+
+const rang = createRang($('ecran'), {
+  pixelScale: 3,
+  reduceMotion,
+  onTrajet: (e) => sons.jouer(e === 'coupe' ? 'coupe' : 'moteur'),
+});
 let lastWarmth = -1;
 let lastLook = '';
 
@@ -108,7 +136,7 @@ const scanEl = $('scan');
 const setVhs = (on: boolean) => {
   scanEl.hidden = !on;
   vhsBtn.setAttribute('aria-pressed', String(on));
-  vhsBtn.textContent = on ? 'VHS : OUI' : 'VHS : NON';
+  vhsBtn.setAttribute('aria-label', on ? 'Lignes VHS : oui' : 'Lignes VHS : non');
 };
 let vhsOn = true;
 try {
@@ -148,6 +176,7 @@ for (const u of UPGRADES) {
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (buy(state, u.id)) {
+      sons.jouer('achat');
       save(localStorage, state);
       render();
     }
@@ -171,6 +200,7 @@ for (const p of PARTS) {
   btn.addEventListener('click', () => {
     const roulait = carRuns(state);
     if (!repair(state, p.id)) return;
+    sons.jouer('achat');
     save(localStorage, state);
     if (!roulait && carRuns(state)) {
       showMessage(
@@ -186,6 +216,7 @@ for (const p of PARTS) {
 qClaim.addEventListener('click', () => {
   const q = claimQuest(state);
   if (!q) return;
+  sons.jouer('quete');
   save(localStorage, state);
   showMessage(`${CHARACTERS[q.giver].name} : « ${q.thanks} » (+${formatMoney(q.reward)})`);
   render();
@@ -205,6 +236,7 @@ boostBtn.addEventListener('click', async () => {
     if (!watched) return render();
   }
   addBoost(state);
+  sons.jouer('boost');
   save(localStorage, state);
   render();
 });
@@ -262,6 +294,7 @@ for (const a of ARTICLES) {
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (buyArticle(state, a.id)) {
+      sons.jouer('achat');
       save(localStorage, state);
       render();
     }
@@ -286,6 +319,7 @@ lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu 
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
   if (!b || !buyBuilding(state, b.id)) return;
+  sons.jouer('achat');
   save(localStorage, state);
   allerA(b.id);
   showMessage(
@@ -312,6 +346,7 @@ prestigeBtn.addEventListener('click', () => {
 
 buyCarBtn.addEventListener('click', () => {
   if (!buyCar(state)) return;
+  sons.jouer('achat');
   save(localStorage, state);
   showMessage(
     "Le bonhomme Gagnon : « Y'é à toé, mon gars. Y roule pas, y'a pu de batterie pis y'é sur les blocs, mais c'est un bon char. »",
@@ -321,6 +356,7 @@ buyCarBtn.addEventListener('click', () => {
 
 tapBtn.addEventListener('click', () => {
   tap(state);
+  sons.jouer(carRuns(state) ? 'livraison' : 'canette');
   tapBtn.classList.remove('pop');
   void tapBtn.offsetWidth;
   tapBtn.classList.add('pop');

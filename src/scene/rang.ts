@@ -72,7 +72,15 @@ const ORIGINE: Record<Lieu, number> = { maison: 0, magasin: 150, garage: 300, co
 const STATIONNEMENT = { x: 4.6, z: 2.4, ry: -0.55 };
 const ROUTE_Z = 6.4;
 
-export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduceMotion?: boolean } = {}): Rang | null {
+export function createRang(
+  host: HTMLElement,
+  opts: {
+    pixelScale?: number;
+    reduceMotion?: boolean;
+    /** Pour les sons : le bazou part, ou la coupure VHS. */
+    onTrajet?: (e: 'depart' | 'coupe') => void;
+  } = {},
+): Rang | null {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });
@@ -450,7 +458,7 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
     const ox = ORIGINE[l];
     const route = { x: ox + 7.5, z: ROUTE_Z, ry: 0 };
     return [
-      { ms: 380, de: stationne(l), a: route, ease: easeIn },
+      { ms: 380, de: stationne(l), a: route, ease: easeIn, action: () => opts.onTrajet?.('depart') },
       { ms: 520, de: route, a: { x: ox + 32, z: ROUTE_Z, ry: 0 }, ease: easeIn },
     ];
   };
@@ -563,7 +571,13 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
       arrive[0] && (arrive[0].action = () => (carLieu = l));
       // Le flash VHS monte, on coupe au plus fort, pis il redescend sur le nouvel endroit.
       const coupure: Etape[] = [
-        { ms: 150, action: flash },
+        {
+          ms: 150,
+          action: () => {
+            flash();
+            opts.onTrajet?.('coupe');
+          },
+        },
         {
           ms: 150,
           action: () => {

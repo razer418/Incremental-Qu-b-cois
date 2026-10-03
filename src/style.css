@@ -113,10 +113,19 @@ p {
   border: 2px solid var(--gold);
 }
 
-.vhs {
+.reglages {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  gap: 6px;
+}
+/* Coupé : texte barré pis pâle. */
+.vhs[aria-pressed='false'] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.vhs {
   font: 400 20px/1 var(--pixel);
   color: var(--fg);
   background: rgb(20 22 19 / 0.75);

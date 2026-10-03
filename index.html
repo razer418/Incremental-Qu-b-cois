@@ -11,25 +11,34 @@
       <section id="ecran" class="ecran" aria-label="Ton rang">
         <div id="scan" class="scan"></div>
         <div class="hud">
-          <p class="job">RAMASSER DES CANETTES</p>
+          <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
           <p id="rate" class="rate">+0,00 $/s</p>
         </div>
         <button id="vhs" class="vhs" type="button" aria-pressed="true">VHS</button>
       </section>
 
-      <section class="goal">
+      <button id="tap" class="tap" type="button">
+        <span id="tap-label">[ RAMASSER ]</span>
+        <span id="tap-value" class="tap-value">+0,10 $</span>
+      </button>
+
+      <section id="goal" class="goal">
         <div class="goal-label">
           <span>PROCHAIN : TON PREMIER BAZOU</span>
           <span id="goal-text"></span>
         </div>
         <div class="bar"><div id="goal-bar" class="bar-fill"></div></div>
+        <button id="buy-car" class="buy-car" type="button" hidden>[ ACHETER LE BAZOU ]</button>
       </section>
 
-      <button id="tap" class="tap" type="button">
-        <span>[ RAMASSER ]</span>
-        <span id="tap-value" class="tap-value">+0,10 $</span>
-      </button>
+      <section id="garage" class="garage" hidden>
+        <div class="garage-head">
+          <h2>TON BAZOU</h2>
+          <span id="car-status" class="car-status"></span>
+        </div>
+        <ul id="parts" class="upgrades"></ul>
+      </section>
 
       <section>
         <h2>ACHATS</h2>
@@ -41,8 +50,8 @@
       </footer>
     </main>
 
-    <dialog id="offline">
-      <p id="offline-text"></p>
+    <dialog id="message">
+      <p id="message-text"></p>
       <form method="dialog"><button type="submit">[ ENVOYE DONC ]</button></form>
     </dialog>
 

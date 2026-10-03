@@ -138,6 +138,45 @@ p {
   transition: width 0.2s;
 }
 
+.buy-car {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  font: 400 30px/1 var(--pixel);
+  color: var(--bg);
+  background: var(--gold);
+  border: 0;
+  cursor: pointer;
+}
+
+.buy-car[hidden],
+.garage[hidden],
+.goal[hidden],
+.upgrade[hidden] {
+  display: none;
+}
+
+.garage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.car-status {
+  font: 400 22px/1 var(--pixel);
+  color: var(--alert);
+}
+
+.car-status.roule {
+  color: var(--cash);
+}
+
+.upgrade.done .buy:disabled {
+  color: var(--cash);
+  border-color: var(--cash);
+}
+
 /* Bouton principal */
 .tap {
   display: flex;

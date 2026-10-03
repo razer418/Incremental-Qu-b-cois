@@ -44,7 +44,14 @@ const TARD = {
   soleilPos: new THREE.Vector3(-12, 7, 10),
 };
 
+export interface CarLook {
+  owned: boolean;
+  wheels: boolean;
+  clean: boolean;
+}
+
 export interface Rang {
+  setCar(look: CarLook): void;
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
   setPixelScale(scale: number): void;
@@ -157,19 +164,36 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
   part(carrosserie, B(4.2, 0.8, 1.8), PAL.carrosserie, 0, 0.8, 0);
   part(carrosserie, B(2.2, 0.66, 1.6), PAL.vitre, -0.25, 1.53, 0);
   part(carrosserie, B(2.35, 0.12, 1.7), PAL.carrosserie, -0.25, 1.9, 0);
-  part(carrosserie, B(0.7, 0.45, 0.04), PAL.rouille, 1.2, 0.75, 0.92);
-  part(carrosserie, B(0.4, 0.3, 0.04), PAL.rouille, -1.5, 0.95, 0.92);
+  const rouille = [
+    part(carrosserie, B(0.7, 0.45, 0.04), PAL.rouille, 1.2, 0.75, 0.92),
+    part(carrosserie, B(0.4, 0.3, 0.04), PAL.rouille, -1.5, 0.95, 0.92),
+  ];
   part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, 2.15, 0.55, 0);
   part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, -2.15, 0.55, 0);
   const roue = G(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 8));
+  const bloc = B(0.5, 0.42, 0.5);
+  const roues: THREE.Mesh[] = [];
+  const blocs: THREE.Mesh[] = [];
   for (const [x, z] of [
     [1.35, 0.9],
     [1.35, -0.9],
     [-1.35, 0.9],
     [-1.35, -0.9],
   ]) {
-    part(bazou, roue, PAL.pneu, x, 0.42, z, { rx: Math.PI / 2 });
+    roues.push(part(bazou, roue, PAL.pneu, x, 0.42, z, { rx: Math.PI / 2 }));
+    // Sur les blocs de béton tant qu'y a pas de pneus.
+    blocs.push(part(bazou, bloc, PAL.gravier, x, 0.21, z * 0.8));
   }
+
+  // Pancarte « à vendre » du bonhomme Gagnon
+  const pancarte = new THREE.Group();
+  pancarte.position.set(7.4, 0, 4.2);
+  pancarte.rotation.y = -0.3;
+  scene.add(pancarte);
+  part(pancarte, G(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 5)), PAL.bois, 0, 0.65, 0);
+  part(pancarte, B(1.1, 0.6, 0.06), PAL.declin, 0, 1.4, 0);
+  part(pancarte, B(0.8, 0.14, 0.07), PAL.rougeGrange, 0, 1.48, 0);
+  part(pancarte, B(0.6, 0.1, 0.07), PAL.rougeGrange, 0, 1.28, 0);
 
   // Pile de pneus, boîte à malle, botte de foin
   const pneu = G(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 8));
@@ -279,6 +303,13 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
   start();
 
   return {
+    setCar(look) {
+      pancarte.visible = !look.owned;
+      roues.forEach((r) => (r.visible = look.wheels));
+      blocs.forEach((b) => (b.visible = !look.wheels));
+      rouille.forEach((r) => (r.visible = !look.clean));
+      if (!raf) renderer.render(scene, camera);
+    },
     setWarmth(w) {
       const k = Math.min(1, Math.max(0, w));
       ciel.lerpColors(DEBUT.ciel, TARD.ciel, k);

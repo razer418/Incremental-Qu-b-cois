@@ -1,4 +1,5 @@
-import { UPGRADES, getUpgrade, upgradeCost } from './upgrades';
+import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
+import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 
 export interface GameState {
   version: 1;
@@ -6,15 +7,25 @@ export interface GameState {
   totalEarned: number;
   taps: number;
   upgrades: Record<string, number>;
+  car: { owned: boolean; parts: Record<string, boolean> };
   lastTick: number;
 }
 
 export const BASE_TAP = 0.1; // une canette consignée
+export const DELIVERY_TAP = 1.5; // une livraison de pizza
 export const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
-export const FIRST_CAR_GOAL = 500;
+export const FIRST_CAR_GOAL = CAR_PRICE;
 
 export function newGame(now: number): GameState {
-  return { version: 1, cash: 0, totalEarned: 0, taps: 0, upgrades: {}, lastTick: now };
+  return {
+    version: 1,
+    cash: 0,
+    totalEarned: 0,
+    taps: 0,
+    upgrades: {},
+    car: { owned: false, parts: {} },
+    lastTick: now,
+  };
 }
 
 export function levelOf(state: GameState, id: string): number {
@@ -26,11 +37,12 @@ export function multiplier(state: GameState): number {
   for (const u of UPGRADES) {
     if (u.effect.kind === 'globalMult') mult *= Math.pow(u.effect.factor, levelOf(state, u.id));
   }
+  if (state.car.parts.carrosserie) mult *= CAR_TIP_MULT;
   return mult;
 }
 
 export function tapValue(state: GameState): number {
-  let value = BASE_TAP;
+  let value = carRuns(state) ? DELIVERY_TAP : BASE_TAP;
   for (const u of UPGRADES) {
     if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
   }
@@ -82,7 +94,13 @@ export function nextCost(state: GameState, id: string): number | null {
   return level >= u.maxLevel ? null : upgradeCost(u, level);
 }
 
+export function isUnlocked(state: GameState, u: Upgrade): boolean {
+  return u.requires !== 'roule' || carRuns(state);
+}
+
 export function buy(state: GameState, id: string): boolean {
+  const u = getUpgrade(id);
+  if (!u || !isUnlocked(state, u)) return false;
   const cost = nextCost(state, id);
   if (cost === null || state.cash < cost) return false;
   state.cash -= cost;
@@ -90,7 +108,37 @@ export function buy(state: GameState, id: string): boolean {
   return true;
 }
 
-/** Réchauffement du rang : 0 au début, 0,5 quand t'as amassé de quoi payer ton premier bazou. */
+// --- Le bazou ---
+
+export function buyCar(state: GameState): boolean {
+  if (state.car.owned || state.cash < CAR_PRICE) return false;
+  state.cash -= CAR_PRICE;
+  state.car.owned = true;
+  return true;
+}
+
+export function isRepaired(state: GameState, partId: string): boolean {
+  return state.car.parts[partId] === true;
+}
+
+export function repair(state: GameState, partId: string): boolean {
+  const part = PARTS.find((p) => p.id === partId);
+  if (!part || !state.car.owned || isRepaired(state, partId) || state.cash < part.cost) return false;
+  state.cash -= part.cost;
+  state.car.parts[partId] = true;
+  return true;
+}
+
+/** Le char roule quand toutes les pièces essentielles sont réparées. */
+export function carRuns(state: GameState): boolean {
+  return state.car.owned && PARTS.every((p) => !p.essential || isRepaired(state, p.id));
+}
+
+export function repairedFraction(state: GameState): number {
+  return PARTS.filter((p) => isRepaired(state, p.id)).length / PARTS.length;
+}
+
+/** Réchauffement du rang : 0 au début, 0,3 avec de quoi payer le bazou, 0,5 une fois le bazou tout réparé. */
 export function warmth(state: GameState): number {
-  return Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.5;
+  return Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 + repairedFraction(state) * 0.2;
 }

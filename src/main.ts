@@ -4,6 +4,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang, type Lieu } from './scene/rang';
 import { ARTICLES, REJEAN } from './game/magasin';
+import { icone } from './icones';
 import { createSons } from './platform/sons';
 import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
@@ -21,6 +22,7 @@ import {
   buyBuilding,
   canBuyBuilding,
   canPrestige,
+  earn,
   nextBuilding,
   prestige,
   applyOffline,
@@ -53,8 +55,8 @@ import {
   TUTO_FINI,
 } from './game/state';
 import { load, save, wipe } from './game/save';
-import { saisonA } from './game/saisons';
-import { bonusFete, feteA, grosseFeteA } from './game/fetes';
+import { resteSaison, saisonA } from './game/saisons';
+import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
 import { PROJETS } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
@@ -168,6 +170,13 @@ langueBtn.addEventListener('click', () => {
   save(localStorage, state);
   location.reload();
 });
+
+// Outils de dev (npm run dev seulement) : l'horloge du jeu peut avancer, pour changer de saison.
+const devHorloge = { decalage: import.meta.env.DEV ? Number(localStorage.getItem('dev-decalage')) || 0 : 0 };
+if (import.meta.env.DEV) {
+  const vrai = Date.now;
+  Date.now = () => vrai() + devHorloge.decalage;
+}
 
 let state = load(localStorage, Date.now());
 
@@ -293,7 +302,7 @@ const montrerCode = (aide: string, importer: boolean) => {
   codeAide.textContent = aide;
 };
 // Le menu : trois onglets, succès, stats pis options.
-type Onglet = 'succes' | 'stats' | 'reglages';
+type Onglet = 'succes' | 'stats' | 'reglages' | 'dev';
 const ongletBtns = [...optionsDlg.querySelectorAll<HTMLButtonElement>('[data-onglet]')];
 const panneaux = [...optionsDlg.querySelectorAll<HTMLElement>('[data-panneau]')];
 let onglet: Onglet = 'reglages';
@@ -774,6 +783,7 @@ function render(): void {
   cashEl.textContent = formatMoney(state.cash);
   rateEl.textContent = `+${formatMoney(currentRate(state))}/s`;
   renderBoost();
+  renderBuffs();
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
   const w = Math.round(warmth(state) * 200) / 200;
@@ -887,17 +897,55 @@ function renderEmpire(roule: boolean): void {
 }
 
 function renderBoost(): void {
-  const left = Math.ceil(state.boostSeconds);
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
   boostBtn.textContent = t(sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]');
-  boostSub.classList.toggle('on', left > 0);
-  const mm = Math.floor(left / 60);
-  const ss = String(left % 60).padStart(2, '0');
-  boostSub.textContent =
-    left > 0 ? t('x2 ACTIF : {temps}', { temps: `${mm}:${ss}` }) : t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
+  boostSub.textContent = t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
   noAdsBuy.textContent = t(state.noAds ? 'ACHETÉ' : NO_ADS_PRICE);
   noAdsBuy.disabled = state.noAds;
+}
+
+// --- Buffs actifs : une icône par achat dans la barre du haut, qui se vide avec le temps ---
+
+const buffsEl = $('buffs');
+const buffIcones = new Map<string, HTMLButtonElement>();
+function temps(s: number): string {
+  const c = Math.ceil(s);
+  return `${Math.floor(c / 60)}:${String(c % 60).padStart(2, '0')}`;
+}
+function buffsActifs(): { id: string; nom: string; description: string; left: number; duree: number }[] {
+  return [
+    { id: 'boost', nom: 'Boost x2', description: 'Tes tapes pis ton passif x2.', left: state.boostSeconds, duree: BOOST_SECONDS },
+    ...ARTICLES.map((a) => ({ id: a.id, nom: a.name, description: a.description, left: state.magasin[a.id] ?? 0, duree: a.seconds })),
+  ].filter((b) => b.left > 0);
+}
+function renderBuffs(): void {
+  const actifs = buffsActifs();
+  for (const [id, btn] of buffIcones) {
+    if (actifs.some((b) => b.id === id)) continue;
+    btn.remove();
+    buffIcones.delete(id);
+  }
+  for (const b of actifs) {
+    let btn = buffIcones.get(b.id);
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'buff';
+      btn.innerHTML = icone(b.id);
+      btn.addEventListener('click', () => {
+        const now = buffsActifs().find((y) => y.id === b.id);
+        if (now) showMessage(`${t(now.nom)} : ${t(now.description)} ${t('Il reste {temps}.', { temps: temps(now.left) })}`);
+      });
+      buffsEl.append(btn);
+      buffIcones.set(b.id, btn);
+    }
+    // Pleine quand t'achètes, vide à zéro. Si t'en as cumulé, elle se vide une fois par achat.
+    btn.style.setProperty('--reste', String(b.left / (Math.ceil(b.left / b.duree) * b.duree)));
+    btn.classList.toggle('fin', b.left < 30);
+    btn.setAttribute('aria-label', `${t(b.nom)} ${temps(b.left)}`);
+  }
+  buffsEl.hidden = actifs.length === 0;
 }
 
 // --- Saisons ---
@@ -1068,6 +1116,30 @@ function loop(): void {
   }
   render();
   renderToast(now);
+}
+
+// Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.
+if (import.meta.env.DEV) {
+  ongletBtns.find((b) => b.dataset.onglet === 'dev')!.hidden = false;
+  const avancer = (ms: number, gagner: boolean) => {
+    devHorloge.decalage += ms;
+    localStorage.setItem('dev-decalage', String(devHorloge.decalage));
+    if (!gagner) state.lastTick = Date.now();
+  };
+  const outil = (id: string, f: () => void) =>
+    $(id).addEventListener('click', () => {
+      f();
+      save(localStorage, state);
+      render();
+    });
+  outil('dev-cash', () => earn(state, Math.max(1000, state.cash * 9)));
+  outil('dev-saison', () => avancer(resteSaison(Date.now()) * 1000 + 1, false));
+  outil('dev-fete', () => avancer(Math.max(0, resteSaison(Date.now()) - FETE_SECONDES) * 1000 + 1, false));
+  outil('dev-heure', () => avancer(3600 * 1000, true));
+  outil('dev-vraie', () => avancer(-devHorloge.decalage, false));
+  outil('dev-evenement', () => (prochainEvenement = 0));
+  outil('dev-minijeux', () => (state.minijeux = {}));
+  outil('dev-tuto', finirTuto);
 }
 
 setInterval(loop, 100);

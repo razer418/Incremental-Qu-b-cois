@@ -31,6 +31,11 @@ export const PAL = {
   bleu: 0x3c4a6e,
   // Les fenêtres pis l'enseigne allumées du bar : pas d'ombrage, ça luit dans la brunante.
   lampe: 0xe8c26a,
+  // Les feuilles du printemps pis de l'été, le sapin enneigé, la pluie
+  bourgeons: [0x8a9a56, 0x7d8c4a, 0x97a462],
+  feuilles: [0x4f6a36, 0x5e7a3e, 0x46602f],
+  sapinNeige: 0x6f7d72,
+  pluie: 0xb4c2c8,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -41,6 +46,46 @@ const SOL: Record<SaisonId, [number, number]> = {
   automne: [PAL.foin, PAL.herbeSombre],
   hiver: [PAL.neige, PAL.neigeOmbre],
 };
+
+// Chaque saison a sa lumière, ses arbres pis ce qui tombe du ciel.
+interface LookSaison {
+  ciel: number;
+  lumiere: number;
+  soleil: number;
+  force: number;
+  brume: number;
+  /** La couleur des érables (null : y'a pus de feuilles). */
+  erables: readonly number[] | null;
+  sapin: number;
+  tombe: { couleurs: readonly number[]; nb: number; taille: number; vitesse: number; vent: number } | null;
+}
+const LOOK_SAISON: Record<SaisonId, LookSaison> = {
+  // Gris-vert mouillé, bourgeons pis pluie
+  printemps: {
+    ciel: 0x98a4a2, lumiere: 0xd0dccc, soleil: 0xdde4d6, force: 0.85, brume: 0.7,
+    erables: PAL.bourgeons, sapin: PAL.sapin,
+    tombe: { couleurs: [PAL.pluie], nb: 500, taille: 0.16, vitesse: 16, vent: 0.3 },
+  },
+  // Grand ciel bleu, gros soleil, feuilles ben vertes
+  ete: {
+    ciel: 0x9db8c8, lumiere: 0xf4ecd0, soleil: 0xfff2c8, force: 1.2, brume: 1.3,
+    erables: PAL.feuilles, sapin: PAL.sapin, tombe: null,
+  },
+  // Lumière dorée pis les feuilles qui revolent
+  automne: {
+    ciel: 0xc49a6a, lumiere: 0xf0c890, soleil: 0xffb870, force: 1, brume: 1,
+    erables: PAL.erables, sapin: PAL.sapin,
+    tombe: { couleurs: PAL.erables, nb: 150, taille: 0.26, vitesse: 1.2, vent: 1.4 },
+  },
+  // Blanc bleuté, arbres nus, sapins enneigés pis la neige qui tombe
+  hiver: {
+    ciel: 0xc8d0d8, lumiere: 0xe4ecf4, soleil: 0xdce6f0, force: 1.1, brume: 0.75,
+    erables: null, sapin: PAL.sapinNeige,
+    tombe: { couleurs: [PAL.neige], nb: 500, taille: 0.22, vitesse: 1.6, vent: 0.6 },
+  },
+};
+// La saison passe par-dessus la teinte de l'endroit, assez pour qu'on la voie partout.
+const MELANGE_SAISON = 0.45;
 
 // Ambiance : le rang est gris pis brumeux au début, il se réchauffe avec la progression.
 const DEBUT = {
@@ -274,6 +319,11 @@ export function createRang(
 
   // Décor commun à chaque endroit : collines, arbres, poteaux d'Hydro.
   const arbres: THREE.Group[] = [];
+  // Les feuilles ont leurs propres matériaux : elles changent avec la saison sans toucher au reste.
+  const feuillage = PAL.erables.map(
+    (c) => new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0, specular: 0x000000 }),
+  );
+  const cimes: THREE.Mesh[] = [];
   const tronc = G(new THREE.CylinderGeometry(0.18, 0.25, 2.2, 6));
   const troncSapin = G(new THREE.CylinderGeometry(0.15, 0.2, 1, 6));
   const sapinBas = G(new THREE.ConeGeometry(1.4, 2.6, 6));
@@ -292,7 +342,10 @@ export function createRang(
       t.position.set(ox + x, 0, z);
       scene.add(t);
       part(t, tronc, PAL.tronc, 0, 1.1, 0);
-      part(t, G(new THREE.IcosahedronGeometry(r, 0)), PAL.erables[i % 3], 0, 2.4 + r * 0.6, 0);
+      const cime = new THREE.Mesh(G(new THREE.IcosahedronGeometry(r, 0)), feuillage[i % 3]);
+      cime.position.set(0, 2.4 + r * 0.6, 0);
+      t.add(cime);
+      cimes.push(cime);
       arbres.push(t);
     });
     for (const [x, z] of sapins) {
@@ -710,8 +763,38 @@ export function createRang(
     camera.updateProjectionMatrix();
   };
 
-  // Lumière : la progression du rang, pis la teinte de l'endroit par-dessus.
+  // Ce qui tombe du ciel (pluie, feuilles, neige) : une boîte de points autour de l'endroit.
+  const NB_TOMBE = 500;
+  const tombePos = new Float32Array(NB_TOMBE * 3);
+  const tombeCouleurs = new Float32Array(NB_TOMBE * 3);
+  for (let i = 0; i < NB_TOMBE; i++) {
+    tombePos[i * 3] = (Math.random() - 0.5) * 34;
+    tombePos[i * 3 + 1] = Math.random() * 14;
+    tombePos[i * 3 + 2] = -10 + Math.random() * 24;
+  }
+  const tombeGeo = G(new THREE.BufferGeometry());
+  tombeGeo.setAttribute('position', new THREE.BufferAttribute(tombePos, 3));
+  tombeGeo.setAttribute('color', new THREE.BufferAttribute(tombeCouleurs, 3));
+  const tombeMat = new THREE.PointsMaterial({ size: 0.2, vertexColors: true });
+  const tombe = new THREE.Points(tombeGeo, tombeMat);
+  tombe.frustumCulled = false;
+  tombe.visible = false;
+  scene.add(tombe);
+  const faireTomber = (dt: number, t: number) => {
+    const x = LOOK_SAISON[saison].tombe;
+    if (!x) return;
+    for (let i = 0; i < NB_TOMBE; i++) {
+      let y = tombePos[i * 3 + 1] - x.vitesse * dt * (0.7 + (i % 5) * 0.1);
+      if (y < 0) y += 14;
+      tombePos[i * 3 + 1] = y;
+      tombePos[i * 3] += Math.sin(t * 0.8 + i) * x.vent * dt;
+    }
+    tombeGeo.attributes.position.needsUpdate = true;
+  };
+
+  // Lumière : la progression du rang, la teinte de l'endroit pis la saison par-dessus.
   let chaleur = 0;
+  let saison: SaisonId = 'ete';
   const teinte = new THREE.Color();
   const eclairer = () => {
     const k = chaleur;
@@ -724,16 +807,19 @@ export function createRang(
     soleil.color.lerpColors(DEBUT.soleil, TARD.soleil, k);
     let soleilForce = THREE.MathUtils.lerp(DEBUT.soleilForce, TARD.soleilForce, k);
     soleil.position.lerpVectors(DEBUT.soleilPos, TARD.soleilPos, k);
+    const teinter = (a: Ambiance, k: number) => {
+      ciel.lerp(teinte.setHex(a.ciel), k);
+      hemi.color.lerp(teinte.setHex(a.lumiere), k);
+      soleil.color.lerp(teinte.setHex(a.soleil), k);
+      const f = THREE.MathUtils.lerp(1, a.force, k);
+      hemiForce *= f;
+      soleilForce *= f;
+      near *= THREE.MathUtils.lerp(1, a.brume, k);
+      far *= THREE.MathUtils.lerp(1, a.brume, k);
+    };
     const a = AMBIANCE[lieuActuel];
-    if (a) {
-      ciel.lerp(teinte.setHex(a.ciel), MELANGE);
-      hemi.color.lerp(teinte.setHex(a.lumiere), MELANGE);
-      soleil.color.lerp(teinte.setHex(a.soleil), MELANGE);
-      hemiForce *= a.force;
-      soleilForce *= a.force;
-      near *= a.brume;
-      far *= a.brume;
-    }
+    if (a) teinter(a, MELANGE);
+    teinter(LOOK_SAISON[saison], MELANGE_SAISON);
     fog.color.copy(ciel);
     fog.near = near;
     fog.far = far;
@@ -839,9 +925,12 @@ export function createRang(
 
   const t0 = performance.now();
   let raf = 0;
+  let tAvant = 0;
   const frame = (now: number) => {
     const t = (now - t0) / 1000;
     arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * 1.1 + i) * 0.025));
+    faireTomber(Math.min(0.1, t - tAvant), t);
+    tAvant = t;
     carrosserie.position.y = Math.sin(t * 28) * 0.012;
     avancer(now);
     renderer.render(scene, camera);
@@ -860,6 +949,7 @@ export function createRang(
 
   const couper = (l: Lieu) => {
     lieuActuel = l;
+    tombe.position.x = ORIGINE[l];
     placerCamera();
     eclairer();
   };
@@ -931,6 +1021,21 @@ export function createRang(
     setSaison(x) {
       (M(PAL.herbe) as THREE.MeshPhongMaterial).color.setHex(SOL[x][0]);
       (M(PAL.herbeSombre) as THREE.MeshPhongMaterial).color.setHex(SOL[x][1]);
+      saison = x;
+      const look = LOOK_SAISON[x];
+      cimes.forEach((c) => (c.visible = !!look.erables));
+      if (look.erables) feuillage.forEach((m, i) => m.color.setHex(look.erables![i % look.erables!.length]));
+      (M(PAL.sapin) as THREE.MeshPhongMaterial).color.setHex(look.sapin);
+      tombe.visible = !!look.tombe;
+      if (look.tombe) {
+        tombeMat.size = look.tombe.taille;
+        tombeGeo.setDrawRange(0, look.tombe.nb);
+        for (let i = 0; i < NB_TOMBE; i++) {
+          teinte.setHex(look.tombe.couleurs[i % look.tombe.couleurs.length]).toArray(tombeCouleurs, i * 3);
+        }
+        tombeGeo.attributes.color.needsUpdate = true;
+      }
+      eclairer();
       if (!raf) renderer.render(scene, camera);
     },
     setFete(f) {
@@ -949,6 +1054,8 @@ export function createRang(
       mats.forEach((m) => m.dispose());
       leBazou.dispose();
       filMat.dispose();
+      tombeMat.dispose();
+      feuillage.forEach((m) => m.dispose());
       enseignes.forEach((e) => (e.tex.dispose(), e.mat.dispose()));
       renderer.dispose();
       renderer.domElement.remove();

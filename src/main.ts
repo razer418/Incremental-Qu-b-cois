@@ -1,9 +1,19 @@
+import '@fontsource/vt323';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
+import { createRang } from './scene/rang';
 import { UPGRADES } from './game/upgrades';
+import { CAR_PRICE, PARTS } from './game/car';
 import {
   FIRST_CAR_GOAL,
   applyOffline,
   buy,
+  buyCar,
+  carRuns,
+  isRepaired,
+  isUnlocked,
+  repair,
   levelOf,
   newGame,
   nextCost,
@@ -11,6 +21,7 @@ import {
   tap,
   tapValue,
   tick,
+  warmth,
 } from './game/state';
 import { load, save, wipe } from './game/save';
 import { formatDuration, formatMoney } from './game/format';
@@ -24,19 +35,64 @@ const tapValueEl = $('tap-value');
 const upgradesEl = $<HTMLUListElement>('upgrades');
 const goalBar = $('goal-bar');
 const goalText = $('goal-text');
-const offlineDialog = $<HTMLDialogElement>('offline');
-const offlineText = $('offline-text');
+const jobEl = $('job');
+const tapLabel = $('tap-label');
+const goalEl = $('goal');
+const buyCarBtn = $<HTMLButtonElement>('buy-car');
+const garageEl = $('garage');
+const carStatus = $('car-status');
+const partsEl = $<HTMLUListElement>('parts');
+const messageDialog = $<HTMLDialogElement>('message');
+const messageText = $('message-text');
+
+function showMessage(text: string): void {
+  messageText.textContent = text;
+  if (!messageDialog.open) messageDialog.showModal();
+}
 
 let state = load(localStorage, Date.now());
 
+// Le rang en 3D, style Bazou VHS. Si WebGL marche pas, le jeu roule pareil.
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rang = createRang($('ecran'), { pixelScale: 3, reduceMotion });
+let lastWarmth = -1;
+let lastLook = '';
+
+// Lignes VHS : désactivables pour le confort des yeux, choix gardé sur l'appareil.
+const VHS_KEY = 'incremental-quebecois-vhs';
+const vhsBtn = $<HTMLButtonElement>('vhs');
+const scanEl = $('scan');
+const setVhs = (on: boolean) => {
+  scanEl.hidden = !on;
+  vhsBtn.setAttribute('aria-pressed', String(on));
+  vhsBtn.textContent = on ? 'VHS : OUI' : 'VHS : NON';
+};
+let vhsOn = true;
+try {
+  vhsOn = localStorage.getItem(VHS_KEY) !== 'off';
+} catch {
+  // stockage bloqué : on garde les lignes
+}
+setVhs(vhsOn);
+vhsBtn.addEventListener('click', () => {
+  vhsOn = !vhsOn;
+  setVhs(vhsOn);
+  try {
+    localStorage.setItem(VHS_KEY, vhsOn ? 'on' : 'off');
+  } catch {
+    // rien à faire
+  }
+});
+
 const offline = applyOffline(state, Date.now());
 if (offline.gained >= 0.01 && offline.seconds >= 60) {
-  offlineText.textContent = `Pendant que t'étais parti (${formatDuration(offline.seconds)}), ta gang a ramassé ${formatMoney(offline.gained)}.`;
-  offlineDialog.showModal();
+  showMessage(
+    `Pendant que t'étais parti (${formatDuration(offline.seconds)}), ta gang a ramassé ${formatMoney(offline.gained)}.`,
+  );
 }
 
 // Une ligne par achat, créée une fois.
-const rows = new Map<string, { btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
+const rows = new Map<string, { li: HTMLLIElement; btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
 for (const u of UPGRADES) {
   const li = document.createElement('li');
   li.className = 'upgrade';
@@ -53,9 +109,45 @@ for (const u of UPGRADES) {
       render();
     }
   });
-  rows.set(u.id, { btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')! });
+  rows.set(u.id, { li, btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')! });
   upgradesEl.append(li);
 }
+
+// Les pièces du bazou, une ligne chacune.
+const partRows = new Map<string, { li: HTMLLIElement; btn: HTMLButtonElement; cost: HTMLElement }>();
+for (const p of PARTS) {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong>${p.name}</strong>
+      <small>${p.description}</small>
+    </div>
+    <button type="button" class="buy"><span class="cost"></span></button>`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    const roulait = carRuns(state);
+    if (!repair(state, p.id)) return;
+    save(localStorage, state);
+    if (!roulait && carRuns(state)) {
+      showMessage(
+        "Vroum! Ton bazou part du premier coup (ou presque). T'es maintenant livreur de pizza, pis les jobs motorisées sont débloquées.",
+      );
+    }
+    render();
+  });
+  partRows.set(p.id, { li, btn, cost: li.querySelector('.cost')! });
+  partsEl.append(li);
+}
+
+buyCarBtn.addEventListener('click', () => {
+  if (!buyCar(state)) return;
+  save(localStorage, state);
+  showMessage(
+    "Le bonhomme Gagnon : « Y'é à toé, mon gars. Y roule pas, y'a pu de batterie pis y'é sur les blocs, mais c'est un bon char. »",
+  );
+  render();
+});
 
 tapBtn.addEventListener('click', () => {
   tap(state);
@@ -74,20 +166,56 @@ $('reset').addEventListener('click', () => {
 
 function render(): void {
   cashEl.textContent = formatMoney(state.cash);
-  rateEl.textContent = `${formatMoney(passiveRate(state))}/s`;
+  rateEl.textContent = `+${formatMoney(passiveRate(state))}/s`;
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
-  const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
-  goalBar.style.width = `${progress * 100}%`;
-  goalText.textContent =
-    progress >= 1 ? 'Prêt! (Jalon 2)' : `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
+  const w = Math.round(warmth(state) * 200) / 200;
+  if (rang && w !== lastWarmth) {
+    rang.setWarmth(w);
+    lastWarmth = w;
+  }
+
+  const roule = carRuns(state);
+  jobEl.textContent = roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES';
+  tapLabel.textContent = roule ? '[ LIVRER ]' : '[ RAMASSER ]';
+  const look = {
+    owned: state.car.owned,
+    wheels: isRepaired(state, 'pneus'),
+    clean: isRepaired(state, 'carrosserie'),
+  };
+  const lookKey = JSON.stringify(look);
+  if (rang && lookKey !== lastLook) {
+    rang.setCar(look);
+    lastLook = lookKey;
+  }
+
+  // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
+  goalEl.hidden = state.car.owned;
+  garageEl.hidden = !state.car.owned;
+  if (!state.car.owned) {
+    const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
+    goalBar.style.width = `${progress * 100}%`;
+    goalText.textContent = `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
+    buyCarBtn.hidden = state.cash < CAR_PRICE;
+  } else {
+    carStatus.textContent = roule ? 'ÇA ROULE!' : 'SUR LES BLOCS';
+    carStatus.classList.toggle('roule', roule);
+    for (const p of PARTS) {
+      const row = partRows.get(p.id)!;
+      const done = isRepaired(state, p.id);
+      row.li.classList.toggle('done', done);
+      row.cost.textContent = done ? 'RÉPARÉ' : formatMoney(p.cost);
+      row.btn.disabled = done || state.cash < p.cost;
+    }
+  }
 
   for (const u of UPGRADES) {
     const row = rows.get(u.id)!;
+    row.li.hidden = !isUnlocked(state, u);
     const cost = nextCost(state, u.id);
     const level = levelOf(state, u.id);
-    row.level.textContent = level > 0 ? `niv. ${level}` : '';
-    row.cost.textContent = cost === null ? 'Au max' : formatMoney(cost);
+    row.level.textContent = level > 0 ? `NIV. ${level}` : '';
+    row.cost.textContent = cost === null ? 'AU MAX' : formatMoney(cost);
     row.btn.disabled = cost === null || state.cash < cost;
   }
 }

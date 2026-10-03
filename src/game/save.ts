@@ -18,6 +18,7 @@ export function load(storage: Storage, now: number): GameState {
       ...newGame(now),
       ...data,
       upgrades: { ...(data.upgrades ?? {}) },
+      car: { owned: data.car?.owned === true, parts: { ...(data.car?.parts ?? {}) } },
     };
   } catch {
     return newGame(now);

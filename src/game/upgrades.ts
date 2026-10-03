@@ -11,6 +11,8 @@ export interface Upgrade {
   costGrowth: number;
   maxLevel: number;
   effect: UpgradeEffect;
+  /** 'roule' : visible seulement quand le bazou roule. */
+  requires?: 'roule';
 }
 
 // Jalon 1 : on est à pied, on ramasse des canettes consignées.
@@ -59,6 +61,37 @@ export const UPGRADES: readonly Upgrade[] = [
     costGrowth: 4,
     maxLevel: 5,
     effect: { kind: 'globalMult', factor: 1.5 },
+  },
+  // Jobs motorisées, débloquées quand le bazou roule.
+  {
+    id: 'circulaires',
+    name: 'Route de circulaires',
+    description: '+15 $/s. Le Publisac, ça se livre pas tout seul.',
+    baseCost: 2000,
+    costGrowth: 1.5,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 15 },
+    requires: 'roule',
+  },
+  {
+    id: 'deneigement',
+    name: 'Déneigement des entrées',
+    description: '+60 $/s. Une pelle sur le bazou pis envoye.',
+    baseCost: 9000,
+    costGrowth: 1.55,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 60 },
+    requires: 'roule',
+  },
+  {
+    id: 'remorquage',
+    name: 'Remorquage chez les voisins',
+    description: "+250 $/s. Tout le monde reste pogné dans le fossé l'hiver.",
+    baseCost: 40000,
+    costGrowth: 1.6,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 250 },
+    requires: 'roule',
   },
 ];
 

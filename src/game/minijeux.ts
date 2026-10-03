@@ -2,9 +2,9 @@
 // Jamais obligatoires : le jeu avance pareil sans eux.
 import { saisonA } from './saisons';
 import { t } from './i18n';
-import { carRuns, earn, revenuRef, type GameState } from './state';
+import { earn, revenuRef, type GameState } from './state';
 
-export type MiniJeuId = 'moteur' | 'deneiger' | 'demolition';
+export type MiniJeuId = 'moteur' | 'deneiger' | 'trafic';
 
 export interface MiniJeu {
   id: MiniJeuId;
@@ -37,11 +37,11 @@ export const MINIJEUX: readonly MiniJeu[] = [
     bloque: (s) => (saisonA(s.lastTick).id === 'hiver' ? null : t("Y'a pas de neige. Reviens l'hiver.")),
   },
   {
-    id: 'demolition',
-    nom: 'Derby de démolition',
-    description: "À l'expo agricole. Change de voie pour éviter les autres chars pendant 20 secondes.",
+    id: 'trafic',
+    nom: 'Swimming dans le trafic',
+    description: 'La trend du moment : nage entre les chars sur le rang. Ça va de plus en plus vite. Tiens 30 secondes pour la totale.',
     secondes: 90,
-    bloque: (s) => (carRuns(s) ? null : t('Le bazou doit rouler.')),
+    bloque: () => null,
   },
 ];
 

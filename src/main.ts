@@ -60,7 +60,8 @@ import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
 import { cite, facteur, langue, t } from './game/i18n';
-import { createPerso } from './perso';
+import { createAtelier } from './atelier';
+import { CATEGORIES, possede, LOOK } from './game/look';
 import { createMiniJeux } from './minijeux-ui';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -577,17 +578,23 @@ $('reset').addEventListener('click', async () => {
 
 // --- Le look du bazou pis les mini-jeux ---
 
-const perso = createPerso({
-  liste: $('look-liste'),
+const atelier = createAtelier({
+  dialog: $<HTMLDialogElement>('atelier'),
   etat: () => state,
-  achete: () => {
-    sons.jouer('achat');
+  reduceMotion,
+  change: (achat) => {
+    sons.jouer(achat ? 'achat' : 'boost');
     save(localStorage, state);
     render();
   },
-  // Un bazou qui roule pas reste dans la cour : on y retourne pour voir l'aperçu.
-  apercu: () => (rang && !carRuns(state) && lieu !== 'maison' ? allerA('maison') : render()),
+  expo: (msg) => {
+    sons.jouer('quete');
+    save(localStorage, state);
+    showMessage(msg);
+    render();
+  },
 });
+$('atelier-ouvrir').addEventListener('click', () => atelier.ouvrir());
 const minijeux = createMiniJeux({
   liste: $('minijeux-liste'),
   section: $('minijeux'),
@@ -784,7 +791,7 @@ function render(): void {
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
-    ...perso.look(),
+    look: state.look.choix,
   };
   lieuxEl.hidden = !rang;
   for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];
@@ -802,7 +809,12 @@ function render(): void {
   renderProjets();
   renderMagasin();
   $('look').hidden = !state.car.owned;
-  if (state.car.owned) perso.render();
+  if (state.car.owned) {
+    const n = CATEGORIES.reduce((k, c) => k + LOOK[c].options.filter((x) => x.prix > 0 && possede(state, c, x.id)).length, 0);
+    const total = CATEGORIES.reduce((k, c) => k + LOOK[c].options.filter((x) => x.prix > 0).length, 0);
+    $('look-resume').textContent = t('Peinture, mags, toit pis plus. {n} / {total} pièces dans ta collection.', { n, total });
+  }
+  atelier.render();
   minijeux.render();
   celebrer(verifierSucces(state));
   renderTuto();

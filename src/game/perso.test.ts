@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { LOOK, choisie, possede, poser } from './look';
 import { MINIJEUX, REPOS_MS, SCORE_MIN, finirPartie, peutJouer, recompense } from './minijeux';
 import { SAISON_SECONDES } from './saisons';
-import { PARTS } from './car';
 import { newGame, prestige, revenuRef } from './state';
 import { load, save } from './save';
+import { THEMES, inscrire, noteExpo, prixExpo, themeA } from './expo';
 
 const memoire = () => {
   const m = new Map<string, string>();
@@ -58,14 +58,11 @@ describe('les mini-jeux', () => {
   it('chacun se débloque à son heure', () => {
     const s = newGame(0);
     s.lastTick = 0;
-    expect(MINIJEUX.filter((m) => m.bloque(s) === null)).toEqual([]);
+    expect(MINIJEUX.filter((m) => m.bloque(s) === null).map((m) => m.id)).toEqual(['trafic']);
     s.lastTick = HIVER;
     expect(peutJouer(s, 'deneiger', 0)).toBe(true);
     s.car.owned = true;
     expect(peutJouer(s, 'moteur', 0)).toBe(true);
-    expect(peutJouer(s, 'demolition', 0)).toBe(false);
-    for (const p of PARTS) s.car.parts[p.id] = true;
-    expect(peutJouer(s, 'demolition', 0)).toBe(true);
   });
 
   it('paye selon le score, pis se repose 5 minutes', () => {
@@ -86,5 +83,29 @@ describe('les mini-jeux', () => {
     const s = newGame(0);
     s.car.owned = true;
     expect(recompense(s, 'moteur', 1)).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("l'expo de chars", () => {
+  it('note le look posé, paye une fois par saison, pis donne un trophée pour la 1re place', () => {
+    const s = newGame(0);
+    s.car.owned = true;
+    s.cash = 1e6;
+    const theme = themeA(0);
+    for (const c of theme.criteres) poser(s, c.categorie, c.ids[0]);
+    expect(noteExpo(s, theme)).toBe(1);
+    const r = inscrire(s, 0)!;
+    expect(r.note).toBe(1);
+    expect(r.gain).toBeCloseTo(prixExpo(s, 1));
+    expect(s.expo.trophees).toBe(1);
+    expect(inscrire(s, 1000)).toBeNull();
+    // La saison d'après : un autre juge, un autre thème.
+    const plusTard = SAISON_SECONDES * 1000;
+    expect(themeA(plusTard).id).not.toBe(theme.id);
+    expect(inscrire(s, plusTard)).not.toBeNull();
+  });
+
+  it('chaque critère demande des options qui existent', () => {
+    for (const x of THEMES) for (const c of x.criteres) for (const id of c.ids) expect(LOOK[c.categorie].options.some((o) => o.id === id), `${x.id} ${id}`).toBe(true);
   });
 });

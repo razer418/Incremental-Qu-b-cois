@@ -129,8 +129,10 @@ p {
 .lieux {
   position: absolute;
   left: 8px;
+  right: 8px;
   bottom: 8px;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .lieux[hidden],
@@ -138,7 +140,7 @@ p {
   display: none;
 }
 .lieux button {
-  font: 400 20px/1 var(--pixel);
+  font: 400 18px/1 var(--pixel);
   color: var(--fg);
   background: rgb(20 22 19 / 0.75);
   border: 2px solid var(--line);
@@ -148,6 +150,46 @@ p {
 .lieux button[aria-pressed='true'] {
   color: var(--gold);
   border-color: var(--gold);
+}
+
+/* Coupure VHS entre deux endroits */
+.coupe {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.18) 0 2px, transparent 2px 5px),
+    linear-gradient(#cfc8b4, #6f6a5c);
+  mix-blend-mode: normal;
+}
+.coupe.on {
+  animation: coupe 0.34s steps(6) forwards;
+}
+@keyframes coupe {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(-6px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(5px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+}
+.magasin {
+  display: grid;
+  gap: 8px;
+}
+.magasin[hidden] {
+  display: none;
 }
 
 /* Les sections arrivent en glissant quand elles se débloquent. */

@@ -3,17 +3,17 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang, type Lieu } from './scene/rang';
+import { ARTICLES } from './game/magasin';
+import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
-import { CHARACTERS } from './game/quests';
 import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
   addBoost,
-  boostFactor,
   BOOST_MAX_SECONDS,
   BOOST_SECONDS,
   buyBuilding,
@@ -33,7 +33,10 @@ import {
   levelOf,
   newGame,
   nextCost,
-  passiveRate,
+  currentRate,
+  articleCost,
+  buyArticle,
+  canBuyArticle,
   tap,
   tapValue,
   tick,
@@ -224,10 +227,59 @@ noAdsBuy.addEventListener('click', async () => {
 const lieuxEl = $('lieux');
 const lieuBtns = [...lieuxEl.querySelectorAll<HTMLButtonElement>('button')];
 let lieu: Lieu = 'maison';
+const lieuBtn = (l: Lieu) => lieuBtns.find((b) => b.dataset.lieu === l)!;
 function allerA(l: Lieu): void {
   lieu = l;
   rang?.allerA(l);
   lieuBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lieu === l)));
+  if (l === 'magasin') mLine.textContent = `« ${REJEAN[Math.floor(Math.random() * REJEAN.length)]} »`;
+  render();
+}
+
+// Le magasin général : on le voit quand on y est (ou tout le temps sans le décor 3D).
+const REJEAN = [
+  "Salut mon gars! Y'a de la frette dans le frigidaire pis du café sur le rond.",
+  "Cash seulement, la machine à cartes est encore brisée.",
+  "Ta mère est passée tantôt. A m'a dit que tu travaillais fort, astheure.",
+  "Le vin est en spécial. Ben, y'est toujours en spécial.",
+  "Si tu vas à la pêche, prends des vers. Les miens sont frais d'à matin.",
+];
+const magasinEl = $('magasin');
+const mLine = $('m-line');
+const mPortrait = $('m-portrait');
+mPortrait.style.background = CHARACTERS.rejean.color;
+mLine.textContent = `« ${REJEAN[0]} »`;
+const articleRows = new Map<string, { btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
+for (const a of ARTICLES) {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong>${a.name} <span class="level"></span></strong>
+      <small>${a.description}</small>
+    </div>
+    <button type="button" class="buy"><span class="cost"></span></button>`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    if (buyArticle(state, a.id)) {
+      save(localStorage, state);
+      render();
+    }
+  });
+  articleRows.set(a.id, { btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')! });
+  $('articles').append(li);
+}
+function renderMagasin(): void {
+  magasinEl.hidden = !!rang && lieu !== 'magasin';
+  if (magasinEl.hidden) return;
+  for (const a of ARTICLES) {
+    const row = articleRows.get(a.id)!;
+    const left = Math.ceil(state.magasin[a.id] ?? 0);
+    row.level.textContent = left > 0 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+    const cost = articleCost(state, a.id);
+    row.cost.textContent = formatMoney(cost);
+    row.btn.disabled = !canBuyArticle(state, a.id);
+  }
 }
 lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
 
@@ -284,7 +336,7 @@ $('reset').addEventListener('click', () => {
 
 function render(): void {
   cashEl.textContent = formatMoney(state.cash);
-  rateEl.textContent = `+${formatMoney(passiveRate(state) * boostFactor(state))}/s`;
+  rateEl.textContent = `+${formatMoney(currentRate(state))}/s`;
   renderBoost();
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
@@ -303,11 +355,13 @@ function render(): void {
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
+    runs: roule,
   };
-  lieuxEl.hidden = !rang || !look.garage;
-  lieuBtns[2].hidden = !look.concession;
+  lieuxEl.hidden = !rang;
+  lieuBtn('garage').hidden = !look.garage;
+  lieuBtn('concession').hidden = !look.concession;
   // Après le prestige, les bâtiments sont partis : on revient à la maison.
-  if (lieu !== 'maison' && !state.buildings[lieu]) allerA('maison');
+  if ((lieu === 'garage' || lieu === 'concession') && !state.buildings[lieu]) allerA('maison');
   const lookKey = JSON.stringify(look);
   if (rang && lookKey !== lastLook) {
     rang.setCar(look);
@@ -315,6 +369,7 @@ function render(): void {
   }
 
   renderQuest();
+  renderMagasin();
   renderEmpire(roule);
 
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.

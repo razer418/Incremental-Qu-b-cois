@@ -19,6 +19,7 @@
         <button id="vhs" class="vhs" type="button" aria-pressed="true">VHS</button>
         <nav id="lieux" class="lieux" aria-label="Endroits du rang" hidden>
           <button type="button" data-lieu="maison" aria-pressed="true">MAISON</button>
+          <button type="button" data-lieu="magasin" aria-pressed="false">MAGASIN</button>
           <button type="button" data-lieu="garage" aria-pressed="false">GARAGE</button>
           <button type="button" data-lieu="concession" aria-pressed="false">LOT</button>
         </nav>
@@ -33,6 +34,17 @@
         <button id="boost" class="boost" type="button">[ BOOST x2 ]</button>
         <span id="boost-sub" class="boost-sub"></span>
       </div>
+
+      <section id="magasin" class="magasin" hidden>
+        <div class="quest">
+          <div id="m-portrait" class="portrait" aria-hidden="true">RJ</div>
+          <div class="quest-body">
+            <p class="quest-who">RÉJEAN DU MAGASIN GÉNÉRAL</p>
+            <p id="m-line" class="quest-line"></p>
+          </div>
+        </div>
+        <ul id="articles" class="upgrades"></ul>
+      </section>
 
       <section id="quest" class="quest" aria-live="polite">
         <div id="q-portrait" class="portrait" aria-hidden="true"></div>

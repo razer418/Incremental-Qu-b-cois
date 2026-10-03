@@ -26,6 +26,9 @@ export function load(storage: Storage, now: number): GameState {
       },
       boostSeconds: Math.max(0, Number(data.boostSeconds) || 0),
       noAds: data.noAds === true,
+      magasin: Object.fromEntries(
+        Object.entries(data.magasin ?? {}).filter(([, v]) => typeof v === 'number' && v > 0),
+      ),
       questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,
     };
   } catch {

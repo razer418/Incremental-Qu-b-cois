@@ -1,6 +1,7 @@
 import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
+import { ARTICLES, getArticle, type Article } from './magasin';
 import {
   BUILDINGS,
   PRESTIGE_BONUS_PER_POINT,
@@ -25,6 +26,8 @@ export interface GameState {
   boostSeconds: number;
   /** Achat « pas de pubs » : boost gratuit, sans pub. Gardé au prestige. */
   noAds: boolean;
+  /** Secondes qui restent sur chaque article du magasin général. */
+  magasin: Record<string, number>;
   lastTick: number;
 }
 
@@ -46,6 +49,7 @@ export function newGame(now: number): GameState {
     prestige: { points: 0, count: 0 },
     boostSeconds: 0,
     noAds: false,
+    magasin: {},
     lastTick: now,
   };
 }
@@ -64,12 +68,22 @@ export function multiplier(state: GameState): number {
   return mult;
 }
 
-export function tapValue(state: GameState): number {
+/** Une tape, sans les boosts temporaires. */
+function baseTapValue(state: GameState): number {
   let value = carRuns(state) ? DELIVERY_TAP : BASE_TAP;
   for (const u of UPGRADES) {
     if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
   }
-  return value * multiplier(state) * boostFactor(state);
+  return value * multiplier(state);
+}
+
+export function tapValue(state: GameState): number {
+  return baseTapValue(state) * boostFactor(state) * magasinFactor(state, 'tap');
+}
+
+/** Ce que tu fais par seconde en ce moment, avec les boosts. */
+export function currentRate(state: GameState): number {
+  return passiveRate(state) * boostFactor(state) * magasinFactor(state, 'idle');
 }
 
 export const BOOST_FACTOR = 2;
@@ -88,11 +102,54 @@ export function addBoost(state: GameState): boolean {
   return true;
 }
 
-/** Revenu passif sur une durée, en consommant le boost qui reste. */
+/** Les articles du magasin qui sont encore actifs multiplient tes tapes ou ton passif. */
+export function magasinFactor(state: GameState, boosts: Article['boosts']): number {
+  let f = 1;
+  for (const a of ARTICLES) if (a.boosts === boosts && (state.magasin[a.id] ?? 0) > 0) f *= a.factor;
+  return f;
+}
+
+/** Prix d'un article : suit tes revenus (passif + environ 2 tapes par seconde). */
+export function articleCost(state: GameState, id: string): number {
+  const a = getArticle(id);
+  if (!a) return Infinity;
+  const income = passiveRate(state) + 2 * baseTapValue(state);
+  return Math.round(Math.max(a.minCost, a.incomeSeconds * income) * 100) / 100;
+}
+
+/** On peut en reprendre quand il en reste moins que la durée d'un article (max 2 d'avance). */
+export function canBuyArticle(state: GameState, id: string): boolean {
+  const a = getArticle(id);
+  return !!a && (state.magasin[id] ?? 0) <= a.seconds && state.cash >= articleCost(state, id);
+}
+
+export function buyArticle(state: GameState, id: string): boolean {
+  if (!canBuyArticle(state, id)) return false;
+  state.cash -= articleCost(state, id);
+  state.magasin[id] = (state.magasin[id] ?? 0) + getArticle(id)!.seconds;
+  return true;
+}
+
+/** Revenu passif sur une durée, en consommant le boost pis les articles qui restent. */
 function passiveOver(state: GameState, seconds: number): number {
-  const boosted = Math.min(seconds, state.boostSeconds);
-  state.boostSeconds -= boosted;
-  return passiveRate(state) * (seconds + boosted * (BOOST_FACTOR - 1));
+  const timers = [{ left: state.boostSeconds, factor: BOOST_FACTOR }];
+  for (const a of ARTICLES) {
+    if (a.boosts === 'idle') timers.push({ left: state.magasin[a.id] ?? 0, factor: a.factor });
+  }
+  // Par bouts : chaque fois qu'un boost finit, le facteur change.
+  const cuts = [...new Set([0, seconds, ...timers.map((t) => Math.min(seconds, Math.max(0, t.left)))])].sort((a, b) => a - b);
+  let weighted = 0;
+  for (let i = 0; i < cuts.length - 1; i++) {
+    const factor = timers.reduce((f, t) => (t.left > cuts[i] ? f * t.factor : f), 1);
+    weighted += (cuts[i + 1] - cuts[i]) * factor;
+  }
+  state.boostSeconds = Math.max(0, state.boostSeconds - seconds);
+  for (const id of Object.keys(state.magasin)) {
+    const left = state.magasin[id] - seconds;
+    if (left > 0) state.magasin[id] = left;
+    else delete state.magasin[id];
+  }
+  return passiveRate(state) * weighted;
 }
 
 export function passiveRate(state: GameState): number {

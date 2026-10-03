@@ -11,6 +11,7 @@ export const CHARACTERS: Record<string, Character> = {
   ginette: { id: 'ginette', name: 'Ginette du dépanneur', initials: 'GI', color: '#a47a3c' },
   tiguy: { id: 'tiguy', name: 'Ti-Guy', initials: 'TG', color: '#50573c' },
   gagnon: { id: 'gagnon', name: 'Le bonhomme Gagnon', initials: 'BG', color: '#5d5f60' },
+  rejean: { id: 'rejean', name: 'Réjean du magasin général', initials: 'RJ', color: '#7a6650' },
 };
 
 export type Objective =

@@ -1,4 +1,6 @@
-import { newGame, type GameState } from './state';
+import { TUTO_FINI, newGame, type GameState } from './state';
+
+const num = (v: unknown) => Math.max(0, Number(v) || 0);
 
 const KEY = 'incremental-quebecois-save';
 
@@ -29,6 +31,17 @@ export function load(storage: Storage, now: number): GameState {
       magasin: Object.fromEntries(
         Object.entries(data.magasin ?? {}).filter(([, v]) => typeof v === 'number' && v > 0),
       ),
+      succes: Array.isArray(data.succes) ? data.succes.filter((x) => typeof x === 'string') : [],
+      stats: {
+        secondes: num(data.stats?.secondes),
+        // Vieilles parties : on part des chiffres de la partie en cours.
+        tapsVie: num(data.stats?.tapsVie ?? data.taps),
+        gagneVie: num(data.stats?.gagneVie ?? data.totalEarned),
+        boosts: num(data.stats?.boosts),
+        articles: num(data.stats?.articles),
+      },
+      // Une partie déjà commencée saute le tuto.
+      tuto: Number.isInteger(data.tuto) ? data.tuto! : (data.taps ?? 0) > 0 ? TUTO_FINI : 0,
       questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,
     };
   } catch {

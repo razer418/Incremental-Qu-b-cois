@@ -43,8 +43,12 @@ import {
   tapValue,
   tick,
   warmth,
+  assez,
+  SUCCES_BONUS,
+  TUTO_FINI,
 } from './game/state';
 import { load, save, wipe } from './game/save';
+import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, notation } from './game/format';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -200,9 +204,30 @@ const montrerCode = (aide: string, importer: boolean) => {
   codeOk.hidden = !importer;
   codeAide.textContent = aide;
 };
-$('options').addEventListener('click', () => {
+// Le menu : trois onglets, succès, stats pis options.
+type Onglet = 'succes' | 'stats' | 'reglages';
+const ongletBtns = [...optionsDlg.querySelectorAll<HTMLButtonElement>('[data-onglet]')];
+const panneaux = [...optionsDlg.querySelectorAll<HTMLElement>('[data-panneau]')];
+let onglet: Onglet = 'reglages';
+function montrerOnglet(o: Onglet): void {
+  onglet = o;
+  ongletBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.onglet === o)));
+  panneaux.forEach((p) => (p.hidden = p.dataset.panneau !== o));
+  if (o === 'succes') {
+    nonVus = 0;
+    badge.hidden = true;
+  }
+  renderMenu();
+}
+function ouvrirMenu(o: Onglet = onglet): void {
   codeEl.hidden = codeAide.hidden = codeOk.hidden = true;
-  optionsDlg.showModal();
+  if (!optionsDlg.open) optionsDlg.showModal();
+  montrerOnglet(o);
+}
+ongletBtns.forEach((b) => b.addEventListener('click', () => montrerOnglet(b.dataset.onglet as Onglet)));
+$('options').addEventListener('click', () => {
+  if (state.tuto === TUTO.length - 1) finirTuto();
+  ouvrirMenu(nonVus > 0 ? 'succes' : onglet);
 });
 $('exporter').addEventListener('click', async () => {
   save(localStorage, state);
@@ -467,12 +492,145 @@ tapBtn.addEventListener('click', (e) => {
 });
 
 $('reset').addEventListener('click', async () => {
-  if (!(await demander('Tout effacer pis recommencer à zéro? Ta réputation pis ton achat « pas de pubs » restent pas.'))) return;
+  if (!(await demander('Tout effacer pis recommencer à zéro? Tout part : réputation, succès, stats pis « pas de pubs ».'))) return;
   wipe(localStorage);
   state = newGame(Date.now());
   optionsDlg.close();
   allerA('maison');
 });
+
+// --- Succès ---
+
+const badge = $('badge');
+const toast = $<HTMLButtonElement>('toast');
+let nonVus = 0;
+const aCelebrer: Succes[] = [];
+let toastFin = 0;
+function celebrer(nouveaux: Succes[]): void {
+  if (!nouveaux.length) return;
+  save(localStorage, state);
+  aCelebrer.push(...nouveaux);
+  nonVus += nouveaux.length;
+  badge.hidden = false;
+  badge.textContent = String(nonVus);
+}
+// Un petit bandeau en bas, un succès à la fois, sans bloquer le jeu.
+function renderToast(now: number): void {
+  if (now < toastFin) return;
+  const x = aCelebrer.shift();
+  toast.hidden = !x;
+  if (!x) return;
+  toast.textContent = `SUCCÈS : ${x.nom} (+${SUCCES_BONUS * 100}\u00a0%)`;
+  toast.classList.remove('entre');
+  void toast.offsetWidth;
+  toast.classList.add('entre');
+  sons.jouer('quete');
+  toastFin = now + 3000;
+}
+toast.addEventListener('click', () => {
+  toastFin = 0;
+  aCelebrer.length = 0;
+  toast.hidden = true;
+  ouvrirMenu('succes');
+});
+
+const succesRows = new Map<string, HTMLLIElement>();
+for (const x of SUCCES) {
+  const li = document.createElement('li');
+  li.innerHTML = `<strong></strong><small></small>`;
+  li.querySelector('strong')!.textContent = x.nom;
+  li.querySelector('small')!.textContent = x.description;
+  succesRows.set(x.id, li);
+  $('succes-liste').append(li);
+}
+
+function renderMenu(): void {
+  if (!optionsDlg.open) return;
+  if (onglet === 'succes') {
+    const n = state.succes.length;
+    $('succes-resume').textContent = `${n} / ${SUCCES.length} : +${Math.round(n * SUCCES_BONUS * 100)} % sur tous tes gains`;
+    for (const x of SUCCES) succesRows.get(x.id)!.classList.toggle('obtenu', state.succes.includes(x.id));
+  } else if (onglet === 'stats') {
+    const st = state.stats;
+    const lignes: [string, string][] = [
+      ['Temps joué', formatDuration(st.secondes)],
+      ['Gagné cette partie', formatMoney(state.totalEarned)],
+      ['Gagné à vie', formatMoney(st.gagneVie)],
+      ['Revenu', `${formatMoney(currentRate(state))}/s`],
+      ['Une tape', formatMoney(tapValue(state))],
+      ['Tapes cette partie', state.taps.toLocaleString('fr-CA')],
+      ['Tapes à vie', st.tapsVie.toLocaleString('fr-CA')],
+      ['Boosts x2', String(st.boosts)],
+      ['Achats chez Réjean', String(st.articles)],
+      ['Quêtes finies', String(state.questIndex)],
+      ['Empires vendus', String(state.prestige.count)],
+      ['Réputation', `${state.prestige.points} (+${Math.round(state.prestige.points * PRESTIGE_BONUS_PER_POINT * 100)} %)`],
+      ['Succès', `${state.succes.length} / ${SUCCES.length} (+${Math.round(state.succes.length * SUCCES_BONUS * 100)} %)`],
+    ];
+    $('stats-liste').innerHTML = lignes.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  }
+}
+
+// --- Tuto : une bulle avec une flèche qui pointe la prochaine affaire à faire ---
+
+const TUTO: { cible: () => HTMLElement; texte: string; fini: () => boolean }[] = [
+  {
+    cible: () => tapBtn,
+    texte: 'Tape ici pour ramasser des canettes. Chaque canette consignée, c’est 10 cennes!',
+    // 10 canettes = 1 $, juste assez pour le sac.
+    fini: () => state.taps >= 10,
+  },
+  {
+    cible: () => rows.get('sac')!.li,
+    texte: 'T’as 1 $! Achète un plus gros sac : chaque tape va rapporter plus.',
+    fini: () => levelOf(state, 'sac') >= 1,
+  },
+  {
+    cible: () => questEl,
+    texte: 'Ta mère a une job pour toé. Quand la barre est pleine, réclame ta récompense.',
+    fini: () => state.questIndex >= 1,
+  },
+  {
+    cible: () => $('options'),
+    texte: 'Dans le MENU : tes succès, tes stats pis les options. Bonne game!',
+    fini: () => false,
+  },
+];
+const bulle = document.createElement('div');
+bulle.className = 'bulle';
+bulle.innerHTML = `<p></p><div class="bulle-actions"><button type="button" class="passer">Passer le tuto</button><button type="button" class="ok" hidden>[ OK ]</button></div>`;
+bulle.querySelector('.passer')!.addEventListener('click', () => finirTuto());
+bulle.querySelector('.ok')!.addEventListener('click', () => finirTuto());
+let tutoAffiche = -1;
+function finirTuto(): void {
+  state.tuto = TUTO_FINI;
+  save(localStorage, state);
+  renderTuto();
+}
+function renderTuto(): void {
+  while (state.tuto < TUTO.length && TUTO[state.tuto].fini()) state.tuto++;
+  const step = state.tuto < TUTO.length ? state.tuto : -1;
+  if (step === tutoAffiche) return;
+  document.querySelector('.tuto-cible')?.classList.remove('tuto-cible');
+  tutoAffiche = step;
+  if (step < 0) {
+    bulle.remove();
+    if (state.tuto !== TUTO_FINI) finirTuto();
+    return;
+  }
+  const t = TUTO[step];
+  const cible = t.cible();
+  cible.classList.add('tuto-cible');
+  bulle.querySelector('p')!.textContent = t.texte;
+  const dernier = step === TUTO.length - 1;
+  bulle.querySelector<HTMLElement>('.ok')!.hidden = !dernier;
+  bulle.querySelector<HTMLElement>('.passer')!.hidden = dernier;
+  // Le bouton MENU est dans la barre du haut : la bulle va juste en dessous, flèche à droite.
+  bulle.classList.toggle('droite', dernier);
+  if (dernier) $('app').querySelector(matchMedia('(min-width: 900px)').matches ? '.col-listes' : '.col-jeu')!.prepend(bulle);
+  else cible.after(bulle);
+  if (step > 0 && !dernier) bulle.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+}
 
 /** Le bouton se remplit à mesure que tu t'approches du prix. */
 function progres(btn: HTMLElement, cost: number): void {
@@ -537,6 +695,9 @@ function render(): void {
 
   renderQuest();
   renderMagasin();
+  celebrer(verifierSucces(state));
+  renderTuto();
+  renderMenu();
   renderEmpire(roule);
 
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
@@ -547,7 +708,7 @@ function render(): void {
     const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
     goalBar.style.width = `${progress * 100}%`;
     goalText.textContent = `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
-    buyCarBtn.hidden = state.cash < CAR_PRICE;
+    buyCarBtn.hidden = !assez(state, CAR_PRICE);
   } else {
     carStatus.textContent = roule ? 'ÇA ROULE!' : 'SUR LES BLOCS';
     carStatus.classList.toggle('roule', roule);
@@ -556,7 +717,7 @@ function render(): void {
       const done = isRepaired(state, p.id);
       row.li.classList.toggle('done', done);
       row.cost.textContent = done ? 'RÉPARÉ' : formatMoney(p.cost);
-      row.btn.disabled = done || state.cash < p.cost;
+      row.btn.disabled = done || !assez(state, p.cost);
       if (!done) progres(row.btn, p.cost);
     }
   }
@@ -571,7 +732,7 @@ function render(): void {
     row.level.textContent = level > 0 ? `NIV. ${level}` : '';
     row.cost.textContent = max ? 'AU MAX' : formatMoney(lot.cost);
     row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} NIV.`;
-    row.btn.disabled = max || state.cash < lot.cost;
+    row.btn.disabled = max || !assez(state, lot.cost);
     progres(row.btn, lot.cost);
   }
 }
@@ -648,6 +809,7 @@ function loop(): void {
     lastSave = now;
   }
   render();
+  renderToast(now);
 }
 
 setInterval(loop, 100);

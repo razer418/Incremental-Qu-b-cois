@@ -704,3 +704,201 @@ button:focus-visible {
 .reglages li > button {
   margin-left: auto;
 }
+
+/* Pastille sur MENU : des succès pas encore vus. */
+.options {
+  position: relative;
+}
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  padding: 2px 4px;
+  font: 400 18px/1 var(--pixel);
+  color: var(--bg);
+  background: var(--gold);
+  border-radius: 11px;
+}
+.badge[hidden] {
+  display: none;
+}
+
+/* Menu : onglets */
+.onglets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+dialog .onglets button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 20px;
+  color: var(--muted);
+  border-color: var(--line);
+}
+dialog .onglets button[aria-pressed='true'] {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+[data-panneau][hidden] {
+  display: none;
+}
+.options-dlg {
+  max-height: calc(100dvh - 32px);
+}
+.resume {
+  font: 400 20px/1.1 var(--pixel);
+  color: var(--cash);
+}
+dialog p.resume {
+  margin-bottom: 8px;
+}
+
+.succes-liste {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.succes-liste li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  opacity: 0.55;
+}
+.succes-liste li.obtenu {
+  border-color: var(--gold);
+  opacity: 1;
+}
+.succes-liste strong {
+  font: 400 22px/1 var(--pixel);
+  color: var(--fg);
+}
+.succes-liste li.obtenu strong {
+  color: var(--gold);
+}
+.succes-liste li.obtenu strong::before {
+  content: '★ ';
+}
+.succes-liste small {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.stats-liste {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  margin: 0 0 12px;
+}
+.stats-liste dt {
+  color: var(--muted);
+  font-size: 16px;
+}
+.stats-liste dd {
+  margin: 0;
+  font: 400 22px/1 var(--pixel);
+  color: var(--gold);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bandeau de succès, en bas de l'écran, sans bloquer le jeu. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 10;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  font: 400 22px/1.1 var(--pixel);
+  color: var(--bg);
+  background: var(--gold);
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  cursor: pointer;
+}
+.toast[hidden] {
+  display: none;
+}
+.toast.entre {
+  animation: toast 0.3s steps(3);
+}
+@keyframes toast {
+  from {
+    transform: translate(-50%, 24px);
+    opacity: 0;
+  }
+}
+
+/* Tuto : la cible clignote en or, la bulle pointe dessus. */
+.tuto-cible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  animation: cible 1s steps(2) infinite;
+}
+@keyframes cible {
+  50% {
+    outline-color: transparent;
+  }
+}
+.bulle {
+  position: relative;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: var(--gold);
+  color: var(--bg);
+  font: 600 16px/1.35 var(--mono);
+  list-style: none;
+}
+.bulle::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  margin-left: -10px;
+  border: 10px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--gold);
+}
+.bulle.droite::before {
+  left: auto;
+  right: 28px;
+}
+.bulle-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.bulle button {
+  font: 400 20px/1 var(--pixel);
+  color: var(--bg);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.bulle button.ok {
+  text-decoration: none;
+  border: 2px solid var(--bg);
+  padding: 4px 10px;
+}
+.bulle button[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tuto-cible,
+  .toast.entre {
+    animation: none;
+  }
+}

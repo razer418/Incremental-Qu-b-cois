@@ -1,0 +1,155 @@
+// Les icônes des buffs, en pixel art 12x12 dessiné en code (palette Bazou VHS).
+// Une lettre = une couleur, un point = rien.
+
+const COULEURS: Record<string, string> = {
+  g: '#e8c26a', // or
+  v: '#9fb58a', // vert
+  e: '#50573c', // vert sombre
+  r: '#c8553d', // rouge
+  n: '#6e2f28', // rouge grange
+  u: '#a0613a', // rouille
+  w: '#d8d2bf', // crème
+  m: '#9b9684', // gris
+  s: '#7f7f78', // chrome
+  b: '#7a6650', // bois
+  t: '#4a3a2c', // tronc
+  p: '#3c4a6e', // bleu
+  k: '#1d1f1c', // noir
+};
+
+const DESSINS: Record<string, string[]> = {
+  boost: [
+    '.......gggg.',
+    '......gggg..',
+    '.....gggg...',
+    '....gggg....',
+    '...gggggggg.',
+    '..gggggggg..',
+    '......ggg...',
+    '.....ggg....',
+    '....ggg.....',
+    '...gg.......',
+    '..gg........',
+    '.g..........',
+  ],
+  chips: [
+    '..r.r.r.r...',
+    '..rrrrrrrr..',
+    '..rrrrrrrr..',
+    '..rggggggr..',
+    '..rgwwwwgr..',
+    '..rgwuuwgr..',
+    '..rgwuuwgr..',
+    '..rgwwwwgr..',
+    '..rggggggr..',
+    '..rrrrrrrr..',
+    '..rrrrrrrr..',
+    '..r.r.r.r...',
+  ],
+  cafe: [
+    '...m..m.....',
+    '....m..m....',
+    '...m..m.....',
+    '............',
+    '.wwwwwwww...',
+    '.wttttttwww.',
+    '.wwwwwwww.w.',
+    '.wwwwwwww.w.',
+    '.wwwwwwwwww.',
+    '.wwwwwwww...',
+    '..wwwwww....',
+    '............',
+  ],
+  biere: [
+    '.....gg.....',
+    '.....uu.....',
+    '.....uu.....',
+    '.....uu.....',
+    '....uuuu....',
+    '...uuuuuu...',
+    '...uggggu...',
+    '...ugnngu...',
+    '...uggggu...',
+    '...uuuuuu...',
+    '...uuuuuu...',
+    '...uuuuuu...',
+  ],
+  cigarettes: [
+    '...u.u.u....',
+    '...w.w.w....',
+    '..wwwwwwww..',
+    '..rrrrrrrr..',
+    '..rrrrrrrr..',
+    '..wwwwwwww..',
+    '..wrrrrrrw..',
+    '..wwwwwwww..',
+    '..rrrrrrrr..',
+    '..rrrrrrrr..',
+    '..rrrrrrrr..',
+    '............',
+  ],
+  vape: [
+    '.mm..mmm....',
+    'mmmm.mmmm...',
+    '.mmmmmm.....',
+    '....ss......',
+    '....ss......',
+    '...ssss.....',
+    '...spps.....',
+    '...spps.....',
+    '...sggs.....',
+    '...spps.....',
+    '...spps.....',
+    '...ssss.....',
+  ],
+  vin: [
+    '.....nn.....',
+    '.....ee.....',
+    '.....ee.....',
+    '.....ee.....',
+    '....eeee....',
+    '...eeeeee...',
+    '...ewwwwe...',
+    '...ewnnwe...',
+    '...ewwwwe...',
+    '...eeeeee...',
+    '...eeeeee...',
+    '...eeeeee...',
+  ],
+  vers: [
+    '...u..u.....',
+    '...u.uu..u..',
+    '..uu.u..uu..',
+    '..u..u..u...',
+    '.ssssssssss.',
+    '.swwwwwwwws.',
+    '.swkkkkkkws.',
+    '.swwwwwwwws.',
+    '.ssssssssss.',
+    '.ssssssssss.',
+    '.ssssssssss.',
+    '............',
+  ],
+  bois: [
+    '............',
+    '............',
+    '...bbb.bbb..',
+    '..btwtbtwtb.',
+    '..btttbtttb.',
+    '...bbb.bbb..',
+    '.bbb.bbb.bbb',
+    'btwtbtwtbtwt',
+    'btttbtttbttt',
+    '.bbb.bbb.bbb',
+    '............',
+    '............',
+  ],
+};
+
+/** Le SVG d'une icône (vide si on la connaît pas). */
+export function icone(id: string): string {
+  const rects = (DESSINS[id] ?? []).flatMap((ligne, y) =>
+    [...ligne].map((c, x) => (COULEURS[c] ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${COULEURS[c]}"/>` : '')),
+  );
+  return `<svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${rects.join('')}</svg>`;
+}

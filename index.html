@@ -13,7 +13,7 @@
         <div class="hud">
           <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
-          <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span> <button id="saison" class="saison" type="button"></button></p>
+          <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span> <button id="saison" class="saison" type="button"></button> <span id="buffs" class="buffs" hidden></span></p>
           <button id="radio" class="radio" type="button"><span id="radio-texte"></span></button>
         </div>
         <button id="options" class="options" type="button" aria-label="Menu : succès, stats pis options">MENU<span id="badge" class="badge" hidden></span></button>
@@ -161,6 +161,7 @@
         <button type="button" data-onglet="succes" aria-pressed="false" data-t>SUCCÈS</button>
         <button type="button" data-onglet="stats" aria-pressed="false" data-t>STATS</button>
         <button type="button" data-onglet="reglages" aria-pressed="true" data-t>OPTIONS</button>
+        <button type="button" data-onglet="dev" aria-pressed="false" hidden data-t>DEV</button>
       </nav>
       <div data-panneau="succes" hidden>
         <p id="succes-resume" class="resume"></p>
@@ -168,6 +169,18 @@
       </div>
       <div data-panneau="stats" hidden>
         <dl id="stats-liste" class="stats-liste"></dl>
+      </div>
+      <div data-panneau="dev" hidden>
+      <ul class="reglages">
+        <li><span data-t>Cash</span><button id="dev-cash" type="button" class="bascule" data-t>x10</button></li>
+        <li><span data-t>Saison</span><button id="dev-saison" type="button" class="bascule" data-t>SUIVANTE</button></li>
+        <li><span data-t>Fête</span><button id="dev-fete" type="button" class="bascule" data-t>ASTEURE</button></li>
+        <li><span data-t>Avancer le temps</span><button id="dev-heure" type="button" class="bascule" data-t>+1 H</button></li>
+        <li><span data-t>Heure du jeu</span><button id="dev-vraie" type="button" class="bascule" data-t>NORMALE</button></li>
+        <li><span data-t>Événement</span><button id="dev-evenement" type="button" class="bascule" data-t>ASTEURE</button></li>
+        <li><span data-t>Mini-jeux</span><button id="dev-minijeux" type="button" class="bascule" data-t>PRÊTS</button></li>
+        <li><span data-t>Tuto</span><button id="dev-tuto" type="button" class="bascule" data-t>SAUTER</button></li>
+      </ul>
       </div>
       <div data-panneau="reglages">
       <ul class="reglages">

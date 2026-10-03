@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { simuler } from './simulation';
 
 // Le rythme visé (« moyen » au début, « long » ensuite, choisi par Etienne) pour un vrai joueur actif :
-// 4 tapes par seconde, boost x2 toujours allumé, pis le magasin à Réjean quand c'est pas cher.
-// bazou ~7 min, y roule ~16 min, garage ~1 h 15, cabane ~2 h 30, lot ~4 h, bar ~7 h 50, aréna ~10 h 30, prestige ~11 h
+// 4 tapes par seconde, boost x2 toujours allumé, le magasin à Réjean, les mini-jeux pis l'expo.
+// bazou ~7 min, y roule ~15 min, garage ~1 h 15, cabane ~2 h 40, lot ~4 h, bar ~8 h, aréna ~10 h 50, prestige ~11 h 20
 // (avec les fêtes de fin de saison, x1,5).
 // Si un changement de chiffres fait sortir de ces bornes, c'est que le rythme a changé.
 describe('équilibre', () => {

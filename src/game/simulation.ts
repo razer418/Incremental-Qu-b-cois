@@ -1,11 +1,14 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
 // Il joue comme un vrai : il tape à un rythme fixe, garde son boost x2 allumé, passe au magasin
-// à Réjean, réclame ses quêtes, pis achète ce qui rapporte le plus vite.
+// à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
+// pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
 import { BUILDINGS, type BuildingId } from './buildings';
 import { CAR_PRICE, PARTS } from './car';
 import { PROJETS } from './chars';
 import { ARTICLES } from './magasin';
+import { MINIJEUX, finirPartie, peutJouer } from './minijeux';
+import { periode, peutInscrire, prixExpo } from './expo';
 import {
   activeQuest,
   addBoost,
@@ -20,6 +23,7 @@ import {
   canPrestige,
   carRuns,
   claimQuest,
+  earn,
   isUnlocked,
   nextBuilding,
   nextCost,
@@ -98,6 +102,11 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     // Une pub quand le boost achève, pis un tour au magasin quand c'est pas cher pour lui.
     if (s.boostSeconds < 60) addBoost(s);
     for (const a of ARTICLES) if (canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) buyArticle(s, a.id);
+    for (const m of MINIJEUX) if (peutJouer(s, m.id, t * 1000)) finirPartie(s, m.id, 0.7, t * 1000);
+    if (peutInscrire(s, t * 1000)) {
+      earn(s, prixExpo(s, 2 / 3));
+      s.expo.periode = periode(t * 1000);
+    }
 
     // Quand le prochain jalon est à moins de 15 minutes de revenus, on ramasse pour,
     // en se permettant juste des petits achats (10 % du prix du jalon).

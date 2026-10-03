@@ -94,6 +94,16 @@
         <ul id="parts" class="upgrades"></ul>
       </section>
 
+      <section id="look" class="garage" hidden>
+        <h2 data-t>LE LOOK DU BAZOU</h2>
+        <ul id="look-liste" class="upgrades"></ul>
+      </section>
+
+      <section id="minijeux" class="garage" hidden>
+        <h2 data-t>MINI-JEUX</h2>
+        <ul id="minijeux-liste" class="upgrades"></ul>
+      </section>
+
       <section id="empire" class="garage" hidden>
         <h2 data-t>TON EMPIRE</h2>
         <ul class="upgrades">
@@ -187,6 +197,13 @@
     <dialog id="message">
       <p id="message-text"></p>
       <form method="dialog"><button type="submit" data-t>[ ENVOYE DONC ]</button></form>
+    </dialog>
+
+    <dialog id="minijeu" class="minijeu">
+      <p class="mj-titre"></p>
+      <canvas width="160" height="120"></canvas>
+      <p class="mj-aide"></p>
+      <button type="button" class="mj-lacher" data-t>[ LÂCHER ]</button>
     </dialog>
 
     <dialog id="ad" class="ad">

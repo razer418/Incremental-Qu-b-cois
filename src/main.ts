@@ -5,9 +5,13 @@ import './style.css';
 import { createRang } from './scene/rang';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
+import { CHARACTERS } from './game/quests';
 import {
   FIRST_CAR_GOAL,
+  activeQuest,
   applyOffline,
+  claimQuest,
+  questProgress,
   buy,
   buyCar,
   carRuns,
@@ -42,6 +46,14 @@ const buyCarBtn = $<HTMLButtonElement>('buy-car');
 const garageEl = $('garage');
 const carStatus = $('car-status');
 const partsEl = $<HTMLUListElement>('parts');
+const questEl = $('quest');
+const qPortrait = $('q-portrait');
+const qWho = $('q-who');
+const qLine = $('q-line');
+const qBar = $('q-bar');
+const qGoal = $('q-goal');
+const qReward = $('q-reward');
+const qClaim = $<HTMLButtonElement>('q-claim');
 const messageDialog = $<HTMLDialogElement>('message');
 const messageText = $('message-text');
 
@@ -140,6 +152,14 @@ for (const p of PARTS) {
   partsEl.append(li);
 }
 
+qClaim.addEventListener('click', () => {
+  const q = claimQuest(state);
+  if (!q) return;
+  save(localStorage, state);
+  showMessage(`${CHARACTERS[q.giver].name} : « ${q.thanks} » (+${formatMoney(q.reward)})`);
+  render();
+});
+
 buyCarBtn.addEventListener('click', () => {
   if (!buyCar(state)) return;
   save(localStorage, state);
@@ -189,6 +209,8 @@ function render(): void {
     lastLook = lookKey;
   }
 
+  renderQuest();
+
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
   goalEl.hidden = state.car.owned;
   garageEl.hidden = !state.car.owned;
@@ -218,6 +240,28 @@ function render(): void {
     row.cost.textContent = cost === null ? 'AU MAX' : formatMoney(cost);
     row.btn.disabled = cost === null || state.cash < cost;
   }
+}
+
+let lastQuestId = '';
+function renderQuest(): void {
+  const q = activeQuest(state);
+  questEl.hidden = q === null;
+  if (!q) return;
+  if (q.id !== lastQuestId) {
+    const who = CHARACTERS[q.giver];
+    qPortrait.textContent = who.initials;
+    qPortrait.style.background = who.color;
+    qWho.textContent = who.name.toUpperCase();
+    qLine.textContent = `« ${q.ask} »`;
+    qGoal.textContent = q.goal.toUpperCase();
+    qReward.textContent = `+${formatMoney(q.reward)}`;
+    lastQuestId = q.id;
+  }
+  const progress = questProgress(state, q);
+  qBar.style.width = `${progress * 100}%`;
+  const ready = progress >= 1;
+  qClaim.hidden = !ready;
+  questEl.classList.toggle('ready', ready);
 }
 
 let lastSave = Date.now();

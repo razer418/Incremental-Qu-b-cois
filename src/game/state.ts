@@ -89,3 +89,8 @@ export function buy(state: GameState, id: string): boolean {
   state.upgrades[id] = levelOf(state, id) + 1;
   return true;
 }
+
+/** Réchauffement du rang : 0 au début, 0,5 quand t'as amassé de quoi payer ton premier bazou. */
+export function warmth(state: GameState): number {
+  return Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.5;
+}

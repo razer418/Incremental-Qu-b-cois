@@ -10,6 +10,7 @@ import {
   tap,
   tapValue,
   tick,
+  warmth,
 } from './state';
 import { load, save } from './save';
 
@@ -55,6 +56,17 @@ describe('boucle de base', () => {
     s.upgrades = { chum: 2 };
     tick(s, 3000);
     expect(s.cash).toBeCloseTo(6);
+  });
+});
+
+describe('ambiance du rang', () => {
+  it('se réchauffe avec les gains, plafonné à 0,5 pour le premier bazou', () => {
+    const s = newGame(0);
+    expect(warmth(s)).toBe(0);
+    s.totalEarned = 250;
+    expect(warmth(s)).toBeCloseTo(0.25);
+    s.totalEarned = 10_000;
+    expect(warmth(s)).toBe(0.5);
   });
 });
 

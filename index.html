@@ -14,6 +14,7 @@
           <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
           <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span> <button id="saison" class="saison" type="button"></button></p>
+          <button id="radio" class="radio" type="button"><span id="radio-texte"></span></button>
         </div>
         <button id="options" class="options" type="button" aria-label="Menu : succès, stats pis options">MENU<span id="badge" class="badge" hidden></span></button>
       </header>
@@ -157,9 +158,11 @@
       </div>
       <div data-panneau="reglages">
       <ul class="reglages">
-        <li><span data-t>Son</span><button id="son" type="button" class="bascule" aria-pressed="true"></button></li>
-        <li><span data-t>Lignes VHS</span><button id="vhs" type="button" class="bascule" aria-pressed="true"></button></li>
         <li><span data-t>Langue</span><button id="langue" type="button" class="bascule"></button></li>
+        <li><span data-t>Radio</span><button id="station" type="button" class="bascule"></button></li>
+        <li><span data-t>Volume radio</span><button id="radio-volume" type="button" class="bascule"></button></li>
+        <li><span data-t>Effets sonores</span><button id="effets" type="button" class="bascule"></button></li>
+        <li><span data-t>Lignes VHS</span><button id="vhs" type="button" class="bascule" aria-pressed="true"></button></li>
         <li><span data-t>Chiffres</span><button id="nombres" type="button" class="bascule"></button></li>
         <li><span data-t>Sauvegarde</span><span class="paire"><button id="exporter" type="button" class="bascule" data-t>COPIER</button><button id="importer" type="button" class="bascule" data-t>COLLER</button></span></li>
       </ul>

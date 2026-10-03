@@ -13,6 +13,7 @@ import { SAISONS } from './saisons';
 import { PROJETS } from './chars';
 import { EVENEMENTS } from './evenements';
 import { NO_ADS_PRICE } from '../platform/store';
+import { PUBS, STATIONS } from '../platform/radio';
 
 /** Tout le texte du jeu qui passe par t(). */
 function cles(): string[] {
@@ -31,6 +32,10 @@ function cles(): string[] {
     // Les boutons OUI/NON des options
     'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH',
     NO_ADS_PRICE,
+    // La radio du char
+    ...STATIONS.flatMap((s) => [s.nom, s.slogan, ...s.tounes.map((x) => x.titre)]),
+    ...PUBS,
+    'FERMÉE',
   ];
   // Les t('...') pis les textes du tuto dans le code
   const sources = import.meta.glob<string>(['../**/*.ts', '!../**/*.test.ts', '!./en.ts'], { query: '?raw', import: 'default', eager: true });

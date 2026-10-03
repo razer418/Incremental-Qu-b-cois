@@ -5,6 +5,7 @@ import './style.css';
 import { createRang, type Lieu } from './scene/rang';
 import { ARTICLES, REJEAN } from './game/magasin';
 import { createSons } from './platform/sons';
+import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
@@ -168,18 +169,78 @@ let state = load(localStorage, Date.now());
 
 // Le rang en 3D, style Bazou VHS. Si WebGL marche pas, le jeu roule pareil.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-// Sons : on peut les couper, choix gardé sur l'appareil.
-const sons = createSons();
-const sonBtn = $<HTMLButtonElement>('son');
-const setSon = (on: boolean) => {
-  sons.actif = on;
-  bascule(sonBtn, on);
+// Effets sonores pis radio du char : volumes pis station gardés sur l'appareil.
+const NIVEAUX = [0, 0.25, 0.5, 0.75, 1];
+const pourcent = (v: number) => (v > 0 ? `${Math.round(v * 100)}${langue.en ? '' : ' '}%` : 'NON');
+const niveau = (k: string, defaut: number) => {
+  const v = Number(pref.get(k) ?? defaut);
+  return NIVEAUX.includes(v) ? v : defaut;
 };
-setSon(pref.get('son') !== 'off');
-sonBtn.addEventListener('click', () => {
-  setSon(!sons.actif);
-  pref.set('son', sons.actif ? 'on' : 'off');
+const suivant = (v: number, min = 0) => NIVEAUX[Math.max(min, (NIVEAUX.indexOf(v) + 1) % NIVEAUX.length)];
+
+const sons = createSons();
+const effetsBtn = $<HTMLButtonElement>('effets');
+const setEffets = (v: number) => {
+  sons.volume = v;
+  bascule(effetsBtn, v > 0, pourcent(v));
+};
+// Ancien réglage SON OUI/NON : « off » devient des effets coupés.
+setEffets(pref.get('son') === 'off' ? 0 : niveau('effets', 1));
+effetsBtn.addEventListener('click', () => {
+  setEffets(suivant(sons.volume));
+  pref.set('effets', String(sons.volume));
+  sons.jouer('achat');
 });
+
+const radioEl = $<HTMLButtonElement>('radio');
+const radioTexte = $('radio-texte');
+const radio = createRadio(sons.contexte, (texte) => {
+  radioTexte.textContent = texte;
+  radioEl.setAttribute('aria-label', t('Radio : {texte}. Change de poste.', { texte }));
+  // Le texte défile seulement s'il rentre pas sur la ligne.
+  radioTexte.classList.remove('defile');
+  requestAnimationFrame(() => {
+    const trop = radioTexte.scrollWidth - radioEl.clientWidth;
+    radioTexte.style.setProperty('--trop', `${-trop}px`);
+    radioTexte.style.setProperty('--duree', `${Math.max(6, trop / 25)}s`);
+    radioTexte.classList.toggle('defile', trop > 0 && !reduceMotion);
+  });
+});
+const stationBtn = $<HTMLButtonElement>('station');
+const volumeBtn = $<HTMLButtonElement>('radio-volume');
+const setStation = (i: number) => {
+  radio.syntoniser(i);
+  bascule(stationBtn, i >= 0, i >= 0 ? STATIONS[i].nom : '', 'FERMÉE');
+  radioEl.classList.toggle('fermee', i < 0);
+  if (i >= 0 && !radioTexte.textContent) radioTexte.textContent = `♪ ${t(STATIONS[i].nom)}`;
+  pref.set('radio', String(i));
+};
+const changerPoste = () => {
+  // Poste suivant, pis « fermée » après le dernier.
+  setStation(radio.station + 1 < STATIONS.length ? radio.station + 1 : -1);
+  radio.demarrer();
+};
+const setVolumeRadio = (v: number) => {
+  radio.setVolume(v);
+  bascule(volumeBtn, true, pourcent(v));
+  pref.set('radio-volume', String(v));
+};
+const stationGardee = Number(pref.get('radio') ?? 0);
+setStation(stationGardee >= -1 && stationGardee < STATIONS.length ? stationGardee : 0);
+setVolumeRadio(niveau('radio-volume', 0.5) || 0.5);
+stationBtn.addEventListener('click', changerPoste);
+radioEl.addEventListener('click', changerPoste);
+volumeBtn.addEventListener('click', () => setVolumeRadio(suivant(radio.volume, 1)));
+// Les navigateurs bloquent le son tant que le joueur a rien touché.
+const premierGeste = () => {
+  radio.demarrer();
+  if (sons.contexte()) {
+    removeEventListener('pointerdown', premierGeste);
+    removeEventListener('keydown', premierGeste);
+  }
+};
+addEventListener('pointerdown', premierGeste);
+addEventListener('keydown', premierGeste);
 
 const rang = createRang($('ecran'), {
   pixelScale: 3,

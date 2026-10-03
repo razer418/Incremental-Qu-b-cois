@@ -2,7 +2,7 @@
 // Jamais obligatoires : le jeu avance pareil sans eux.
 import { saisonA } from './saisons';
 import { t } from './i18n';
-import { earn, revenuRef, type GameState } from './state';
+import { carRuns, earn, revenuRef, type GameState } from './state';
 
 export type MiniJeuId = 'moteur' | 'deneiger' | 'trafic';
 
@@ -39,9 +39,9 @@ export const MINIJEUX: readonly MiniJeu[] = [
   {
     id: 'trafic',
     nom: 'Swimming dans le trafic',
-    description: 'La trend du moment : nage entre les chars sur le rang. Ça va de plus en plus vite. Tiens 30 secondes pour la totale.',
+    description: "La trend du moment : zigzague avec le bazou entre les chars, de plus en plus vite. Frôler un char sans l'accrocher donne du bonus.",
     secondes: 90,
-    bloque: () => null,
+    bloque: (s) => (carRuns(s) ? null : t('Le bazou doit rouler.')),
   },
 ];
 

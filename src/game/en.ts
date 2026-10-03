@@ -498,8 +498,6 @@ export const EN: Record<string, string> = {
   "Ton bazou. Glisse le doigt pour le virer de bord.": "Your beater. Swipe to spin it around.",
   "Catégories": "Categories",
   "Swimming dans le trafic": "Swimming in traffic",
-  "La trend du moment : nage entre les chars sur le rang. Ça va de plus en plus vite. Tiens 30 secondes pour la totale.": "The latest trend: swim between the cars on the road. It keeps getting faster. Last 30 seconds for the full payout.",
-  "Tape à gauche ou à droite pour nager entre les chars. Ça va de plus en plus vite!": "Tap left or right to swim between the cars. It keeps getting faster!",
   "POUET POUET!": "HONK HONK!",
   // L'expo de chars
   "Char de course": "Race car",
@@ -541,4 +539,8 @@ export const EN: Record<string, string> = {
   "Ton look fitte {n} / {total}": "Your look fits {n} / {total}",
   "INSCRIT": "ENTERED",
   "S'INSCRIRE": "ENTER",
+  "La trend du moment : zigzague avec le bazou entre les chars, de plus en plus vite. Frôler un char sans l'accrocher donne du bonus.": "The latest trend: weave the beater between cars, faster and faster. Near misses earn a bonus.",
+  "Tape à gauche ou à droite pour zigzaguer entre les chars. Frôle-les sans les accrocher!": "Tap left or right to weave between cars. Get close without hitting them!",
+  "FRÔLÉ!": "CLOSE ONE!",
+  "Le bazou doit rouler.": "The beater has to run.",
 };

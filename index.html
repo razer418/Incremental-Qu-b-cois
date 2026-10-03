@@ -99,7 +99,8 @@
 
       <section id="look" class="garage" hidden>
         <h2 data-t>LE LOOK DU BAZOU</h2>
-        <ul id="look-liste" class="upgrades"></ul>
+        <p id="look-resume" class="look-resume"></p>
+        <button id="atelier-ouvrir" class="buy-car" type="button" data-t>[ ALLER À L'ATELIER ]</button>
       </section>
 
       <section id="minijeux" class="garage" hidden>
@@ -213,6 +214,21 @@
     <dialog id="message">
       <p id="message-text"></p>
       <form method="dialog"><button type="submit" data-t>[ ENVOYE DONC ]</button></form>
+    </dialog>
+
+    <dialog id="atelier" class="atelier">
+      <header class="atelier-tete">
+        <p class="atelier-titre" data-t>L'ATELIER À TI-GUY</p>
+        <p class="atelier-cash"></p>
+      </header>
+      <div class="atelier-vue" aria-label="Ton bazou. Glisse le doigt pour le virer de bord."></div>
+      <nav class="atelier-onglets" aria-label="Catégories"></nav>
+      <div class="atelier-grille"></div>
+      <div class="atelier-pied">
+        <p class="atelier-choix"></p>
+        <button type="button" class="buy atelier-action"></button>
+      </div>
+      <form method="dialog"><button type="submit" data-t>[ FERMER ]</button></form>
     </dialog>
 
     <dialog id="minijeu" class="minijeu">

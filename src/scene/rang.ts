@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BuildingId } from '../game/buildings';
 import type { FeteId } from '../game/fetes';
+import { creerBazou, type ChoixLook } from './bazou';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
 export const PAL = {
@@ -165,11 +166,8 @@ export interface CarLook {
   clean: boolean;
   /** Le bazou roule : il te suit d'un endroit à l'autre pis part livrer. */
   runs: boolean;
-  /** Le look choisi (voir game/look.ts) : couleurs, ou null pour rien. */
-  peinture: number;
-  collant: { id: string; couleur: number | null };
-  mags: number | null;
-  flaps: number | null;
+  /** Le look posé (voir game/look.ts). */
+  look: ChoixLook;
 }
 
 export type Lieu = 'maison' | 'magasin' | BuildingId;
@@ -459,84 +457,12 @@ export function createRang(
   plan(3.2, 5, PAL.gravier, 4.6, 0.02, 2.6);
 
   // Le bazou (à vendre pour l'instant : c'est l'objectif)
-  const bazou = new THREE.Group();
+  const leBazou = creerBazou();
+  const bazou = leBazou.groupe;
+  const carrosserie = leBazou.carrosserie;
   bazou.position.set(STATIONNEMENT.x, 0, STATIONNEMENT.z);
   bazou.rotation.y = STATIONNEMENT.ry;
   scene.add(bazou);
-  const carrosserie = new THREE.Group();
-  bazou.add(carrosserie);
-  // La peinture a son propre matériau : elle change avec le look.
-  const peinture = new THREE.MeshPhongMaterial({ color: PAL.carrosserie, flatShading: true, shininess: 0, specular: 0x000000 });
-  part(carrosserie, B(4.2, 0.8, 1.8), PAL.carrosserie, 0, 0.8, 0).material = peinture;
-  part(carrosserie, B(2.2, 0.66, 1.6), PAL.vitre, -0.25, 1.53, 0);
-  part(carrosserie, B(2.35, 0.12, 1.7), PAL.carrosserie, -0.25, 1.9, 0).material = peinture;
-  // Les collants, des deux bords. Un matériau par collant pour changer sa couleur.
-  const collantMat = () => new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, shininess: 0, specular: 0x000000 });
-  const collants: Record<string, { g: THREE.Group; mat: THREE.MeshPhongMaterial }> = {};
-  const collant = (id: string, faire: (g: THREE.Group, mat: THREE.Material) => void) => {
-    const g = new THREE.Group();
-    const mat = collantMat();
-    faire(g, mat);
-    g.visible = false;
-    carrosserie.add(g);
-    collants[id] = { g, mat };
-  };
-  collant('numero', (g, mat) => {
-    const rond = G(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 10));
-    for (const z of [0.91, -0.91]) {
-      part(g, rond, 0, -0.3, 0.8, z, { rx: Math.PI / 2 }).material = mat;
-      part(g, B(0.08, 0.36, 0.04), PAL.pneu, -0.3, 0.8, z * 1.012);
-    }
-  });
-  collant('bandes', (g, mat) => {
-    for (const z of [-0.22, 0.22]) {
-      part(g, B(4.22, 0.02, 0.18), 0, 0, 1.21, z).material = mat;
-      part(g, B(2.37, 0.02, 0.18), 0, -0.25, 1.97, z).material = mat;
-    }
-  });
-  collant('flammes', (g, mat) => {
-    // Des langues de feu qui partent du devant.
-    const f = new THREE.Shape();
-    f.moveTo(0, 0);
-    for (const [x, y] of [[-0.7, 0.08], [-0.4, 0.18], [-1.0, 0.25], [-0.45, 0.33], [-0.75, 0.45], [0, 0.5]]) f.lineTo(x, y);
-    const geo = G(new THREE.ShapeGeometry(f));
-    // Le bord de l'autre côté est viré de bord : on le décale pour qu'il parte aussi du devant.
-    part(g, geo, 0, 2.05, 0.55, 0.905).material = mat;
-    part(g, geo, 0, 1.05, 0.55, -0.905, { ry: Math.PI }).material = mat;
-  });
-  const rouille = [
-    part(carrosserie, B(0.7, 0.45, 0.04), PAL.rouille, 1.2, 0.75, 0.92),
-    part(carrosserie, B(0.4, 0.3, 0.04), PAL.rouille, -1.5, 0.95, 0.92),
-  ];
-  part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, 2.15, 0.55, 0);
-  part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, -2.15, 0.55, 0);
-  const roue = G(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 8));
-  const bloc = B(0.5, 0.42, 0.5);
-  const roues: THREE.Mesh[] = [];
-  const blocs: THREE.Mesh[] = [];
-  // Mags pis flaps de bouette : cachés tant que t'en as pas.
-  const magsMat = collantMat();
-  const flapsMat = collantMat();
-  const mag = G(new THREE.CylinderGeometry(0.24, 0.24, 0.34, 8));
-  const flap = B(0.05, 0.38, 0.3);
-  const mags: THREE.Mesh[] = [];
-  const flaps: THREE.Mesh[] = [];
-  for (const [x, z] of [
-    [1.35, 0.9],
-    [1.35, -0.9],
-    [-1.35, 0.9],
-    [-1.35, -0.9],
-  ]) {
-    const r = part(bazou, roue, PAL.pneu, x, 0.42, z, { rx: Math.PI / 2 });
-    roues.push(r);
-    const m = new THREE.Mesh(mag, magsMat);
-    r.add(m);
-    mags.push(m);
-    flaps.push(part(bazou, flap, 0, x - 0.52, 0.32, z));
-    flaps.at(-1)!.material = flapsMat;
-    // Sur les blocs de béton tant qu'y a pas de pneus.
-    blocs.push(part(bazou, bloc, PAL.gravier, x, 0.21, z * 0.8));
-  }
 
   // Pancarte « à vendre » du bonhomme Gagnon
   const pancarte = new THREE.Group();
@@ -565,6 +491,7 @@ export function createRang(
   part(pancarteMaison, B(4.2, 1.2, 0.08), PAL.tronc, 0, 1.7, 0);
   enseigne(pancarteMaison, 'CHEZ NOUS', 4, 1.05, 0, 1.7, 0.05, { fond: PAL.tronc, encre: PAL.declin });
 
+  const roue = G(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 8));
   const miniChar = (parent: THREE.Object3D, c: number, x: number, z: number, ry: number) => {
     const g = new THREE.Group();
     g.position.set(x, 0, z);
@@ -1037,18 +964,8 @@ export function createRang(
       // La pile de pneus déménage dans le garage, la pancarte disparaît avec la vente.
       pilePneus.forEach((p) => (p.visible = !look.lieux.concession));
       pancarte.visible = !look.owned;
-      roues.forEach((r) => (r.visible = look.wheels));
-      blocs.forEach((b) => (b.visible = !look.wheels));
-      rouille.forEach((r) => (r.visible = !look.clean));
-      peinture.color.setHex(look.peinture);
-      for (const [id, c] of Object.entries(collants)) {
-        c.g.visible = id === look.collant.id;
-        if (look.collant.couleur !== null) c.mat.color.setHex(look.collant.couleur);
-      }
-      mags.forEach((m) => (m.visible = look.mags !== null));
-      if (look.mags !== null) magsMat.color.setHex(look.mags);
-      flaps.forEach((f) => (f.visible = look.wheels && look.flaps !== null));
-      if (look.flaps !== null) flapsMat.color.setHex(look.flaps);
+      leBazou.setEtat(look);
+      leBazou.setLook(look.look);
       if (look.runs && !roule) planifierLivraison(performance.now());
       roule = look.runs;
       // Un bazou qui roule pas reste dans la cour chez vous.
@@ -1135,7 +1052,7 @@ export function createRang(
       document.removeEventListener('visibilitychange', onVisibility);
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => m.dispose());
-      [peinture, magsMat, flapsMat, ...Object.values(collants).map((c) => c.mat)].forEach((m) => m.dispose());
+      leBazou.dispose();
       filMat.dispose();
       tombeMat.dispose();
       feuillage.forEach((m) => m.dispose());

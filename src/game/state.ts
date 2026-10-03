@@ -42,9 +42,11 @@ export interface GameState {
   /** Chars à retaper achetés : id du char -> pièces réparées. */
   projets: Record<string, string[]>;
   /** Le look du bazou (voir look.ts) : options achetées (« peinture:rouge ») pis celles posées. Gardé au prestige. */
-  look: { achetes: string[]; choix: Record<'peinture' | 'collant' | 'mags' | 'flaps', string> };
+  look: { achetes: string[]; choix: Record<'peinture' | 'collant' | 'mags' | 'flaps' | 'toit' | 'antenne', string> };
   /** Mini-jeux : quand chacun est prêt à rejouer (ms, heure de l'appareil). */
   minijeux: Record<string, number>;
+  /** L'expo de chars : la dernière saison où t'es inscrit, pis tes trophées de 1re place. Gardé au prestige. */
+  expo: { periode: number; trophees: number };
   lastTick: number;
 }
 
@@ -87,8 +89,9 @@ export function newGame(now: number): GameState {
     stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0, minijeux: 0 },
     tuto: 0,
     projets: {},
-    look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun' } },
+    look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun', toit: 'aucun', antenne: 'aucune' } },
     minijeux: {},
+    expo: { periode: -1, trophees: 0 },
     lastTick: now,
   };
 }
@@ -391,6 +394,7 @@ export function prestige(state: GameState, now: number): number {
     fetes: state.fetes,
     stats: state.stats,
     look: state.look,
+    expo: state.expo,
     tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,

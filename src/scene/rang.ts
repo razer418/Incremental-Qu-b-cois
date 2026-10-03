@@ -216,6 +216,54 @@ export function createRang(
   const plan = (w: number, d: number, c: number, x: number, y: number, z: number) =>
     part(scene, G(new THREE.PlaneGeometry(w, d)), c, x, y, z, { rx: -Math.PI / 2 });
 
+  // Les enseignes : du texte peint dans une petite texture, en VT323 une fois la police chargée.
+  const enseignes: { tex: THREE.CanvasTexture; mat: THREE.Material; dessiner: () => void }[] = [];
+  const hexCss = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+  const enseigne = (
+    parent: THREE.Object3D,
+    texte: string,
+    w: number,
+    h: number,
+    x: number,
+    y: number,
+    z: number,
+    o: { fond?: number; encre?: number; allumee?: boolean; ry?: number } = {},
+  ) => {
+    const canvas = document.createElement('canvas');
+    canvas.height = 32;
+    canvas.width = Math.round((32 * w) / h);
+    const ctx = canvas.getContext('2d');
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    const dessiner = () => {
+      if (!ctx) return;
+      ctx.fillStyle = hexCss(o.fond ?? PAL.declin);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = hexCss(o.encre ?? PAL.rougeGrange);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let taille = 28;
+      do ctx.font = `${taille--}px VT323, monospace`;
+      while (ctx.measureText(texte).width > canvas.width - 6 && taille > 8);
+      ctx.fillText(texte, canvas.width / 2, canvas.height / 2 + 1);
+      tex.needsUpdate = true;
+    };
+    dessiner();
+    const mat = o.allumee
+      ? new THREE.MeshBasicMaterial({ map: tex })
+      : new THREE.MeshPhongMaterial({ map: tex, flatShading: true, shininess: 0, specular: 0x000000 });
+    enseignes.push({ tex, mat, dessiner });
+    const m = new THREE.Mesh(G(new THREE.PlaneGeometry(w, h)), mat);
+    m.position.set(x, y, z);
+    m.rotation.y = o.ry ?? 0;
+    parent.add(m);
+    return m;
+  };
+  document.fonts?.load('28px VT323').then(() => enseignes.forEach((e) => e.dessiner()), () => {});
+
   // Sol pis route : une longue bande pour tous les endroits.
   plan(1300, 160, PAL.herbe, 450, 0, 0);
   plan(1300, 3.8, PAL.gravier, 450, 0.02, ROUTE_Z);
@@ -401,6 +449,14 @@ export function createRang(
   part(scene, B(0.45, 0.4, 0.7), PAL.chrome, -3.4, 1.25, 4.3);
   part(scene, B(0.06, 0.3, 0.06), PAL.tole, -3.15, 1.5, 4.45);
   part(scene, G(new THREE.CylinderGeometry(0.65, 0.65, 1.1, 10)), PAL.champ, -9, 0.65, -6, { rz: Math.PI / 2 });
+  // La pancarte de bois à l'entrée de la cour
+  const pancarteMaison = new THREE.Group();
+  pancarteMaison.position.set(-0.6, 0, 5);
+  pancarteMaison.rotation.y = 0.45;
+  scene.add(pancarteMaison);
+  for (const x of [-1.9, 1.9]) part(pancarteMaison, G(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 5)), PAL.tronc, x, 1.1, 0);
+  part(pancarteMaison, B(4.2, 1.2, 0.08), PAL.tronc, 0, 1.7, 0);
+  enseigne(pancarteMaison, 'CHEZ NOUS', 4, 1.05, 0, 1.7, 0.05, { fond: PAL.tronc, encre: PAL.declin });
 
   const miniChar = (parent: THREE.Object3D, c: number, x: number, z: number, ry: number) => {
     const g = new THREE.Group();
@@ -430,9 +486,8 @@ export function createRang(
     part(m, B(7.2, 0.18, 5.4), PAL.tole, 0, 3.45, 0);
     // Fausse façade, typique des magasins de village
     part(m, B(7.4, 5, 0.25), PAL.declin, 0, 2.5, 2.55);
-    part(m, B(5.4, 0.9, 0.1), PAL.declin, 0, 4.3, 2.72);
-    part(m, B(4.6, 0.18, 0.12), PAL.rougeGrange, 0, 4.48, 2.74);
-    part(m, B(3.6, 0.14, 0.12), PAL.rougeGrange, 0, 4.15, 2.74);
+    part(m, B(7.2, 1.4, 0.1), PAL.rougeGrange, 0, 4.2, 2.72);
+    enseigne(m, 'MAGASIN GÉNÉRAL', 7, 1.2, 0, 4.2, 2.78, { fond: PAL.rougeGrange, encre: PAL.declin });
     part(m, B(1.1, 2.1, 0.1), PAL.rougeGrange, 0, 1.1, 2.7);
     part(m, B(0.8, 1.2, 0.12), PAL.vitre, 0, 1.45, 2.72);
     for (const x of [-2.4, 2.4]) {
@@ -453,6 +508,27 @@ export function createRang(
     part(m, B(0.5, 0.4, 0.52), PAL.declin, -4.8, 1.95, 4.4);
     part(m, B(0.12, 0.6, 0.12), PAL.pneu, -4.4, 1, 4.65);
     plan(11, 3.6, PAL.gravier, ox + 1, 0.025, 3.4);
+    // L'îlot de pompes à essence devant le magasin, pis la grande pancarte des prix
+    const ilot = new THREE.Group();
+    ilot.position.set(ox - 2.6, 0, 4.4);
+    scene.add(ilot);
+    part(ilot, B(3.6, 0.18, 0.9), PAL.gravier, 0, 0.09, 0);
+    [-1.1, 1.1].forEach((x, i) => {
+      const c = i ? PAL.bleu : PAL.rougeGrange;
+      part(ilot, B(0.6, 1.5, 0.45), c, x, 0.93, 0);
+      part(ilot, B(0.5, 0.35, 0.47), PAL.declin, x, 1.35, 0);
+      part(ilot, B(0.4, 0.2, 0.48), PAL.vitre, x, 1.05, 0);
+      part(ilot, B(0.1, 0.5, 0.1), PAL.pneu, x + 0.36, 0.95, 0.12);
+    });
+    part(ilot, G(new THREE.CylinderGeometry(0.18, 0.18, 0.7, 6)), PAL.rouille, 0, 0.53, 0);
+    const prix = new THREE.Group();
+    prix.position.set(ox - 4.4, 0, 4.2);
+    prix.rotation.y = 0.35;
+    scene.add(prix);
+    part(prix, G(new THREE.CylinderGeometry(0.1, 0.1, 2.6, 6)), PAL.poteau, 0, 1.3, 0);
+    part(prix, B(2.4, 1.6, 0.14), PAL.rougeGrange, 0, 3.3, 0);
+    enseigne(prix, 'ESSENCE', 2.2, 0.65, 0, 3.7, 0.08, { fond: PAL.rougeGrange, encre: PAL.declin });
+    enseigne(prix, '1,59 $/L', 2.2, 0.65, 0, 2.95, 0.08, { fond: PAL.pneu, encre: PAL.lampe, allumee: true });
   }
 
   // Le garage à Ti-Guy (caché tant qu'il est pas acheté)
@@ -465,8 +541,13 @@ export function createRang(
   part(garage, B(2.6, 2.2, 0.08), PAL.bois, 0.5, 1.1, 2.02);
   for (let i = 0; i < 4; i++) part(garage, B(2.6, 0.06, 0.1), PAL.poteau, 0.5, 0.4 + i * 0.5, 2.06);
   part(garage, B(0.7, 0.7, 0.08), PAL.vitre, -1.55, 1.9, 2.02);
-  part(garage, B(2.4, 0.5, 0.1), PAL.declin, 0, 3.5, 2.1);
-  part(garage, B(1.8, 0.16, 0.12), PAL.rougeGrange, 0, 3.5, 2.12);
+  for (const x of [-1.6, 1.6]) part(garage, B(0.1, 0.8, 0.1), PAL.poteau, x, 3.5, 1.9);
+  const pancarteGarage = new THREE.Group();
+  pancarteGarage.position.set(0, 3.9, 2);
+  pancarteGarage.rotation.y = 0.55;
+  garage.add(pancarteGarage);
+  part(pancarteGarage, B(4.6, 1, 0.1), PAL.rougeGrange, 0, 0, 0);
+  enseigne(pancarteGarage, 'GARAGE TI-GUY', 4.4, 0.85, 0, 0, 0.06, { fond: PAL.rougeGrange, encre: PAL.declin });
   part(garage, G(new THREE.PlaneGeometry(4, 3)), PAL.gravier, 0.5, 0.02, 3.4, { rx: -Math.PI / 2 });
   miniChar(garage, PAL.champ, -3.6, 2.2, 1.2);
   for (let i = 0; i < 4; i++) part(garage, pneu, PAL.pneu, 3, 0.15 + i * 0.3, 0.6);
@@ -490,9 +571,8 @@ export function createRang(
     part(lot, fanion, [PAL.rougeGrange, PAL.erables[1], PAL.declin][i % 3], x, y, 2.2, { rx: Math.PI });
   }
   part(lot, G(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 5)), PAL.poteau, 3.2, 1.6, -2);
-  part(lot, B(2.2, 1, 0.1), PAL.declin, 3.2, 3.4, -2);
-  part(lot, B(1.8, 0.2, 0.12), PAL.rougeGrange, 3.2, 3.6, -2);
-  part(lot, B(1.4, 0.16, 0.12), PAL.rougeGrange, 3.2, 3.2, -2);
+  part(lot, B(3.2, 1.4, 0.1), PAL.rougeGrange, 3.2, 3.6, -2);
+  enseigne(lot, 'AUTOS USAGÉES', 3, 1.2, 3.2, 3.6, -1.94, { fond: PAL.rougeGrange, encre: PAL.declin });
   lot.visible = false;
 
   // La cabane à sucre : en bois, avec la cheminée qui boucane pis des chaudières aux érables.
@@ -505,6 +585,14 @@ export function createRang(
   part(cabane, B(5, 0.18, 2.3), PAL.tole, 0, 2.95, -0.95, { rx: -0.55 });
   part(cabane, B(1.4, 0.7, 3.8), PAL.bois, 0, 3.6, 0);
   part(cabane, B(1, 1.9, 0.08), PAL.tronc, 0.6, 0.95, 1.82);
+  // La pancarte de bois au bord du chemin
+  const pancarteCabane = new THREE.Group();
+  pancarteCabane.position.set(-1.6, 0, 3);
+  pancarteCabane.rotation.y = 0.25;
+  cabane.add(pancarteCabane);
+  for (const x of [-1.4, 1.4]) part(pancarteCabane, G(new THREE.CylinderGeometry(0.07, 0.07, 2, 5)), PAL.tronc, x, 1, 0);
+  part(pancarteCabane, B(3.2, 0.85, 0.08), PAL.tronc, 0, 1.55, 0);
+  enseigne(pancarteCabane, 'CABANE À SUCRE', 3, 0.72, 0, 1.55, 0.05, { fond: PAL.tronc, encre: PAL.declin });
   part(cabane, B(0.7, 0.6, 0.08), PAL.vitre, -1.3, 1.5, 1.82);
   part(cabane, G(new THREE.CylinderGeometry(0.16, 0.16, 1.6, 6)), PAL.poteau, -1.6, 3.6, -0.6);
   const boucane = G(new THREE.IcosahedronGeometry(0.4, 0));
@@ -532,9 +620,9 @@ export function createRang(
   part(bar, B(1, 2, 0.08), PAL.tronc, -1.4, 1, 1.92);
   part(bar, B(1.4, 0.8, 0.08), PAL.lampe, 0.6, 1.5, 1.92);
   part(bar, B(1.4, 0.8, 0.08), PAL.lampe, 2.1, 1.5, 1.92);
-  part(bar, B(3, 0.6, 0.12), PAL.lampe, 0.4, 3.4, 1.9);
-  part(bar, B(2.4, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.5, 1.97);
-  part(bar, B(1.6, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.28, 1.97);
+  for (const x of [-1.4, 2.2]) part(bar, B(0.1, 0.8, 0.1), PAL.poteau, x, 3.3, 1.7);
+  part(bar, B(4.6, 1.15, 0.12), PAL.pneu, 0.4, 3.7, 1.8);
+  enseigne(bar, 'CHEZ GINETTE', 4.4, 0.95, 0.4, 3.7, 1.87, { fond: PAL.rougeGrange, encre: PAL.lampe, allumee: true });
   part(bar, G(new THREE.PlaneGeometry(13, 4.4)), PAL.tole, 0, 0.025, 3.4, { rx: -Math.PI / 2 });
   miniChar(bar, PAL.rougeGrange, 4, 2.6, 0.5);
   miniChar(bar, PAL.chrome, -4.2, 2.4, 0.5);
@@ -549,7 +637,8 @@ export function createRang(
   const toitArena = G(new THREE.CylinderGeometry(3.5, 3.5, 5.2, 10, 1, false, Math.PI / 2, Math.PI));
   part(arena, toitArena, PAL.tole, 0, 2.4, 0, { rx: Math.PI / 2, s: [1, 1, 0.45] });
   part(arena, B(1.8, 2, 0.08), PAL.tole, 0, 1, 2.52);
-  part(arena, B(3, 0.5, 0.1), PAL.rougeGrange, 0, 2.7, 2.55);
+  part(arena, B(5.2, 1.1, 0.1), PAL.rougeGrange, 0, 3.2, 2.6);
+  enseigne(arena, 'ARÉNA MUNICIPAL', 5, 0.9, 0, 3.2, 2.66, { fond: PAL.rougeGrange, encre: PAL.declin });
   part(arena, B(1.2, 0.8, 0.9), PAL.declin, 3.4, 0.5, 3.6);
   part(arena, B(0.6, 0.5, 0.8), PAL.vitre, 3.4, 1.15, 3.6);
   part(arena, G(new THREE.PlaneGeometry(10, 3)), PAL.tole, 0, 0.025, 4.2, { rx: -Math.PI / 2 });
@@ -566,11 +655,13 @@ export function createRang(
   const flamme = G(new THREE.ConeGeometry(0.45, 1.1, 5));
   const citrouille = G(new THREE.IcosahedronGeometry(0.32, 1));
   const lumiere = B(0.2, 0.24, 0.2);
-  for (const ox of Object.values(ORIGINE)) {
+  for (const [lieu, ox] of Object.entries(ORIGINE)) {
     // Un coin de décor devant chaque endroit, un peu plus gros pour qu'on le voie.
+    // Au magasin, les pompes à essence prennent la place : la fête va de l'autre bord.
+    const dx = lieu === 'magasin' ? 7.6 : -3.4;
     const coin = (g: THREE.Group) => {
       const c = new THREE.Group();
-      c.position.set(ox - 3.4, 0, 3.4);
+      c.position.set(ox + dx, 0, 3.4);
       c.scale.setScalar(1.6);
       g.add(c);
       return c;
@@ -587,10 +678,11 @@ export function createRang(
     for (let i = 0; i < 5; i++) part(sj, buche, PAL.tronc, 0, 0.45, 0, { ry: (i * Math.PI) / 5, rz: 0.9 });
     part(sj, flamme, PAL.rouille, 0, 0.85, 0);
     part(sj, flamme, PAL.erables[1], 0, 1.1, 0, { s: [0.6, 0.8, 0.6] });
-    part(sj, G(new THREE.CylinderGeometry(0.05, 0.05, 3.4, 5)), PAL.poteau, 2.4, 1.7, -0.6);
-    part(sj, B(1.3, 0.85, 0.04), PAL.bleu, 3.05, 3, -0.6);
-    part(sj, B(1.3, 0.12, 0.05), PAL.declin, 3.05, 3, -0.6);
-    part(sj, B(0.12, 0.85, 0.05), PAL.declin, 3.05, 3, -0.6);
+    // Le drapeau reste assez bas pour pas cacher les enseignes.
+    part(sj, G(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 5)), PAL.poteau, 2.4, 1.2, -0.6);
+    part(sj, B(1.3, 0.85, 0.04), PAL.bleu, 3.05, 2, -0.6);
+    part(sj, B(1.3, 0.12, 0.05), PAL.declin, 3.05, 2, -0.6);
+    part(sj, B(0.12, 0.85, 0.05), PAL.declin, 3.05, 2, -0.6);
     // Halloween : des citrouilles sur le bord du chemin.
     const ha = coin(fetes.halloween);
     [
@@ -876,6 +968,7 @@ export function createRang(
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => m.dispose());
       filMat.dispose();
+      enseignes.forEach((e) => (e.tex.dispose(), e.mat.dispose()));
       renderer.dispose();
       renderer.domElement.remove();
       coupe.remove();

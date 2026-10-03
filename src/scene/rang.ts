@@ -20,7 +20,20 @@ export const PAL = {
   chrome: 0x7f7f78,
   pneu: 0x1c1c1a,
   vitre: 0x1f2526,
+  neige: 0xcfd0c8,
+  neigeOmbre: 0xa9aca3,
+  boue: 0x5f6342,
+  foin: 0x7d7448,
 } as const;
+
+export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
+// Le sol pis les buissons changent de couleur avec la saison.
+const SOL: Record<SaisonId, [number, number]> = {
+  printemps: [PAL.boue, PAL.herbeSombre],
+  ete: [PAL.herbe, PAL.herbeSombre],
+  automne: [PAL.foin, PAL.herbeSombre],
+  hiver: [PAL.neige, PAL.neigeOmbre],
+};
 
 // Ambiance : le rang est gris pis brumeux au début, il se réchauffe avec la progression.
 const DEBUT = {
@@ -62,6 +75,7 @@ export interface Rang {
   allerA(lieu: Lieu): void;
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
+  setSaison(s: SaisonId): void;
   setPixelScale(scale: number): void;
   dispose(): void;
 }
@@ -601,6 +615,11 @@ export function createRang(
       soleil.color.lerpColors(DEBUT.soleil, TARD.soleil, k);
       soleil.intensity = THREE.MathUtils.lerp(DEBUT.soleilForce, TARD.soleilForce, k) * Math.PI;
       soleil.position.lerpVectors(DEBUT.soleilPos, TARD.soleilPos, k);
+      if (!raf) renderer.render(scene, camera);
+    },
+    setSaison(x) {
+      (M(PAL.herbe) as THREE.MeshPhongMaterial).color.setHex(SOL[x][0]);
+      (M(PAL.herbeSombre) as THREE.MeshPhongMaterial).color.setHex(SOL[x][1]);
       if (!raf) renderer.render(scene, camera);
     },
     setPixelScale(scale) {

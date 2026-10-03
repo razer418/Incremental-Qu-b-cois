@@ -1,6 +1,8 @@
 // La radio du char : deux stations, des tounes composées en code (Web Audio) pis des fausses pubs
 // de radio locale lues par la voix du navigateur. Le son passe dans un filtre « radio AM » pour
 // fitter le style Bazou VHS. Toute la musique est faite ici : aucun fichier, aucune licence.
+// La voix parle toujours en joual; le texte affiché suit la langue choisie (sous-titres).
+import { t } from '../game/i18n';
 
 export interface Toune {
   titre: string;
@@ -253,13 +255,14 @@ export function createRadio(contexte: () => AudioContext | null, afficher: (text
   };
   const pause = () => {
     const s = STATIONS[radio.station];
-    const texte = `${PUBS[pubIndex]} ${s.slogan}`;
+    const pub = PUBS[pubIndex];
+    const texte = `${pub} ${s.slogan}`;
     pubIndex = (pubIndex + 1) % PUBS.length;
     pubEnCours = true;
-    afficher(`PUB · ${texte}`);
-    const t = ctx!.currentTime;
+    afficher(`${t('PUB')} · ${t(pub)} ${t(s.slogan)}`);
+    const debut = ctx!.currentTime;
     // Le jingle de la station.
-    [0, 4, 7, 12].forEach((n, i) => ton('triangle', hz(67 + n), t + i * 0.12, 0.3, 0.12));
+    [0, 4, 7, 12].forEach((n, i) => ton('triangle', hz(67 + n), debut + i * 0.12, 0.3, 0.12));
     // Assez de temps pour lire le texte, même sans voix.
     pubFin = performance.now() + 900 + texte.length * 65;
     const v = voix();
@@ -283,7 +286,7 @@ export function createRadio(contexte: () => AudioContext | null, afficher: (text
     notesMelodie = melodie(toune, s.style);
     pas = 0;
     prochaine = ctx!.currentTime + 0.3;
-    afficher(`♪ ${s.nom} · ${toune.titre} - ${toune.artiste}`);
+    afficher(`♪ ${t(s.nom)} · ${t(toune.titre)} - ${toune.artiste}`);
   };
   const arreterPub = () => {
     pubEnCours = false;
@@ -328,15 +331,15 @@ export function createRadio(contexte: () => AudioContext | null, afficher: (text
       arreterPub();
       toune = null;
       tounesJouees = Math.floor(Math.random() * 4);
-      if (station < 0) afficher('RADIO FERMÉE');
+      if (station < 0) afficher(t('RADIO FERMÉE'));
       if (!ctx) return;
-      const t = ctx.currentTime;
-      bus.gain.cancelScheduledValues(t);
-      bus.gain.setValueAtTime(station < 0 ? 0 : radio.volume, t);
+      const maint = ctx.currentTime;
+      bus.gain.cancelScheduledValues(maint);
+      bus.gain.setValueAtTime(station < 0 ? 0 : radio.volume, maint);
       // Le grichage entre deux postes.
-      grichage.gain.cancelScheduledValues(t);
-      grichage.gain.setValueAtTime(station < 0 ? 0.006 : 0.25, t);
-      grichage.gain.exponentialRampToValueAtTime(0.006, t + 0.6);
+      grichage.gain.cancelScheduledValues(maint);
+      grichage.gain.setValueAtTime(station < 0 ? 0.006 : 0.25, maint);
+      grichage.gain.exponentialRampToValueAtTime(0.006, maint + 0.6);
     },
     setVolume(v) {
       radio.volume = v;

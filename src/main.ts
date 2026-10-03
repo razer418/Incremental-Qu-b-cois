@@ -3,7 +3,7 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang, type Lieu } from './scene/rang';
-import { ARTICLES } from './game/magasin';
+import { ARTICLES, REJEAN } from './game/magasin';
 import { createSons } from './platform/sons';
 import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
@@ -45,12 +45,20 @@ import {
   tick,
   warmth,
   assez,
+  buyProjet,
+  projetDebloque,
+  projetFini,
+  reparerProjet,
   SUCCES_BONUS,
   TUTO_FINI,
 } from './game/state';
 import { load, save, wipe } from './game/save';
+import { saisonA } from './game/saisons';
+import { PROJETS } from './game/chars';
+import { EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
-import { formatDuration, formatMoney, notation } from './game/format';
+import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
+import { cite, facteur, langue, t } from './game/i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -139,8 +147,23 @@ const pref = {
 };
 const bascule = (btn: HTMLElement, on: boolean, oui = 'OUI', non = 'NON') => {
   btn.setAttribute('aria-pressed', String(on));
-  btn.textContent = on ? oui : non;
+  btn.textContent = t(on ? oui : non);
 };
+
+// La langue avant tout le reste : tout le texte passe par t().
+langue.en = pref.get('langue') === 'en';
+document.documentElement.lang = langue.en ? 'en-CA' : 'fr-CA';
+// Le texte fixe de la page (marqué data-t dans index.html).
+document.querySelectorAll<HTMLElement>('[data-t]').forEach((el) => (el.textContent = t(el.textContent!.trim())));
+document.querySelectorAll<HTMLElement>('[aria-label]').forEach((el) => el.setAttribute('aria-label', t(el.getAttribute('aria-label')!)));
+const langueBtn = $<HTMLButtonElement>('langue');
+bascule(langueBtn, !langue.en, 'JOUAL', 'ENGLISH');
+langueBtn.addEventListener('click', () => {
+  // On recharge la page : tout se réaffiche dans la bonne langue.
+  pref.set('langue', langue.en ? 'fr' : 'en');
+  save(localStorage, state);
+  location.reload();
+});
 
 let state = load(localStorage, Date.now());
 
@@ -148,7 +171,7 @@ let state = load(localStorage, Date.now());
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Effets sonores pis radio du char : volumes pis station gardés sur l'appareil.
 const NIVEAUX = [0, 0.25, 0.5, 0.75, 1];
-const pourcent = (v: number) => (v > 0 ? `${Math.round(v * 100)} %` : 'NON');
+const pourcent = (v: number) => (v > 0 ? `${Math.round(v * 100)}${langue.en ? '' : ' '}%` : 'NON');
 const niveau = (k: string, defaut: number) => {
   const v = Number(pref.get(k) ?? defaut);
   return NIVEAUX.includes(v) ? v : defaut;
@@ -173,7 +196,7 @@ const radioEl = $<HTMLButtonElement>('radio');
 const radioTexte = $('radio-texte');
 const radio = createRadio(sons.contexte, (texte) => {
   radioTexte.textContent = texte;
-  radioEl.setAttribute('aria-label', `Radio : ${texte}. Change de poste.`);
+  radioEl.setAttribute('aria-label', t('Radio : {texte}. Change de poste.', { texte }));
   // Le texte défile seulement s'il rentre pas sur la ligne.
   radioTexte.classList.remove('defile');
   requestAnimationFrame(() => {
@@ -189,7 +212,7 @@ const setStation = (i: number) => {
   radio.syntoniser(i);
   bascule(stationBtn, i >= 0, i >= 0 ? STATIONS[i].nom : '', 'FERMÉE');
   radioEl.classList.toggle('fermee', i < 0);
-  if (i >= 0 && !radioTexte.textContent) radioTexte.textContent = `♪ ${STATIONS[i].nom}`;
+  if (i >= 0 && !radioTexte.textContent) radioTexte.textContent = `♪ ${t(STATIONS[i].nom)}`;
   pref.set('radio', String(i));
 };
 const changerPoste = () => {
@@ -300,12 +323,12 @@ $('exporter').addEventListener('click', async () => {
   } catch {
     // presse-papier bloqué : le code est dans la boîte
   }
-  montrerCode(copie ? 'Code copié! Garde-le en lieu sûr.' : 'Copie ce code pis garde-le en lieu sûr.', false);
+  montrerCode(t(copie ? 'Code copié! Garde-le en lieu sûr.' : 'Copie ce code pis garde-le en lieu sûr.'), false);
   codeEl.select();
 });
 $('importer').addEventListener('click', () => {
   codeEl.value = '';
-  montrerCode('Colle ton code de sauvegarde ici.', true);
+  montrerCode(t('Colle ton code de sauvegarde ici.'), true);
   codeEl.focus();
 });
 codeOk.addEventListener('click', async () => {
@@ -314,22 +337,22 @@ codeOk.addEventListener('click', async () => {
     raw = decodeURIComponent(atob(codeEl.value.trim()));
     JSON.parse(raw);
   } catch {
-    codeAide.textContent = "Ce code-là marche pas. Vérifie que t'as tout copié.";
+    codeAide.textContent = t("Ce code-là marche pas. Vérifie que t'as tout copié.");
     return;
   }
-  if (!(await demander('Remplacer ta partie par celle du code?'))) return;
+  if (!(await demander(t('Remplacer ta partie par celle du code?')))) return;
   localStorage.setItem('incremental-quebecois-save', raw);
   state = load(localStorage, Date.now());
   save(localStorage, state);
   optionsDlg.close();
-  showMessage('Partie chargée!');
+  showMessage(t('Partie chargée!'));
   render();
 });
 
 const offline = applyOffline(state, Date.now());
 if (offline.gained >= 0.01 && offline.seconds >= 60) {
   showMessage(
-    `Pendant que t'étais parti (${formatDuration(offline.seconds)}), ta gang a ramassé ${formatMoney(offline.gained)}.`,
+    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }),
   );
 }
 
@@ -356,8 +379,8 @@ for (const u of UPGRADES) {
   li.className = 'upgrade';
   li.innerHTML = `
     <div class="upgrade-info">
-      <strong>${u.name} <span class="level"></span></strong>
-      <small>${u.description}</small>
+      <strong>${t(u.name)} <span class="level"></span></strong>
+      <small>${t(u.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span><span class="combien"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
@@ -379,8 +402,8 @@ for (const p of PARTS) {
   li.className = 'upgrade';
   li.innerHTML = `
     <div class="upgrade-info">
-      <strong>${p.name}</strong>
-      <small>${p.description}</small>
+      <strong>${t(p.name)}</strong>
+      <small>${t(p.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
@@ -391,7 +414,7 @@ for (const p of PARTS) {
     save(localStorage, state);
     if (!roulait && carRuns(state)) {
       showMessage(
-        "Vroum! Ton bazou part du premier coup (ou presque). T'es maintenant livreur de pizza, pis les jobs motorisées sont débloquées.",
+        t("Vroum! Ton bazou part du premier coup (ou presque). T'es maintenant livreur de pizza, pis les jobs motorisées sont débloquées."),
       );
     }
     render();
@@ -405,7 +428,7 @@ qClaim.addEventListener('click', () => {
   if (!q) return;
   sons.jouer('quete');
   save(localStorage, state);
-  showMessage(`${CHARACTERS[q.giver].name} : « ${q.thanks} » (+${formatMoney(q.reward)})`);
+  showMessage(`${t(CHARACTERS[q.giver].name)} : ${cite(t(q.thanks))} (+${formatMoney(q.reward)})`);
   render();
 });
 
@@ -431,13 +454,13 @@ boostBtn.addEventListener('click', async () => {
 noAdsBuy.addEventListener('click', async () => {
   if (state.noAds) return;
   if (!store.available) {
-    showMessage(`« Pas de pubs » (${NO_ADS_PRICE}) va s'acheter dans l'app Android, via Google Play. Sur le web, y'a juste des pubs de démo.`);
+    showMessage(t("« Pas de pubs » ({prix}) va s'acheter dans l'app Android, via Google Play. Sur le web, y'a juste des pubs de démo.", { prix: t(NO_ADS_PRICE) }));
     return;
   }
   if (await store.buyNoAds()) {
     state.noAds = true;
     save(localStorage, state);
-    showMessage('Merci! Le boost est gratuit pour toujours, pis y aura pu jamais de pubs.');
+    showMessage(t('Merci! Le boost est gratuit pour toujours, pis y aura pu jamais de pubs.'));
     render();
   }
 });
@@ -451,31 +474,24 @@ function allerA(l: Lieu): void {
   lieu = l;
   rang?.allerA(l);
   lieuBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lieu === l)));
-  if (l === 'magasin') mLine.textContent = `« ${REJEAN[Math.floor(Math.random() * REJEAN.length)]} »`;
+  if (l === 'magasin') mLine.textContent = cite(t(REJEAN[Math.floor(Math.random() * REJEAN.length)]));
   render();
 }
 
 // Le magasin général : on le voit quand on y est (ou tout le temps sans le décor 3D).
-const REJEAN = [
-  "Salut mon gars! Y'a de la frette dans le frigidaire pis du café sur le rond.",
-  "Cash seulement, la machine à cartes est encore brisée.",
-  "Ta mère est passée tantôt. A m'a dit que tu travaillais fort, astheure.",
-  "Le vin est en spécial. Ben, y'est toujours en spécial.",
-  "Si tu vas à la pêche, prends des vers. Les miens sont frais d'à matin.",
-];
 const magasinEl = $('magasin');
 const mLine = $('m-line');
 const mPortrait = $('m-portrait');
 mPortrait.style.background = CHARACTERS.rejean.color;
-mLine.textContent = `« ${REJEAN[0]} »`;
+mLine.textContent = cite(t(REJEAN[0]));
 const articleRows = new Map<string, { btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
 for (const a of ARTICLES) {
   const li = document.createElement('li');
   li.className = 'upgrade';
   li.innerHTML = `
     <div class="upgrade-info">
-      <strong>${a.name} <span class="level"></span></strong>
-      <small>${a.description}</small>
+      <strong>${t(a.name)} <span class="level"></span></strong>
+      <small>${t(a.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
@@ -512,8 +528,8 @@ batBuy.addEventListener('click', () => {
   allerA(b.id);
   showMessage(
     b.id === 'garage'
-      ? "Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués."
-      : "Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend.",
+      ? t('Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués.')
+      : t("Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend."),
   );
   render();
 });
@@ -521,13 +537,13 @@ batBuy.addEventListener('click', () => {
 prestigeBtn.addEventListener('click', async () => {
   const points = prestigePointsFor(state.totalEarned);
   const ok = await demander(
-    `Vendre l'empire? Tu repars à pied avec 0 $, mais tu gagnes ${points} points de réputation (+${points * PRESTIGE_BONUS_PER_POINT * 100} % sur tous tes gains, pour toujours).`,
+    t("Vendre l'empire? Tu repars à pied avec 0 $, mais tu gagnes {points} points de réputation (+{pc} % sur tous tes gains, pour toujours).", { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 }),
   );
   if (!ok) return;
   const gained = prestige(state, Date.now());
   save(localStorage, state);
   showMessage(
-    `Le rang au complet parle de toé. +${gained} points de réputation. Envoye, on recommence, mais plus vite cette fois-citte.`,
+    t('Le rang au complet parle de toé. +{points} points de réputation. Envoye, on recommence, mais plus vite cette fois-citte.', { points: gained }),
   );
   render();
 });
@@ -537,7 +553,7 @@ buyCarBtn.addEventListener('click', () => {
   sons.jouer('achat');
   save(localStorage, state);
   showMessage(
-    "Le bonhomme Gagnon : « Y'é à toé, mon gars. Y roule pas, y'a pu de batterie pis y'é sur les blocs, mais c'est un bon char. »",
+    t("Le bonhomme Gagnon : « Y'é à toé, mon gars. Y roule pas, y'a pu de batterie pis y'é sur les blocs, mais c'est un bon char. »"),
   );
   render();
 });
@@ -553,7 +569,7 @@ tapBtn.addEventListener('click', (e) => {
 });
 
 $('reset').addEventListener('click', async () => {
-  if (!(await demander('Tout effacer pis recommencer à zéro? Tout part : réputation, succès, stats pis « pas de pubs ».'))) return;
+  if (!(await demander(t('Tout effacer pis recommencer à zéro? Tout part : réputation, succès, stats pis « pas de pubs ».')))) return;
   wipe(localStorage);
   state = newGame(Date.now());
   optionsDlg.close();
@@ -581,7 +597,7 @@ function renderToast(now: number): void {
   const x = aCelebrer.shift();
   toast.hidden = !x;
   if (!x) return;
-  toast.textContent = `SUCCÈS : ${x.nom} (+${SUCCES_BONUS * 100}\u00a0%)`;
+  toast.textContent = t('SUCCÈS : {nom} (+{pc} %)', { nom: t(x.nom), pc: SUCCES_BONUS * 100 });
   toast.classList.remove('entre');
   void toast.offsetWidth;
   toast.classList.add('entre');
@@ -599,8 +615,8 @@ const succesRows = new Map<string, HTMLLIElement>();
 for (const x of SUCCES) {
   const li = document.createElement('li');
   li.innerHTML = `<strong></strong><small></small>`;
-  li.querySelector('strong')!.textContent = x.nom;
-  li.querySelector('small')!.textContent = x.description;
+  li.querySelector('strong')!.textContent = t(x.nom);
+  li.querySelector('small')!.textContent = t(x.description);
   succesRows.set(x.id, li);
   $('succes-liste').append(li);
 }
@@ -609,24 +625,25 @@ function renderMenu(): void {
   if (!optionsDlg.open) return;
   if (onglet === 'succes') {
     const n = state.succes.length;
-    $('succes-resume').textContent = `${n} / ${SUCCES.length} : +${Math.round(n * SUCCES_BONUS * 100)} % sur tous tes gains`;
+    $('succes-resume').textContent = t('{n} / {total} : +{pc} % sur tous tes gains', { n, total: SUCCES.length, pc: Math.round(n * SUCCES_BONUS * 100) });
     for (const x of SUCCES) succesRows.get(x.id)!.classList.toggle('obtenu', state.succes.includes(x.id));
   } else if (onglet === 'stats') {
     const st = state.stats;
     const lignes: [string, string][] = [
-      ['Temps joué', formatDuration(st.secondes)],
-      ['Gagné cette partie', formatMoney(state.totalEarned)],
-      ['Gagné à vie', formatMoney(st.gagneVie)],
-      ['Revenu', `${formatMoney(currentRate(state))}/s`],
-      ['Une tape', formatMoney(tapValue(state))],
-      ['Tapes cette partie', state.taps.toLocaleString('fr-CA')],
-      ['Tapes à vie', st.tapsVie.toLocaleString('fr-CA')],
-      ['Boosts x2', String(st.boosts)],
-      ['Achats chez Réjean', String(st.articles)],
-      ['Quêtes finies', String(state.questIndex)],
-      ['Empires vendus', String(state.prestige.count)],
-      ['Réputation', `${state.prestige.points} (+${Math.round(state.prestige.points * PRESTIGE_BONUS_PER_POINT * 100)} %)`],
-      ['Succès', `${state.succes.length} / ${SUCCES.length} (+${Math.round(state.succes.length * SUCCES_BONUS * 100)} %)`],
+      [t('Temps joué'), formatDuration(st.secondes)],
+      [t('Gagné cette partie'), formatMoney(state.totalEarned)],
+      [t('Gagné à vie'), formatMoney(st.gagneVie)],
+      [t('Revenu'), `${formatMoney(currentRate(state))}/s`],
+      [t('Une tape'), formatMoney(tapValue(state))],
+      [t('Tapes cette partie'), formatNombre(state.taps)],
+      [t('Tapes à vie'), formatNombre(st.tapsVie)],
+      [t('Boosts x2'), String(st.boosts)],
+      [t('Achats chez Réjean'), String(st.articles)],
+      [t('Événements'), String(st.evenements)],
+      [t('Quêtes finies'), String(state.questIndex)],
+      [t('Empires vendus'), String(state.prestige.count)],
+      [t('Réputation'), `${state.prestige.points} (+${Math.round(state.prestige.points * PRESTIGE_BONUS_PER_POINT * 100)} %)`],
+      [t('Succès'), `${state.succes.length} / ${SUCCES.length} (+${Math.round(state.succes.length * SUCCES_BONUS * 100)} %)`],
     ];
     $('stats-liste').innerHTML = lignes.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   }
@@ -659,7 +676,7 @@ const TUTO: { cible: () => HTMLElement; texte: string; fini: () => boolean }[] =
 ];
 const bulle = document.createElement('div');
 bulle.className = 'bulle';
-bulle.innerHTML = `<p></p><div class="bulle-actions"><button type="button" class="passer">Passer le tuto</button><button type="button" class="ok" hidden>[ OK ]</button></div>`;
+bulle.innerHTML = `<p></p><div class="bulle-actions"><button type="button" class="passer">${t('Passer le tuto')}</button><button type="button" class="ok" hidden>[ OK ]</button></div>`;
 bulle.querySelector('.passer')!.addEventListener('click', () => finirTuto());
 bulle.querySelector('.ok')!.addEventListener('click', () => finirTuto());
 let tutoAffiche = -1;
@@ -679,10 +696,10 @@ function renderTuto(): void {
     if (state.tuto !== TUTO_FINI) finirTuto();
     return;
   }
-  const t = TUTO[step];
-  const cible = t.cible();
+  const etape = TUTO[step];
+  const cible = etape.cible();
   cible.classList.add('tuto-cible');
-  bulle.querySelector('p')!.textContent = t.texte;
+  bulle.querySelector('p')!.textContent = t(etape.texte);
   const dernier = step === TUTO.length - 1;
   bulle.querySelector<HTMLElement>('.ok')!.hidden = !dernier;
   bulle.querySelector<HTMLElement>('.passer')!.hidden = dernier;
@@ -733,8 +750,8 @@ function render(): void {
   }
 
   const roule = carRuns(state);
-  jobEl.textContent = roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES';
-  tapLabel.textContent = roule ? '[ LIVRER ]' : '[ RAMASSER ]';
+  jobEl.textContent = t(roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES');
+  tapLabel.textContent = t(roule ? '[ LIVRER ]' : '[ RAMASSER ]');
   const look = {
     garage: state.buildings.garage,
     concession: state.buildings.concession,
@@ -755,6 +772,9 @@ function render(): void {
   }
 
   renderQuest();
+  renderSaison();
+  renderEvenement();
+  renderProjets();
   renderMagasin();
   celebrer(verifierSucces(state));
   renderTuto();
@@ -771,13 +791,13 @@ function render(): void {
     goalText.textContent = `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
     buyCarBtn.hidden = !assez(state, CAR_PRICE);
   } else {
-    carStatus.textContent = roule ? 'ÇA ROULE!' : 'SUR LES BLOCS';
+    carStatus.textContent = t(roule ? 'ÇA ROULE!' : 'SUR LES BLOCS');
     carStatus.classList.toggle('roule', roule);
     for (const p of PARTS) {
       const row = partRows.get(p.id)!;
       const done = isRepaired(state, p.id);
       row.li.classList.toggle('done', done);
-      row.cost.textContent = done ? 'RÉPARÉ' : formatMoney(p.cost);
+      row.cost.textContent = done ? t('RÉPARÉ') : formatMoney(p.cost);
       row.btn.disabled = done || !assez(state, p.cost);
       if (!done) progres(row.btn, p.cost);
     }
@@ -790,9 +810,10 @@ function render(): void {
     const max = nextCost(state, u.id) === null;
     const lot = bulkCost(state, u.id, LOTS[lotMode]);
     row.li.classList.toggle('max', max);
-    row.level.textContent = level > 0 ? `NIV. ${level}` : '';
-    row.cost.textContent = max ? 'AU MAX' : formatMoney(lot.cost);
-    row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} NIV.`;
+    const bonus = saisonA(state.lastTick).bonus[u.id];
+    row.level.textContent = (level > 0 ? `${t('NIV.')} ${level}` : '') + (bonus ? ` ${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '');
+    row.cost.textContent = max ? t('AU MAX') : formatMoney(lot.cost);
+    row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} ${t('NIV.')}`;
     row.btn.disabled = max || !assez(state, lot.cost);
     progres(row.btn, lot.cost);
   }
@@ -801,15 +822,15 @@ function render(): void {
 function renderEmpire(roule: boolean): void {
   const pts = state.prestige.points;
   repEl.hidden = pts === 0;
-  repEl.textContent = `RÉPUTATION ${pts} (+${Math.round(pts * PRESTIGE_BONUS_PER_POINT * 100)} %)`;
+  repEl.textContent = `${t('RÉPUTATION')} ${pts} (+${Math.round(pts * PRESTIGE_BONUS_PER_POINT * 100)} %)`;
 
   empireEl.hidden = !roule;
   if (!roule) return;
   const b = nextBuilding(state);
   batEl.hidden = b === null;
   if (b) {
-    batName.textContent = b.name;
-    batDesc.textContent = b.description;
+    batName.textContent = t(b.name);
+    batDesc.textContent = t(b.description);
     batCost.textContent = formatMoney(b.cost);
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
@@ -819,8 +840,8 @@ function renderEmpire(roule: boolean): void {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
     prestigeDesc.textContent = ready
-      ? `Tu repars à zéro avec ${points} points de réputation (+${points * PRESTIGE_BONUS_PER_POINT * 100} % pour toujours).`
-      : `Disponible à ${formatMoney(PRESTIGE_MIN_EARNED)} gagnés au total. T'es rendu à ${formatMoney(state.totalEarned)}.`;
+      ? t('Tu repars à zéro avec {points} points de réputation (+{pc} % pour toujours).', { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 })
+      : t("Disponible à {min} gagnés au total. T'es rendu à {cash}.", { min: formatMoney(PRESTIGE_MIN_EARNED), cash: formatMoney(state.totalEarned) });
     prestigeBtn.disabled = !ready;
   }
 }
@@ -829,14 +850,138 @@ function renderBoost(): void {
   const left = Math.ceil(state.boostSeconds);
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
-  boostBtn.textContent = sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]';
+  boostBtn.textContent = t(sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]');
   boostSub.classList.toggle('on', left > 0);
   const mm = Math.floor(left / 60);
   const ss = String(left % 60).padStart(2, '0');
   boostSub.textContent =
-    left > 0 ? `x2 ACTIF : ${mm}:${ss}` : sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
-  noAdsBuy.textContent = state.noAds ? 'ACHETÉ' : NO_ADS_PRICE;
+    left > 0 ? t('x2 ACTIF : {temps}', { temps: `${mm}:${ss}` }) : t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
+  noAdsBuy.textContent = t(state.noAds ? 'ACHETÉ' : NO_ADS_PRICE);
   noAdsBuy.disabled = state.noAds;
+}
+
+// --- Saisons ---
+
+const saisonBtn = $<HTMLButtonElement>('saison');
+let lastSaison = '';
+saisonBtn.addEventListener('click', () => {
+  const x = saisonA(state.lastTick);
+  showMessage(`${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes.')}`);
+});
+function renderSaison(): void {
+  const x = saisonA(state.lastTick);
+  if (x.id === lastSaison) return;
+  saisonBtn.textContent = t(x.nom);
+  rang?.setSaison(x.id);
+  lastSaison = x.id;
+}
+
+// --- Événements du rang : aux 3 à 6 minutes, une affaire à prendre ou à laisser ---
+
+const evenementEl = $('evenement');
+const prochainDelai = () => (3 + Math.random() * 3) * 60_000;
+let evenement: { e: Evenement; fin: number } | null = null;
+let prochainEvenement = Date.now() + prochainDelai();
+function montrerEvenement(e: Evenement, now: number): void {
+  evenement = { e, fin: now + EVENEMENT_SECONDES * 1000 };
+  const who = CHARACTERS[e.qui];
+  $('e-portrait').textContent = who.initials;
+  $('e-portrait').style.background = who.color;
+  $('e-who').textContent = t(who.name).toUpperCase();
+  $('e-line').textContent = cite(t(e.texte));
+  const choixEl = $('e-choix');
+  choixEl.replaceChildren(
+    ...e.choix.map((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'buy-car';
+      b.textContent = `[ ${t(c.label).toUpperCase()} ]`;
+      b.addEventListener('click', () => {
+        evenement = null;
+        const msg = choisir(state, e, i, Math.random());
+        save(localStorage, state);
+        showMessage(msg);
+        render();
+      });
+      return b;
+    }),
+  );
+  sons.jouer('quete');
+}
+function renderEvenement(): void {
+  const now = Date.now();
+  // Pas d'événement pendant le tuto.
+  if (!evenement && now >= prochainEvenement && state.tuto === TUTO_FINI) {
+    const e = tirerEvenement(state, Math.random());
+    if (e) montrerEvenement(e, now);
+  }
+  if (evenement && now >= evenement.fin) evenement = null;
+  if (evenement) prochainEvenement = now + prochainDelai();
+  evenementEl.hidden = !evenement;
+  if (evenement) $('e-bar').style.width = `${((evenement.fin - now) / (EVENEMENT_SECONDES * 1000)) * 100}%`;
+}
+
+// --- Chars à retaper ---
+
+const projetRows = PROJETS.map((p) => {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong></strong>
+      <small></small>
+    </div>
+    <button type="button" class="buy"><span class="cost"></span></button>`;
+  li.querySelector('strong')!.textContent = t(p.nom);
+  li.querySelector('small')!.textContent = `${t(p.description)} ${t('Une fois retapé : {x} sur tous tes gains.', { x: facteur(p.bonus) })}`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    if (!buyProjet(state, p.id)) return;
+    sons.jouer('achat');
+    save(localStorage, state);
+    render();
+  });
+  const pieces = p.pieces.map((x) => {
+    const pli = document.createElement('li');
+    pli.className = 'upgrade piece';
+    pli.innerHTML = `<div class="upgrade-info"><strong></strong></div><button type="button" class="buy"><span class="cost"></span></button>`;
+    pli.querySelector('strong')!.textContent = t(x.nom);
+    const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
+    pbtn.addEventListener('click', () => {
+      if (!reparerProjet(state, p.id, x.id)) return;
+      sons.jouer('achat');
+      save(localStorage, state);
+      if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(p.nom), x: facteur(p.bonus) }));
+      render();
+    });
+    return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
+  });
+  $('projets-liste').append(li, ...pieces.map((x) => x.li));
+  return { p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
+});
+function renderProjets(): void {
+  let visible = false;
+  for (const row of projetRows) {
+    const ouvert = projetDebloque(state, row.p);
+    const faites = state.projets[row.p.id];
+    const fini = projetFini(state, row.p);
+    visible ||= ouvert;
+    row.li.hidden = !ouvert;
+    row.li.classList.toggle('done', fini);
+    row.cost.textContent = fini ? t('RETAPÉ') : faites ? t('À TOÉ') : formatMoney(row.p.prix);
+    row.btn.disabled = !!faites || !assez(state, row.p.prix);
+    if (!faites) progres(row.btn, row.p.prix);
+    for (const pc of row.pieces) {
+      // Les pièces s'affichent quand le char est à toé, pis disparaissent quand il est fini.
+      pc.li.hidden = !faites || fini;
+      const faite = !!faites?.includes(pc.x.id);
+      pc.li.classList.toggle('done', faite);
+      pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(pc.x.cost);
+      pc.btn.disabled = faite || !assez(state, pc.x.cost);
+      if (!faite) progres(pc.btn, pc.x.cost);
+    }
+  }
+  $('projets').hidden = !visible;
 }
 
 let lastQuestId = '';
@@ -848,9 +993,9 @@ function renderQuest(): void {
     const who = CHARACTERS[q.giver];
     qPortrait.textContent = who.initials;
     qPortrait.style.background = who.color;
-    qWho.textContent = who.name.toUpperCase();
-    qLine.textContent = `« ${q.ask} »`;
-    qGoal.textContent = q.goal.toUpperCase();
+    qWho.textContent = t(who.name).toUpperCase();
+    qLine.textContent = cite(t(q.ask));
+    qGoal.textContent = t(q.goal).toUpperCase();
     qReward.textContent = `+${formatMoney(q.reward)}`;
     lastQuestId = q.id;
   }

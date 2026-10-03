@@ -42,7 +42,7 @@ describe('boucle de base', () => {
     expect(s.cash).toBeCloseTo(5);
     expect(s.upgrades.velo).toBe(1);
     expect(passiveRate(s)).toBeCloseTo(0.25);
-    expect(nextCost(s, 'velo')).toBeCloseTo(7);
+    expect(nextCost(s, 'velo')).toBeCloseTo(7.75);
   });
 
   it("refuse d'acheter sans assez de cash", () => {
@@ -209,7 +209,7 @@ describe('achat en lot', () => {
   it('arrête au niveau max', () => {
     const s = newGame(0);
     s.cash = 1e9;
-    expect(buyMany(s, 'depanneur', 10)).toBe(5);
+    expect(buyMany(s, 'depanneur', 10)).toBe(3);
   });
 });
 

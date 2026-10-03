@@ -25,13 +25,13 @@ describe('succès', () => {
   it('restent après le prestige, avec les stats', () => {
     const s = newGame(0);
     s.buildings = { garage: true, concession: true };
-    s.totalEarned = 30e6;
-    s.stats.gagneVie = 30e6;
+    s.totalEarned = 30e9;
+    s.stats.gagneVie = 30e9;
     verifierSucces(s);
     const avant = s.succes.length;
     prestige(s, 0);
     expect(s.succes.length).toBe(avant);
-    expect(s.stats.gagneVie).toBe(30e6);
+    expect(s.stats.gagneVie).toBe(30e9);
     expect(s.tuto).toBe(TUTO_FINI);
   });
 });

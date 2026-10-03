@@ -2,6 +2,8 @@ import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
+import { saisonA } from './saisons';
+import { PROJETS, getProjet, type Projet } from './chars';
 import {
   BUILDINGS,
   PRESTIGE_BONUS_PER_POINT,
@@ -34,6 +36,8 @@ export interface GameState {
   stats: Stats;
   /** Étape du tuto; TUTO_FINI quand c'est fini. */
   tuto: number;
+  /** Chars à retaper achetés : id du char -> pièces réparées. */
+  projets: Record<string, string[]>;
   lastTick: number;
 }
 
@@ -44,6 +48,7 @@ export interface Stats {
   gagneVie: number;
   boosts: number;
   articles: number;
+  evenements: number;
 }
 
 export const TUTO_FINI = 99;
@@ -70,8 +75,9 @@ export function newGame(now: number): GameState {
     noAds: false,
     magasin: {},
     succes: [],
-    stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0 },
+    stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0 },
     tuto: 0,
+    projets: {},
     lastTick: now,
   };
 }
@@ -84,7 +90,7 @@ export function assez(state: GameState, cost: number): boolean {
   return state.cash + 1e-6 >= cost;
 }
 
-function payer(state: GameState, cost: number): void {
+export function payer(state: GameState, cost: number): void {
   state.cash = Math.max(0, state.cash - cost);
 }
 
@@ -100,6 +106,7 @@ export function multiplier(state: GameState): number {
   if (state.car.parts.carrosserie) mult *= CAR_TIP_MULT;
   mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
   mult *= 1 + state.succes.length * SUCCES_BONUS;
+  for (const p of PROJETS) if (projetFini(state, p)) mult *= p.bonus;
   return mult;
 }
 
@@ -109,7 +116,7 @@ function baseTapValue(state: GameState): number {
   for (const u of UPGRADES) {
     if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
   }
-  return value * multiplier(state);
+  return value * multiplier(state) * saisonA(state.lastTick).tap;
 }
 
 export function tapValue(state: GameState): number {
@@ -145,12 +152,16 @@ export function magasinFactor(state: GameState, boosts: Article['boosts']): numb
   return f;
 }
 
-/** Prix d'un article : suit tes revenus (passif + environ 2 tapes par seconde). */
+/** Tes revenus de référence : passif + environ 2 tapes par seconde, sans les boosts. */
+export function revenuRef(state: GameState): number {
+  return passiveRate(state) + 2 * baseTapValue(state);
+}
+
+/** Prix d'un article : suit tes revenus. */
 export function articleCost(state: GameState, id: string): number {
   const a = getArticle(id);
   if (!a) return Infinity;
-  const income = passiveRate(state) + 2 * baseTapValue(state);
-  return Math.round(Math.max(a.minCost, a.incomeSeconds * income) * 100) / 100;
+  return Math.round(Math.max(a.minCost, a.incomeSeconds * revenuRef(state)) * 100) / 100;
 }
 
 /** On peut en reprendre quand il en reste moins que la durée d'un article (max 2 d'avance). */
@@ -190,14 +201,15 @@ function passiveOver(state: GameState, seconds: number): number {
 }
 
 export function passiveRate(state: GameState): number {
+  const saison = saisonA(state.lastTick);
   let rate = 0;
   for (const u of UPGRADES) {
-    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id);
+    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id) * (saison.bonus[u.id] ?? 1);
   }
   return rate * multiplier(state);
 }
 
-function earn(state: GameState, amount: number): void {
+export function earn(state: GameState, amount: number): void {
   state.cash += amount;
   state.totalEarned += amount;
   state.stats.gagneVie += amount;
@@ -412,4 +424,32 @@ export function claimQuest(state: GameState): Quest | null {
   earn(state, q.reward);
   state.questIndex += 1;
   return q;
+}
+
+// --- Chars à retaper ---
+
+export function projetDebloque(state: GameState, p: Projet): boolean {
+  return p.requires === 'roule' ? carRuns(state) : state.buildings[p.requires];
+}
+
+export function projetFini(state: GameState, p: Projet): boolean {
+  return state.projets[p.id]?.length === p.pieces.length;
+}
+
+export function buyProjet(state: GameState, id: string): boolean {
+  const p = getProjet(id);
+  if (!p || state.projets[id] || !projetDebloque(state, p) || !assez(state, p.prix)) return false;
+  payer(state, p.prix);
+  state.projets[id] = [];
+  return true;
+}
+
+export function reparerProjet(state: GameState, id: string, pieceId: string): boolean {
+  const p = getProjet(id);
+  const faites = state.projets[id];
+  const piece = p?.pieces.find((x) => x.id === pieceId);
+  if (!piece || !faites || faites.includes(pieceId) || !assez(state, piece.cost)) return false;
+  payer(state, piece.cost);
+  faites.push(pieceId);
+  return true;
 }

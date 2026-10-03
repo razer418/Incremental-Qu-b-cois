@@ -2,6 +2,7 @@
  * Pubs récompensées. Sur le web, c'est une pub de démo de 5 s (aucune vraie pub).
  * Sur Android, on branchera AdMob ici sans toucher au reste du jeu.
  */
+import { t } from '../game/i18n';
 export interface Ads {
   /** Montre une pub récompensée. Retourne true si le joueur l'a regardée au complet. */
   showRewarded(): Promise<boolean>;
@@ -30,8 +31,8 @@ export function createDemoAds(dialog: HTMLDialogElement, countdown: HTMLElement,
           finish(left <= 0);
         };
         const paint = () => {
-          countdown.textContent = left > 0 ? `${left}` : 'MERCI!';
-          close.textContent = left > 0 ? '[ FERMER ]' : '[ CHERCHER MON BOOST ]';
+          countdown.textContent = left > 0 ? `${left}` : t('MERCI!');
+          close.textContent = t(left > 0 ? '[ FERMER ]' : '[ CHERCHER MON BOOST ]');
         };
         const timer = setInterval(() => {
           left -= 1;

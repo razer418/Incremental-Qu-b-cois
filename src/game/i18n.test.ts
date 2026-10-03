@@ -13,6 +13,8 @@ import { SAISONS } from './saisons';
 import { FETES } from './fetes';
 import { PROJETS } from './chars';
 import { EVENEMENTS } from './evenements';
+import { LOOK } from './look';
+import { MINIJEUX } from './minijeux';
 import { NO_ADS_PRICE } from '../platform/store';
 import { PUBS, STATIONS } from '../platform/radio';
 
@@ -31,6 +33,8 @@ function cles(): string[] {
     ...FETES.flatMap((x) => [x.nom, x.description]),
     ...PROJETS.flatMap((p) => [p.nom, p.description, ...p.pieces.map((x) => x.nom)]),
     ...EVENEMENTS.flatMap((e) => [e.texte, ...e.choix.map((c) => c.label)]),
+    ...Object.values(LOOK).flatMap((c) => [c.nom, ...c.options.map((o) => o.nom)]),
+    ...MINIJEUX.flatMap((m) => [m.nom, m.description]),
     // Les boutons OUI/NON des options
     'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH',
     NO_ADS_PRICE,

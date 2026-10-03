@@ -37,12 +37,12 @@ describe('boucle de base', () => {
 
   it('acheter coûte du cash et monte le niveau', () => {
     const s = newGame(0);
-    s.cash = 10;
+    s.cash = 50;
     expect(buy(s, 'velo')).toBe(true);
-    expect(s.cash).toBeCloseTo(5);
+    expect(s.cash).toBeCloseTo(25);
     expect(s.upgrades.velo).toBe(1);
     expect(passiveRate(s)).toBeCloseTo(0.25);
-    expect(nextCost(s, 'velo')).toBeCloseTo(7.75);
+    expect(nextCost(s, 'velo')).toBeCloseTo(38.75);
   });
 
   it("refuse d'acheter sans assez de cash", () => {
@@ -70,7 +70,7 @@ describe('ambiance du rang', () => {
   it('se réchauffe avec les gains pis les réparations, plafonné à 0,5', () => {
     const s = newGame(0);
     expect(warmth(s)).toBe(0);
-    s.totalEarned = 250;
+    s.totalEarned = 1250;
     expect(warmth(s)).toBeCloseTo(0.15);
     s.totalEarned = 10_000;
     expect(warmth(s)).toBeCloseTo(0.3);
@@ -125,7 +125,7 @@ describe('le premier bazou', () => {
     buyCar(s);
     essentials.forEach((p) => repair(s, p.id));
     expect(buy(s, 'circulaires')).toBe(true);
-    expect(passiveRate(s)).toBeCloseTo(15);
+    expect(passiveRate(s)).toBeCloseTo(5);
   });
 
   it('la carrosserie donne x1,25', () => {
@@ -199,7 +199,7 @@ describe('achat en lot', () => {
 
   it("MAX achète tout ce que t'as les moyens", () => {
     const s = newGame(0);
-    s.cash = 3;
+    s.cash = 15;
     const n = buyMany(s, 'sac', Infinity);
     expect(n).toBeGreaterThan(1);
     expect(s.cash).toBeGreaterThanOrEqual(0);
@@ -214,9 +214,9 @@ describe('achat en lot', () => {
 });
 
 describe('virgule flottante', () => {
-  it('10 canettes à 0,10 $ payent un article à 1 $', () => {
+  it('50 canettes à 0,10 $ payent un sac à 5 $', () => {
     const s = newGame(0);
-    for (let i = 0; i < 10; i++) tap(s);
+    for (let i = 0; i < 50; i++) tap(s);
     expect(buyMany(s, 'sac', 1)).toBe(1);
     expect(s.cash).toBeGreaterThanOrEqual(0);
   });

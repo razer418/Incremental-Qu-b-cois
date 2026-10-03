@@ -21,7 +21,7 @@ describe('saisons', () => {
   it("l'hiver triple le déneigement pis ralentit le bicycle", () => {
     const s = newGame(quand('hiver'));
     s.upgrades = { deneigement: 1, velo: 1 };
-    expect(passiveRate(s)).toBeCloseTo(60 * 3 + 0.25 * 0.5);
+    expect(passiveRate(s)).toBeCloseTo(20 * 3 + 0.25 * 0.5);
   });
 
   it("l'été donne des tapes x1,5", () => {

@@ -42,6 +42,12 @@ describe('le magasin général', () => {
     expect(s.boostSeconds).toBe(0);
   });
 
+  it('les articles se cumulent pas entre eux : le meilleur compte', () => {
+    const s = newGame(0);
+    s.magasin = { chips: 100, biere: 100, vape: 100 };
+    expect(tapValue(s)).toBeCloseTo(BASE_TAP * 2);
+  });
+
   it('le prix suit tes revenus', () => {
     const s = newGame(0);
     // Au début : 2 tapes de 0,10 $ par seconde.

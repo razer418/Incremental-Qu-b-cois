@@ -4,6 +4,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang, type Lieu } from './scene/rang';
 import { ARTICLES, REJEAN } from './game/magasin';
+import { icone } from './icones';
 import { createSons } from './platform/sons';
 import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
@@ -767,6 +768,7 @@ function render(): void {
   cashEl.textContent = formatMoney(state.cash);
   rateEl.textContent = `+${formatMoney(currentRate(state))}/s`;
   renderBoost();
+  renderBuffs();
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
   const w = Math.round(warmth(state) * 200) / 200;
@@ -875,17 +877,55 @@ function renderEmpire(roule: boolean): void {
 }
 
 function renderBoost(): void {
-  const left = Math.ceil(state.boostSeconds);
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
   boostBtn.textContent = t(sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]');
-  boostSub.classList.toggle('on', left > 0);
-  const mm = Math.floor(left / 60);
-  const ss = String(left % 60).padStart(2, '0');
-  boostSub.textContent =
-    left > 0 ? t('x2 ACTIF : {temps}', { temps: `${mm}:${ss}` }) : t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
+  boostSub.textContent = t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
   noAdsBuy.textContent = t(state.noAds ? 'ACHETÉ' : NO_ADS_PRICE);
   noAdsBuy.disabled = state.noAds;
+}
+
+// --- Buffs actifs : une icône par achat dans la barre du haut, qui se vide avec le temps ---
+
+const buffsEl = $('buffs');
+const buffIcones = new Map<string, HTMLButtonElement>();
+function temps(s: number): string {
+  const c = Math.ceil(s);
+  return `${Math.floor(c / 60)}:${String(c % 60).padStart(2, '0')}`;
+}
+function buffsActifs(): { id: string; nom: string; description: string; left: number; duree: number }[] {
+  return [
+    { id: 'boost', nom: 'Boost x2', description: 'Tes tapes pis ton passif x2.', left: state.boostSeconds, duree: BOOST_SECONDS },
+    ...ARTICLES.map((a) => ({ id: a.id, nom: a.name, description: a.description, left: state.magasin[a.id] ?? 0, duree: a.seconds })),
+  ].filter((b) => b.left > 0);
+}
+function renderBuffs(): void {
+  const actifs = buffsActifs();
+  for (const [id, btn] of buffIcones) {
+    if (actifs.some((b) => b.id === id)) continue;
+    btn.remove();
+    buffIcones.delete(id);
+  }
+  for (const b of actifs) {
+    let btn = buffIcones.get(b.id);
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'buff';
+      btn.innerHTML = icone(b.id);
+      btn.addEventListener('click', () => {
+        const now = buffsActifs().find((y) => y.id === b.id);
+        if (now) showMessage(`${t(now.nom)} : ${t(now.description)} ${t('Il reste {temps}.', { temps: temps(now.left) })}`);
+      });
+      buffsEl.append(btn);
+      buffIcones.set(b.id, btn);
+    }
+    // Pleine quand t'achètes, vide à zéro. Si t'en as cumulé, elle se vide une fois par achat.
+    btn.style.setProperty('--reste', String(b.left / (Math.ceil(b.left / b.duree) * b.duree)));
+    btn.classList.toggle('fin', b.left < 30);
+    btn.setAttribute('aria-label', `${t(b.nom)} ${temps(b.left)}`);
+  }
+  buffsEl.hidden = actifs.length === 0;
 }
 
 // --- Saisons ---

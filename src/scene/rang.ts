@@ -45,6 +45,8 @@ const TARD = {
 };
 
 export interface CarLook {
+  garage: boolean;
+  concession: boolean;
   owned: boolean;
   wheels: boolean;
   clean: boolean;
@@ -197,11 +199,64 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
 
   // Pile de pneus, boîte à malle, botte de foin
   const pneu = G(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 8));
-  for (let i = 0; i < 3; i++) part(scene, pneu, PAL.pneu, 8.2, 0.15 + i * 0.3, 0.4);
+  const pilePneus: THREE.Mesh[] = [];
+  for (let i = 0; i < 3; i++) pilePneus.push(part(scene, pneu, PAL.pneu, 8.2, 0.15 + i * 0.3, 0.4));
   part(scene, G(new THREE.CylinderGeometry(0.06, 0.06, 1.1, 5)), PAL.bois, -3.4, 0.55, 4.3);
   part(scene, B(0.45, 0.4, 0.7), PAL.chrome, -3.4, 1.25, 4.3);
   part(scene, B(0.06, 0.3, 0.06), PAL.tole, -3.15, 1.5, 4.45);
   part(scene, G(new THREE.CylinderGeometry(0.65, 0.65, 1.1, 10)), PAL.champ, -9, 0.65, -6, { rz: Math.PI / 2 });
+
+  // Le garage à Ti-Guy (caché tant qu'il est pas acheté)
+  const garage = new THREE.Group();
+  garage.position.set(-7.6, 0, 1.6);
+  garage.rotation.y = 0.15;
+  scene.add(garage);
+  part(garage, B(4.4, 3, 4), PAL.tole, 0, 1.5, 0);
+  part(garage, B(4.8, 0.2, 4.4), PAL.rougeGrange, 0, 3.1, 0);
+  part(garage, B(2.6, 2.2, 0.08), PAL.bois, 0.5, 1.1, 2.02);
+  for (let i = 0; i < 4; i++) part(garage, B(2.6, 0.06, 0.1), PAL.poteau, 0.5, 0.4 + i * 0.5, 2.06);
+  part(garage, B(0.7, 0.7, 0.08), PAL.vitre, -1.55, 1.9, 2.02);
+  part(garage, B(2.4, 0.5, 0.1), PAL.declin, 0, 3.5, 2.1);
+  part(garage, B(1.8, 0.16, 0.12), PAL.rougeGrange, 0, 3.5, 2.12);
+  garage.visible = false;
+
+  // Le concessionnaire : un lot de chars avec des fanions
+  const lot = new THREE.Group();
+  lot.position.set(9.3, 0, 2.6);
+  lot.rotation.y = -0.2;
+  scene.add(lot);
+  part(lot, G(new THREE.PlaneGeometry(7, 4.6)), PAL.gravier, 0, 0.03, 0, { rx: -Math.PI / 2 });
+  const miniChar = (c: number, x: number, z: number, ry: number) => {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = ry;
+    lot.add(g);
+    part(g, B(2.6, 0.55, 1.2), c, 0, 0.55, 0);
+    part(g, B(1.3, 0.45, 1.05), PAL.vitre, -0.15, 1.05, 0);
+    for (const [wx, wz] of [
+      [0.85, 0.6],
+      [0.85, -0.6],
+      [-0.85, 0.6],
+      [-0.85, -0.6],
+    ]) {
+      part(g, roue, PAL.pneu, wx, 0.3, wz, { rx: Math.PI / 2, s: [0.7, 0.7, 0.7] });
+    }
+  };
+  miniChar(PAL.rougeGrange, -1.8, -0.9, 0.5);
+  miniChar(PAL.champ, 0.9, -1.1, 0.5);
+  miniChar(PAL.chrome, -0.6, 1.2, 0.5);
+  for (const x of [-3.4, 3.4]) part(lot, G(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 5)), PAL.poteau, x, 1.3, 2.2);
+  const fanion = G(new THREE.ConeGeometry(0.16, 0.34, 3));
+  for (let i = 0; i < 11; i++) {
+    const x = -3.2 + i * 0.64;
+    const y = 2.45 - Math.sin((Math.PI * i) / 10) * 0.35;
+    part(lot, fanion, [PAL.rougeGrange, PAL.erables[1], PAL.declin][i % 3], x, y, 2.2, { rx: Math.PI });
+  }
+  part(lot, G(new THREE.CylinderGeometry(0.08, 0.08, 3.2, 5)), PAL.poteau, 3.2, 1.6, -2);
+  part(lot, B(2.2, 1, 0.1), PAL.declin, 3.2, 3.4, -2);
+  part(lot, B(1.8, 0.2, 0.12), PAL.rougeGrange, 3.2, 3.6, -2);
+  part(lot, B(1.4, 0.16, 0.12), PAL.rougeGrange, 3.2, 3.2, -2);
+  lot.visible = false;
 
   // Érables et sapins
   const arbres: THREE.Group[] = [];
@@ -211,7 +266,7 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
     [-5.5, -8, 1.8],
     [3.5, -7, 1.6],
     [7, -4, 1.3],
-    [-10, 1, 1.4],
+    [-11.5, -1, 1.4],
   ].forEach(([x, z, s], i) => {
     const t = new THREE.Group();
     t.position.set(x, 0, z);
@@ -304,6 +359,10 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
 
   return {
     setCar(look) {
+      garage.visible = look.garage;
+      lot.visible = look.concession;
+      // La pile de pneus déménage dans le garage, la pancarte disparaît avec la vente.
+      pilePneus.forEach((p) => (p.visible = !look.concession));
       pancarte.visible = !look.owned;
       roues.forEach((r) => (r.visible = look.wheels));
       blocs.forEach((b) => (b.visible = !look.wheels));

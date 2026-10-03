@@ -1,6 +1,13 @@
 import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
+import {
+  BUILDINGS,
+  PRESTIGE_BONUS_PER_POINT,
+  PRESTIGE_MIN_EARNED,
+  prestigePointsFor,
+  type BuildingId,
+} from './buildings';
 
 export interface GameState {
   version: 1;
@@ -11,6 +18,9 @@ export interface GameState {
   car: { owned: boolean; parts: Record<string, boolean> };
   /** Index de la quête active dans QUESTS (= nombre de quêtes réclamées). */
   questIndex: number;
+  buildings: Record<BuildingId, boolean>;
+  /** Gardé d'une partie à l'autre. */
+  prestige: { points: number; count: number };
   lastTick: number;
 }
 
@@ -28,6 +38,8 @@ export function newGame(now: number): GameState {
     upgrades: {},
     car: { owned: false, parts: {} },
     questIndex: 0,
+    buildings: { garage: false, concession: false },
+    prestige: { points: 0, count: 0 },
     lastTick: now,
   };
 }
@@ -42,6 +54,7 @@ export function multiplier(state: GameState): number {
     if (u.effect.kind === 'globalMult') mult *= Math.pow(u.effect.factor, levelOf(state, u.id));
   }
   if (state.car.parts.carrosserie) mult *= CAR_TIP_MULT;
+  mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
   return mult;
 }
 
@@ -99,7 +112,14 @@ export function nextCost(state: GameState, id: string): number | null {
 }
 
 export function isUnlocked(state: GameState, u: Upgrade): boolean {
-  return u.requires !== 'roule' || carRuns(state);
+  switch (u.requires) {
+    case undefined:
+      return true;
+    case 'roule':
+      return carRuns(state);
+    default:
+      return state.buildings[u.requires];
+  }
 }
 
 export function buy(state: GameState, id: string): boolean {
@@ -142,9 +162,55 @@ export function repairedFraction(state: GameState): number {
   return PARTS.filter((p) => isRepaired(state, p.id)).length / PARTS.length;
 }
 
-/** Réchauffement du rang : 0 au début, 0,3 avec de quoi payer le bazou, 0,5 une fois le bazou tout réparé. */
+/**
+ * Réchauffement du rang : 0,3 avec de quoi payer le bazou, 0,5 une fois le bazou tout réparé,
+ * 0,7 avec le garage, 1 avec le concessionnaire.
+ */
 export function warmth(state: GameState): number {
-  return Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 + repairedFraction(state) * 0.2;
+  return (
+    Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 +
+    repairedFraction(state) * 0.2 +
+    (state.buildings.garage ? 0.2 : 0) +
+    (state.buildings.concession ? 0.3 : 0)
+  );
+}
+
+// --- Bâtiments ---
+
+/** Le prochain bâtiment à acheter, ou null quand t'as tout. */
+export function nextBuilding(state: GameState) {
+  return BUILDINGS.find((b) => !state.buildings[b.id]) ?? null;
+}
+
+export function canBuyBuilding(state: GameState, id: BuildingId): boolean {
+  const next = nextBuilding(state);
+  return next?.id === id && carRuns(state) && state.cash >= next.cost;
+}
+
+export function buyBuilding(state: GameState, id: BuildingId): boolean {
+  if (!canBuyBuilding(state, id)) return false;
+  state.cash -= nextBuilding(state)!.cost;
+  state.buildings[id] = true;
+  return true;
+}
+
+// --- Prestige ---
+
+export function canPrestige(state: GameState): boolean {
+  return state.buildings.concession && state.totalEarned >= PRESTIGE_MIN_EARNED;
+}
+
+/** Vend l'empire : tout repart à zéro sauf la réputation. Retourne les points gagnés. */
+export function prestige(state: GameState, now: number): number {
+  if (!canPrestige(state)) return 0;
+  const gained = prestigePointsFor(state.totalEarned);
+  const kept = { points: state.prestige.points + gained, count: state.prestige.count + 1 };
+  Object.assign(state, newGame(now), {
+    prestige: kept,
+    // Les quêtes racontent la première partie; on les rejoue pas.
+    questIndex: QUESTS.length,
+  });
+  return gained;
 }
 
 // --- Quêtes ---
@@ -167,6 +233,8 @@ export function questProgress(state: GameState, quest: Quest): number {
       return state.car.owned ? 1 : Math.min(0.99, state.cash / CAR_PRICE);
     case 'repair':
       return isRepaired(state, o.part) ? 1 : 0;
+    case 'building':
+      return state.buildings[o.id] ? 1 : Math.min(0.99, state.cash / BUILDINGS.find((b) => b.id === o.id)!.cost);
     case 'carRuns': {
       const essentials = PARTS.filter((p) => p.essential);
       return essentials.filter((p) => isRepaired(state, p.id)).length / essentials.length;

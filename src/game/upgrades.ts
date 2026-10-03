@@ -11,8 +11,8 @@ export interface Upgrade {
   costGrowth: number;
   maxLevel: number;
   effect: UpgradeEffect;
-  /** 'roule' : visible seulement quand le bazou roule. */
-  requires?: 'roule';
+  /** Visible seulement quand le bazou roule, ou quand le bâtiment est acheté. */
+  requires?: 'roule' | 'garage' | 'concession';
 }
 
 // Jalon 1 : on est à pied, on ramasse des canettes consignées.
@@ -92,6 +92,58 @@ export const UPGRADES: readonly Upgrade[] = [
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 250 },
     requires: 'roule',
+  },
+  // Le garage
+  {
+    id: 'baie',
+    name: 'Une baie de plus',
+    description: '+400 $/s. Un pont élévateur usagé pis un char de plus à la fois.',
+    baseCost: 60_000,
+    costGrowth: 1.5,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 400 },
+    requires: 'garage',
+  },
+  {
+    id: 'mecano',
+    name: 'Engager un vrai mécano',
+    description: 'x2 sur tous tes gains. Ti-Guy est content, y peut enfin prendre son break.',
+    baseCost: 250_000,
+    costGrowth: 6,
+    maxLevel: 3,
+    effect: { kind: 'globalMult', factor: 2 },
+    requires: 'garage',
+  },
+  // Le concessionnaire
+  {
+    id: 'lot',
+    name: 'Des chars sur le lot',
+    description: '+4 000 $/s. Des bazous retapés, garantie de 30 jours (ou 30 km).',
+    baseCost: 1_200_000,
+    costGrowth: 1.5,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 4000 },
+    requires: 'concession',
+  },
+  {
+    id: 'radio',
+    name: 'Une pub à la radio locale',
+    description: "x1,5 sur tous tes gains. « Chez Gagnon pis fils, on vous fait un prix! »",
+    baseCost: 3_000_000,
+    costGrowth: 5,
+    maxLevel: 4,
+    effect: { kind: 'globalMult', factor: 1.5 },
+    requires: 'concession',
+  },
+  {
+    id: 'vendeur',
+    name: 'Un vendeur de chars',
+    description: '+30 000 $/s. Y parle vite pis y a une moustache.',
+    baseCost: 15_000_000,
+    costGrowth: 1.6,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 30_000 },
+    requires: 'concession',
   },
 ];
 

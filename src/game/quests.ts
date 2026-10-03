@@ -19,7 +19,8 @@ export type Objective =
   | { kind: 'upgrade'; id: string; target: number }
   | { kind: 'ownCar' }
   | { kind: 'repair'; part: string }
-  | { kind: 'carRuns' };
+  | { kind: 'carRuns' }
+  | { kind: 'building'; id: 'garage' | 'concession' };
 
 export interface Quest {
   id: string;
@@ -121,9 +122,45 @@ export const QUESTS: readonly Quest[] = [
     id: 'garage',
     giver: 'tiguy',
     ask: "J'ai une idée de fou : on ouvre un garage. Mais faut du cash. Mettons... 50 000 $ de gagné.",
-    thanks: "On a le cash! Le garage s'en vient (au prochain jalon).",
+    thanks: "On a le cash! Astheure, faut juste l'acheter, ce garage-là.",
     goal: 'Gagner 50 000 $ au total',
     objective: { kind: 'earned', target: 50000 },
     reward: 5000,
+  },
+  {
+    id: 'ouverture',
+    giver: 'tiguy',
+    ask: "Le vieux garage au coin du rang est à vendre. 50 000 $. On le prend-tu?",
+    thanks: "On est ouverts! J'ai déjà accroché le calendrier de pneus.",
+    goal: 'Acheter le garage',
+    objective: { kind: 'building', id: 'garage' },
+    reward: 10_000,
+  },
+  {
+    id: 'clientele',
+    giver: 'ginette',
+    ask: "Tout le monde au dépanneur parle de ton garage. Ajoute une baie, y'a du monde qui attend!",
+    thanks: "Ma Corolla est réparée en deux jours. Je te fais de la pub, mon chou.",
+    goal: 'Ajouter une baie',
+    objective: { kind: 'upgrade', id: 'baie', target: 1 },
+    reward: 25_000,
+  },
+  {
+    id: 'heritage',
+    giver: 'gagnon',
+    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 1 000 000 $, pis y'é à toé.",
+    thanks: "« Chez Gagnon pis fils ». J'ai pas de fils, mais toé, t'es comme.",
+    goal: 'Acheter le concessionnaire',
+    objective: { kind: 'building', id: 'concession' },
+    reward: 100_000,
+  },
+  {
+    id: 'empire',
+    giver: 'mere',
+    ask: "Mon gars, un empire! Mais t'as l'air fatigué. Vends toute un jour, pis recommence plus grand.",
+    thanks: "Je l'ai toujours dit que t'irais loin.",
+    goal: 'Gagner 25 000 000 $ au total',
+    objective: { kind: 'earned', target: 25_000_000 },
+    reward: 1_000_000,
   },
 ];

@@ -14,6 +14,7 @@
           <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
           <p id="rate" class="rate">+0,00 $/s</p>
+          <p id="rep" class="rep" hidden></p>
         </div>
         <button id="vhs" class="vhs" type="button" aria-pressed="true">VHS</button>
       </section>
@@ -52,6 +53,26 @@
           <span id="car-status" class="car-status"></span>
         </div>
         <ul id="parts" class="upgrades"></ul>
+      </section>
+
+      <section id="empire" class="garage" hidden>
+        <h2>TON EMPIRE</h2>
+        <ul class="upgrades">
+          <li id="bat" class="upgrade">
+            <div class="upgrade-info">
+              <strong id="bat-name"></strong>
+              <small id="bat-desc"></small>
+            </div>
+            <button id="bat-buy" type="button" class="buy"><span id="bat-cost"></span></button>
+          </li>
+          <li id="prestige" class="upgrade prestige" hidden>
+            <div class="upgrade-info">
+              <strong>Vendre l'empire</strong>
+              <small id="prestige-desc"></small>
+            </div>
+            <button id="prestige-btn" type="button" class="buy">VENDRE</button>
+          </li>
+        </ul>
       </section>
 
       <section>

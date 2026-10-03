@@ -34,16 +34,73 @@ p {
 #app {
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(12px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+.col-jeu,
+.col-listes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Ordi : le rang pis le bouton à gauche (toujours visibles), les listes à droite. */
+@media (min-width: 900px) {
+  #app {
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px 24px;
+  }
+  .barre {
+    grid-column: 1 / -1;
+  }
+  .col-jeu {
+    position: sticky;
+    top: 104px;
+  }
+}
+
+/* Barre du haut : ton cash reste toujours à l'écran, même quand tu descends dans les achats. */
+.barre {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -16px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  background: var(--bg);
+  border-bottom: 2px solid var(--line);
+}
+
+.sous-cash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.options {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 12px;
+  font: 400 22px/1 var(--pixel);
+  color: var(--fg);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  cursor: pointer;
+}
+
 /* Écran 3D */
 .ecran {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   background: #9ea6a2;
   border: 2px solid var(--line);
   overflow: hidden;
@@ -71,24 +128,19 @@ p {
 }
 
 .hud {
-  position: absolute;
-  left: 12px;
-  top: 8px;
-  padding: 6px 10px 8px;
-  background: rgb(20 22 19 / 0.6);
-  pointer-events: none;
-  text-shadow: 2px 2px 0 #000;
+  min-width: 0;
 }
 
 .job {
-  font: 400 20px/1 var(--pixel);
-  color: var(--fg);
+  font: 400 18px/1 var(--pixel);
+  color: var(--muted);
   letter-spacing: 0.04em;
 }
 
 .cash {
-  font: 400 48px/0.95 var(--pixel);
+  font: 400 44px/0.95 var(--pixel);
   color: var(--gold);
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -101,7 +153,6 @@ p {
 .rep {
   font: 400 20px/1 var(--pixel);
   color: var(--gold);
-  margin-top: 4px;
 }
 
 .upgrades[hidden],
@@ -113,47 +164,25 @@ p {
   border: 2px solid var(--gold);
 }
 
-.reglages {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-}
-/* Coupé : texte barré pis pâle. */
-.vhs[aria-pressed='false'] {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-.vhs {
-  font: 400 20px/1 var(--pixel);
-  color: var(--fg);
-  background: rgb(20 22 19 / 0.75);
-  border: 2px solid var(--line);
-  padding: 4px 8px;
-  cursor: pointer;
-}
-
 /* Endroits du rang */
 .lieux {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  margin-top: -10px;
 }
 .lieux[hidden],
 .lieux button[hidden] {
   display: none;
 }
 .lieux button {
-  font: 400 18px/1 var(--pixel);
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font: 400 20px/1 var(--pixel);
   color: var(--fg);
-  background: rgb(20 22 19 / 0.75);
+  background: var(--surface);
   border: 2px solid var(--line);
-  padding: 4px 8px;
+  padding: 4px 6px;
   cursor: pointer;
 }
 .lieux button[aria-pressed='true'] {
@@ -202,7 +231,7 @@ p {
 }
 
 /* Les sections arrivent en glissant quand elles se débloquent. */
-main > section:not(.ecran),
+main section:not(.ecran),
 .boost-row {
   animation: entre 0.45s ease-out;
 }
@@ -392,6 +421,7 @@ main > section:not(.ecran),
 
 /* Bouton principal */
 .tap {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -417,6 +447,24 @@ main > section:not(.ecran),
 
 .tap.pop {
   animation: pop 0.12s steps(2);
+}
+
+/* Le montant gagné qui monte au-dessus du bouton. */
+.flotte {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  font: 400 26px/1 var(--pixel);
+  color: var(--cash);
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+  animation: flotte 0.7s ease-out forwards;
+}
+@keyframes flotte {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48px);
+  }
 }
 
 @keyframes pop {
@@ -488,19 +536,118 @@ h2 {
   color: var(--muted);
   border-color: var(--line);
   cursor: default;
+  /* Se remplit à mesure que tu t'approches du prix. */
+  background: linear-gradient(90deg, rgb(232 194 106 / 0.14) var(--p, 0%), transparent var(--p, 0%));
 }
 
-.foot {
-  text-align: center;
-}
-
-.link {
-  font: 400 18px/1 var(--mono);
+.upgrade.done .buy:disabled {
   background: none;
-  border: 0;
-  color: var(--muted);
-  text-decoration: underline;
+}
+
+.combien {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  color: var(--cash);
+}
+.combien:empty {
+  display: none;
+}
+
+/* Achats au max : en bas de la liste, en petit. */
+.upgrade.max {
+  order: 1;
+  padding: 8px 12px;
+}
+.upgrade.max small {
+  display: none;
+}
+
+.achats-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.achats-head h2 {
+  margin: 0;
+}
+.lot-mode {
+  min-width: 72px;
+  min-height: 40px;
+  font: 400 24px/1 var(--pixel);
+  color: var(--cash);
+  background: transparent;
+  border: 2px solid var(--cash);
   cursor: pointer;
+}
+
+/* Options */
+.options-dlg {
+  width: min(360px, calc(100vw - 32px));
+  text-align: left;
+}
+.reglages {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.reglages li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.paire {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+dialog .bascule {
+  min-width: 96px;
+  font-size: 22px;
+  color: var(--cash);
+  border-color: var(--cash);
+}
+dialog .bascule[aria-pressed='false'] {
+  color: var(--muted);
+  border-color: var(--line);
+}
+.code {
+  width: 100%;
+  margin-bottom: 8px;
+  font: 400 14px/1.3 var(--mono);
+  color: var(--fg);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  word-break: break-all;
+}
+.code-aide {
+  font-size: 16px;
+  color: var(--muted);
+}
+.code[hidden],
+.code-aide[hidden],
+dialog button[hidden] {
+  display: none;
+}
+#code-ok {
+  width: 100%;
+  margin-bottom: 12px;
+}
+dialog .danger {
+  display: block;
+  margin: 8px auto 16px;
+  font: 400 18px/1 var(--mono);
+  color: var(--alert);
+  border: 0;
+  text-decoration: underline;
+}
+.options-dlg form {
+  text-align: center;
 }
 
 dialog {
@@ -535,7 +682,7 @@ button:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  main > section,
+  main section,
   .boost-row {
     animation: none;
   }
@@ -545,4 +692,15 @@ button:focus-visible {
   .bar-fill {
     transition: none;
   }
+}
+
+.reglages .paire {
+  margin-left: auto;
+}
+.reglages .paire .bascule {
+  min-width: 0;
+  padding: 8px 10px;
+}
+.reglages li > button {
+  margin-left: auto;
 }

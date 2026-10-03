@@ -15,6 +15,8 @@ import {
   repair,
   carRuns,
   DELIVERY_TAP,
+  bulkCost,
+  buyMany,
 } from './state';
 import { CAR_PRICE, PARTS } from './car';
 import { load, save } from './save';
@@ -175,5 +177,38 @@ describe('hors-ligne et sauvegarde', () => {
   it('une sauvegarde brisée repart une partie neuve', () => {
     const storage = { getItem: () => '{pas du json', setItem: () => {}, removeItem: () => {} };
     expect(load(storage, 5).cash).toBe(0);
+  });
+});
+
+describe('achat en lot', () => {
+  it('x10 achète 10 niveaux pour la somme des prix', () => {
+    const s = newGame(0);
+    s.cash = 1000;
+    const { count, cost } = bulkCost(s, 'sac', 10);
+    expect(count).toBe(10);
+    expect(buyMany(s, 'sac', 10)).toBe(10);
+    expect(s.cash).toBeCloseTo(1000 - cost);
+  });
+
+  it("x10 achète rien si t'as pas les moyens pour les 10", () => {
+    const s = newGame(0);
+    s.cash = 5;
+    expect(buyMany(s, 'sac', 10)).toBe(0);
+    expect(s.cash).toBe(5);
+  });
+
+  it("MAX achète tout ce que t'as les moyens", () => {
+    const s = newGame(0);
+    s.cash = 3;
+    const n = buyMany(s, 'sac', Infinity);
+    expect(n).toBeGreaterThan(1);
+    expect(s.cash).toBeGreaterThanOrEqual(0);
+    expect(s.cash).toBeLessThan(nextCost(s, 'sac')!);
+  });
+
+  it('arrête au niveau max', () => {
+    const s = newGame(0);
+    s.cash = 1e9;
+    expect(buyMany(s, 'depanneur', 10)).toBe(5);
   });
 });

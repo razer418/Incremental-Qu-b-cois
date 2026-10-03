@@ -197,6 +197,34 @@ export function nextCost(state: GameState, id: string): number | null {
   return level >= u.maxLevel ? null : upgradeCost(u, level);
 }
 
+/**
+ * Achat en lot (x1, x10 ou MAX) : combien de niveaux pis pour combien.
+ * Avec MAX (Infinity), c'est ce que t'as les moyens d'acheter, au moins 1 pour montrer le prix.
+ */
+export function bulkCost(state: GameState, id: string, want: number): { count: number; cost: number } {
+  const u = getUpgrade(id);
+  if (!u) return { count: 0, cost: 0 };
+  let count = 0;
+  let cost = 0;
+  for (let level = levelOf(state, id); level < u.maxLevel && count < want; level++) {
+    const next = upgradeCost(u, level);
+    if (want === Infinity && count > 0 && cost + next > state.cash) break;
+    cost += next;
+    count++;
+  }
+  return { count, cost: Math.round(cost * 100) / 100 };
+}
+
+/** Achète jusqu'à `want` niveaux d'un coup. Tout ou rien. Retourne le nombre acheté. */
+export function buyMany(state: GameState, id: string, want: number): number {
+  const u = getUpgrade(id);
+  const { count, cost } = bulkCost(state, id, want);
+  if (!u || !isUnlocked(state, u) || count === 0 || state.cash < cost) return 0;
+  state.cash -= cost;
+  state.upgrades[id] = levelOf(state, id) + count;
+  return count;
+}
+
 export function isUnlocked(state: GameState, u: Upgrade): boolean {
   switch (u.requires) {
     case undefined:

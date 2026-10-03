@@ -9,6 +9,14 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Sauvegarde locale et gains hors-ligne (plafonnés à 8 h)
 - Objectif affiché : ton premier bazou (500 $)
 
+## Jalon 6 : monétisation et app Android
+
+- Boost x2 : une pub récompensée = 10 minutes de gains doublés (jusqu'à 60 min d'avance). Le boost compte aussi hors-ligne.
+- Jamais de pub forcée : si tu fermes la pub avant la fin, t'as juste pas de boost.
+- Achat « Pas de pubs » (3,99 $) : le boost devient gratuit. Gardé au prestige.
+- Sur le web, la pub est une pub de démo de 5 secondes. Les vraies pubs (AdMob) pis l'achat (Google Play) arrivent dans l'app Android.
+- Projet Android généré avec Capacitor dans `android/`.
+
 ## Jalon 5 : garage, concessionnaire et prestige
 
 - Le garage à Ti-Guy (50 000 $) pis le concessionnaire (1 000 000 $), chacun avec ses achats
@@ -43,6 +51,8 @@ npm install
 npm run dev     # ouvre http://localhost:5173
 npm test        # tests de la logique du jeu
 npm run build   # version web dans dist/
+npm run dev:sans-j5   # mode dev sans le Jalon 5 (garage, concessionnaire, prestige)
+npm run android # build web, sync pis ouvre le projet dans Android Studio
 ```
 
 ## Structure
@@ -52,4 +62,9 @@ npm run build   # version web dans dist/
 - `src/main.ts` : l'interface web
 - `src/style.css` : le style (clair et sombre)
 
-Stack : TypeScript + Vite + Three.js. Capacitor (app Android) arrive au Jalon 6.
+- `src/platform/` : pubs pis achats (démo sur le web)
+- `src/game/features.ts` : les jalons qu'on peut cacher en dev (`.env.sans-j5`)
+
+Pour l'APK, il faut Android Studio sur ton ordi (le SDK Android est pas dans le conteneur).
+
+Stack : TypeScript + Vite + Three.js + Capacitor (Android).

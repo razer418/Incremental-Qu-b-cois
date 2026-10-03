@@ -192,6 +192,52 @@ p {
   border-color: var(--cash);
 }
 
+/* Boost */
+.boost-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.boost {
+  flex: none;
+  padding: 8px 12px;
+  font: 400 26px/1 var(--pixel);
+  color: var(--cash);
+  background: transparent;
+  border: 2px solid var(--cash);
+  cursor: pointer;
+}
+
+.boost:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.boost-sub {
+  font: 400 20px/1.1 var(--pixel);
+  color: var(--muted);
+}
+
+.boost-sub.on {
+  color: var(--cash);
+}
+
+.ad-tag {
+  font: 400 22px/1 var(--pixel);
+  color: var(--alert);
+}
+
+.ad-body {
+  margin: 12px 0;
+}
+
+.ad-count {
+  font: 400 64px/1 var(--pixel);
+  color: var(--gold);
+}
+
 /* Quête */
 .quest {
   display: flex;

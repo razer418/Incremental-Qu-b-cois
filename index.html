@@ -24,6 +24,11 @@
         <span id="tap-value" class="tap-value">+0,10 $</span>
       </button>
 
+      <div class="boost-row">
+        <button id="boost" class="boost" type="button">[ BOOST x2 ]</button>
+        <span id="boost-sub" class="boost-sub"></span>
+      </div>
+
       <section id="quest" class="quest" aria-live="polite">
         <div id="q-portrait" class="portrait" aria-hidden="true"></div>
         <div class="quest-body">
@@ -80,6 +85,19 @@
         <ul id="upgrades" class="upgrades"></ul>
       </section>
 
+      <section class="garage">
+        <h2>BOUTIQUE</h2>
+        <ul class="upgrades">
+          <li id="noads" class="upgrade">
+            <div class="upgrade-info">
+              <strong>Pas de pubs</strong>
+              <small>Le boost x2 devient gratuit, sans pub. Pour toujours, même après le prestige.</small>
+            </div>
+            <button id="noads-buy" type="button" class="buy"></button>
+          </li>
+        </ul>
+      </section>
+
       <footer class="foot">
         <button id="reset" type="button" class="link">Recommencer à zéro</button>
       </footer>
@@ -88,6 +106,13 @@
     <dialog id="message">
       <p id="message-text"></p>
       <form method="dialog"><button type="submit">[ ENVOYE DONC ]</button></form>
+    </dialog>
+
+    <dialog id="ad" class="ad">
+      <p class="ad-tag">PUB DE DÉMO</p>
+      <p class="ad-body">Ici, une vraie pub va jouer dans l'app Android. Pour l'instant, on fait semblant.</p>
+      <p id="ad-count" class="ad-count"></p>
+      <button id="ad-close" type="button"></button>
     </dialog>
 
     <script type="module" src="/src/main.ts"></script>

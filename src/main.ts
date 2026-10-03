@@ -3,13 +3,20 @@ import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
 import { createRang } from './scene/rang';
+import { createDemoAds } from './platform/ads';
+import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
+import { JALON5 } from './game/features';
 import { CAR_PRICE, PARTS } from './game/car';
 import { CHARACTERS } from './game/quests';
 import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
+  addBoost,
+  boostFactor,
+  BOOST_MAX_SECONDS,
+  BOOST_SECONDS,
   buyBuilding,
   canBuyBuilding,
   canPrestige,
@@ -70,6 +77,11 @@ const batBuy = $<HTMLButtonElement>('bat-buy');
 const prestigeEl = $('prestige');
 const prestigeDesc = $('prestige-desc');
 const prestigeBtn = $<HTMLButtonElement>('prestige-btn');
+const boostBtn = $<HTMLButtonElement>('boost');
+const boostSub = $('boost-sub');
+const noAdsBuy = $<HTMLButtonElement>('noads-buy');
+const ads = createDemoAds($<HTMLDialogElement>('ad'), $('ad-count'), $<HTMLButtonElement>('ad-close'));
+const store = webStore;
 const messageDialog = $<HTMLDialogElement>('message');
 const messageText = $('message-text');
 
@@ -176,6 +188,33 @@ qClaim.addEventListener('click', () => {
   render();
 });
 
+// Boost x2 : jamais forcé, toujours sur demande.
+boostBtn.addEventListener('click', async () => {
+  if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return;
+  if (!state.noAds) {
+    boostBtn.disabled = true;
+    const watched = await ads.showRewarded();
+    if (!watched) return render();
+  }
+  addBoost(state);
+  save(localStorage, state);
+  render();
+});
+
+noAdsBuy.addEventListener('click', async () => {
+  if (state.noAds) return;
+  if (!store.available) {
+    showMessage(`« Pas de pubs » (${NO_ADS_PRICE}) va s'acheter dans l'app Android, via Google Play. Sur le web, y'a juste des pubs de démo.`);
+    return;
+  }
+  if (await store.buyNoAds()) {
+    state.noAds = true;
+    save(localStorage, state);
+    showMessage('Merci! Le boost est gratuit pour toujours, pis y aura pu jamais de pubs.');
+    render();
+  }
+});
+
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
   if (!b || !buyBuilding(state, b.id)) return;
@@ -228,7 +267,8 @@ $('reset').addEventListener('click', () => {
 
 function render(): void {
   cashEl.textContent = formatMoney(state.cash);
-  rateEl.textContent = `+${formatMoney(passiveRate(state))}/s`;
+  rateEl.textContent = `+${formatMoney(passiveRate(state) * boostFactor(state))}/s`;
+  renderBoost();
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
   const w = Math.round(warmth(state) * 200) / 200;
@@ -241,8 +281,8 @@ function render(): void {
   jobEl.textContent = roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES';
   tapLabel.textContent = roule ? '[ LIVRER ]' : '[ RAMASSER ]';
   const look = {
-    garage: state.buildings.garage,
-    concession: state.buildings.concession,
+    garage: JALON5 && state.buildings.garage,
+    concession: JALON5 && state.buildings.concession,
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
@@ -293,8 +333,8 @@ function renderEmpire(roule: boolean): void {
   repEl.hidden = pts === 0;
   repEl.textContent = `RÉPUTATION ${pts} (+${Math.round(pts * PRESTIGE_BONUS_PER_POINT * 100)} %)`;
 
-  empireEl.hidden = !roule;
-  if (!roule) return;
+  empireEl.hidden = !roule || !JALON5;
+  if (empireEl.hidden) return;
   const b = nextBuilding(state);
   batEl.hidden = b === null;
   if (b) {
@@ -312,6 +352,20 @@ function renderEmpire(roule: boolean): void {
       : `Disponible à ${formatMoney(PRESTIGE_MIN_EARNED)} gagnés au total. T'es rendu à ${formatMoney(state.totalEarned)}.`;
     prestigeBtn.disabled = !ready;
   }
+}
+
+function renderBoost(): void {
+  const left = Math.ceil(state.boostSeconds);
+  const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
+  boostBtn.disabled = full;
+  boostBtn.textContent = state.noAds ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]';
+  boostSub.classList.toggle('on', left > 0);
+  const mm = Math.floor(left / 60);
+  const ss = String(left % 60).padStart(2, '0');
+  boostSub.textContent =
+    left > 0 ? `x2 ACTIF : ${mm}:${ss}` : state.noAds ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
+  noAdsBuy.textContent = state.noAds ? 'ACHETÉ' : NO_ADS_PRICE;
+  noAdsBuy.disabled = state.noAds;
 }
 
 let lastQuestId = '';

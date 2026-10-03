@@ -3,6 +3,8 @@ export type UpgradeEffect =
   | { kind: 'passiveAdd'; amount: number }
   | { kind: 'globalMult'; factor: number };
 
+import { JALON5 } from './features';
+
 export interface Upgrade {
   id: string;
   name: string;
@@ -16,7 +18,7 @@ export interface Upgrade {
 }
 
 // Jalon 1 : on est à pied, on ramasse des canettes consignées.
-export const UPGRADES: readonly Upgrade[] = [
+const ALL_UPGRADES: readonly Upgrade[] = [
   {
     id: 'sac',
     name: 'Un plus gros sac',
@@ -146,6 +148,10 @@ export const UPGRADES: readonly Upgrade[] = [
     requires: 'concession',
   },
 ];
+
+export const UPGRADES: readonly Upgrade[] = JALON5
+  ? ALL_UPGRADES
+  : ALL_UPGRADES.filter((u) => u.requires !== 'garage' && u.requires !== 'concession');
 
 export function getUpgrade(id: string): Upgrade | undefined {
   return UPGRADES.find((u) => u.id === id);

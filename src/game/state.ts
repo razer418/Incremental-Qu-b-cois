@@ -21,6 +21,10 @@ export interface GameState {
   buildings: Record<BuildingId, boolean>;
   /** Gardé d'une partie à l'autre. */
   prestige: { points: number; count: number };
+  /** Secondes de boost x2 qui restent (pub récompensée). */
+  boostSeconds: number;
+  /** Achat « pas de pubs » : boost gratuit, sans pub. Gardé au prestige. */
+  noAds: boolean;
   lastTick: number;
 }
 
@@ -40,6 +44,8 @@ export function newGame(now: number): GameState {
     questIndex: 0,
     buildings: { garage: false, concession: false },
     prestige: { points: 0, count: 0 },
+    boostSeconds: 0,
+    noAds: false,
     lastTick: now,
   };
 }
@@ -63,7 +69,30 @@ export function tapValue(state: GameState): number {
   for (const u of UPGRADES) {
     if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
   }
-  return value * multiplier(state);
+  return value * multiplier(state) * boostFactor(state);
+}
+
+export const BOOST_FACTOR = 2;
+export const BOOST_SECONDS = 10 * 60;
+/** On peut cumuler jusqu'à une heure de boost. */
+export const BOOST_MAX_SECONDS = 60 * 60;
+
+export function boostFactor(state: GameState): number {
+  return state.boostSeconds > 0 ? BOOST_FACTOR : 1;
+}
+
+/** Ajoute 10 min de boost x2 (après une pub récompensée, ou gratuit avec « pas de pubs »). */
+export function addBoost(state: GameState): boolean {
+  if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return false;
+  state.boostSeconds += BOOST_SECONDS;
+  return true;
+}
+
+/** Revenu passif sur une durée, en consommant le boost qui reste. */
+function passiveOver(state: GameState, seconds: number): number {
+  const boosted = Math.min(seconds, state.boostSeconds);
+  state.boostSeconds -= boosted;
+  return passiveRate(state) * (seconds + boosted * (BOOST_FACTOR - 1));
 }
 
 export function passiveRate(state: GameState): number {
@@ -90,7 +119,7 @@ export function tap(state: GameState): number {
 export function tick(state: GameState, now: number): number {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
-  const gained = passiveRate(state) * seconds;
+  const gained = passiveOver(state, seconds);
   earn(state, gained);
   return gained;
 }
@@ -98,7 +127,7 @@ export function tick(state: GameState, now: number): number {
 /** Gains pendant que l'app était fermée, plafonnés à 8 h. */
 export function applyOffline(state: GameState, now: number): { seconds: number; gained: number } {
   const seconds = Math.min(OFFLINE_CAP_SECONDS, Math.max(0, (now - state.lastTick) / 1000));
-  const gained = passiveRate(state) * seconds;
+  const gained = passiveOver(state, seconds);
   earn(state, gained);
   state.lastTick = now;
   return { seconds, gained };
@@ -207,6 +236,7 @@ export function prestige(state: GameState, now: number): number {
   const kept = { points: state.prestige.points + gained, count: state.prestige.count + 1 };
   Object.assign(state, newGame(now), {
     prestige: kept,
+    noAds: state.noAds,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,
   });

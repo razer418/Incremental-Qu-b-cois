@@ -28,6 +28,8 @@ export const PAL = {
   foin: 0x7d7448,
   // Le bleu du drapeau, juste pour la Saint-Jean
   bleu: 0x3c4a6e,
+  // Les fenêtres pis l'enseigne allumées du bar : pas d'ombrage, ça luit dans la brunante.
+  lampe: 0xe8c26a,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -59,6 +61,55 @@ const TARD = {
   soleil: new THREE.Color(0xffc98a),
   soleilForce: 0.75,
   soleilPos: new THREE.Vector3(-12, 7, 10),
+};
+
+// Chaque endroit a sa lumière, mélangée par-dessus la progression du rang (la maison garde celle du rang).
+interface Ambiance {
+  ciel: number;
+  lumiere: number;
+  soleil: number;
+  /** Multiplie la force des lumières. */
+  force: number;
+  /** Multiplie la distance de la brume (petit = plus épais). */
+  brume: number;
+}
+const MELANGE = 0.65;
+const AMBIANCE: Partial<Record<Lieu, Ambiance>> = {
+  // Après-midi jaune paille sur la galerie
+  magasin: { ciel: 0xc4b68c, lumiere: 0xf2e2b0, soleil: 0xffd890, force: 1.1, brume: 1.1 },
+  // Gris-vert d'huile pis de néon
+  garage: { ciel: 0x7f8a84, lumiere: 0xbcc8bc, soleil: 0xd0dccc, force: 0.85, brume: 0.9 },
+  // Matin froid de mars dans l'érablière, brume épaisse
+  cabane: { ciel: 0xa7b2b4, lumiere: 0xdce6ea, soleil: 0xeef2f0, force: 0.95, brume: 0.7 },
+  // Grand ciel clair pour faire briller les chars
+  concession: { ciel: 0x9fb0b8, lumiere: 0xe0e8ec, soleil: 0xfff0d0, force: 1.15, brume: 1.3 },
+  // Brunante mauve, soleil orange bas
+  bar: { ciel: 0x4a3b4c, lumiere: 0x8a7088, soleil: 0xff9a5a, force: 0.6, brume: 0.85 },
+  // Blanc bleuté de patinoire
+  arena: { ciel: 0xb4bcc4, lumiere: 0xe8eef4, soleil: 0xdfe8f0, force: 1.0, brume: 1.0 },
+};
+
+// Le cadrage de chaque endroit, par rapport à son origine : d'où on regarde, ce qu'on vise, l'angle.
+interface Cadrage {
+  pos: [number, number, number];
+  vise: [number, number, number];
+  fov: number;
+}
+const CADRAGE: Record<Lieu, Cadrage> = {
+  // Trois quarts, comme une photo de la maison
+  maison: { pos: [11, 8.5, 21], vise: [1.2, 2.4, 0], fov: 40 },
+  // De face, à hauteur de galerie, comme si on traversait la rue
+  magasin: { pos: [1.5, 2.3, 13], vise: [0.5, 2.6, 0], fov: 46 },
+  // Bas pis de côté, le bazou devant la porte du garage
+  garage: { pos: [10, 2.6, 12.5], vise: [-1.5, 1.8, 0], fov: 44 },
+  // Basse, entre les érables
+  cabane: { pos: [3, 2.2, 14], vise: [-1, 2.8, -1], fov: 50 },
+  // Plongée sur le lot, comme du haut de la pancarte
+  concession: { pos: [3, 17, 15], vise: [0, 0, 0.5], fov: 44 },
+  // Serré, au ras du stationnement
+  bar: { pos: [8, 2, 11], vise: [-1, 2.4, 0], fov: 42 },
+  // Contre-plongée grand angle : l'aréna a l'air immense
+  arena: { pos: [3, 0.9, 10.5], vise: [0, 3.6, -3], fov: 58 },
 };
 
 export interface CarLook {
@@ -135,7 +186,10 @@ export function createRang(
   const M = (c: number) => {
     let m = mats.get(c);
     if (!m) {
-      m = new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0, specular: 0x000000 });
+      m =
+        c === PAL.lampe
+          ? new THREE.MeshBasicMaterial({ color: c })
+          : new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0, specular: 0x000000 });
       mats.set(c, m);
     }
     return m;
@@ -251,7 +305,22 @@ export function createRang(
   decorAilleurs(ORIGINE.magasin);
   decorAilleurs(ORIGINE.garage);
   decorAilleurs(ORIGINE.concession);
-  decorAilleurs(ORIGINE.cabane);
+  // La cabane est dans une érablière : des érables partout.
+  decor(
+    ORIGINE.cabane,
+    [
+      [-9, -6, 1.6],
+      [-6, -10, 1.8],
+      [6.5, -7, 1.5],
+      [9.5, -3, 1.4],
+      [-12, 0, 1.3],
+      [-8, 4, 1.2],
+      [11, 3.5, 1.3],
+      [2, -11, 1.7],
+      [-14, -6, 1.5],
+    ],
+    [[13, -9]],
+  );
   decorAilleurs(ORIGINE.bar);
   decorAilleurs(ORIGINE.arena);
 
@@ -461,11 +530,12 @@ export function createRang(
   part(bar, B(5.2, 2.8, 3.8), PAL.brique, 0, 1.4, 0);
   part(bar, B(5.4, 0.25, 4), PAL.tole, 0, 2.9, 0);
   part(bar, B(1, 2, 0.08), PAL.tronc, -1.4, 1, 1.92);
-  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 0.6, 1.5, 1.92);
-  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 2.1, 1.5, 1.92);
-  part(bar, B(3, 0.6, 0.12), PAL.declin, 0.4, 3.4, 1.9);
+  part(bar, B(1.4, 0.8, 0.08), PAL.lampe, 0.6, 1.5, 1.92);
+  part(bar, B(1.4, 0.8, 0.08), PAL.lampe, 2.1, 1.5, 1.92);
+  part(bar, B(3, 0.6, 0.12), PAL.lampe, 0.4, 3.4, 1.9);
   part(bar, B(2.4, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.5, 1.97);
   part(bar, B(1.6, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.28, 1.97);
+  part(bar, G(new THREE.PlaneGeometry(13, 4.4)), PAL.tole, 0, 0.025, 3.4, { rx: -Math.PI / 2 });
   miniChar(bar, PAL.rougeGrange, 4, 2.6, 0.5);
   miniChar(bar, PAL.chrome, -4.2, 2.4, 0.5);
   bar.visible = false;
@@ -482,6 +552,7 @@ export function createRang(
   part(arena, B(3, 0.5, 0.1), PAL.rougeGrange, 0, 2.7, 2.55);
   part(arena, B(1.2, 0.8, 0.9), PAL.declin, 3.4, 0.5, 3.6);
   part(arena, B(0.6, 0.5, 0.8), PAL.vitre, 3.4, 1.15, 3.6);
+  part(arena, G(new THREE.PlaneGeometry(10, 3)), PAL.tole, 0, 0.025, 4.2, { rx: -Math.PI / 2 });
   arena.visible = false;
 
   // Les fêtes : le même petit décor devant chaque endroit, caché le reste du temps.
@@ -547,19 +618,54 @@ export function createRang(
     scene.add(g);
   }
 
-  // Caméra : même angle partout, centrée sur l'endroit.
+  // Caméra : chaque endroit a son cadrage.
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
   let lieuActuel: Lieu = 'maison';
-  let recul = 1;
   const placerCamera = (aspect?: number) => {
     if (aspect) camera.aspect = aspect;
-    // Écran étroit (téléphone) : on recule pour garder la maison pis le bazou dans le cadre.
-    recul = camera.aspect < 1.2 ? 1.25 : 1;
+    const { pos, vise, fov } = CADRAGE[lieuActuel];
     const ox = ORIGINE[lieuActuel];
-    camera.position.set(ox + 11 * recul, 8.5 * recul, 21 * recul);
-    // Rien par-dessus l'image : on vise le centre de l'endroit.
-    camera.lookAt(ox + 1.2, 2.4, 0);
+    // Écran étroit (téléphone) : on recule pour garder l'endroit pis le bazou dans le cadre.
+    const recul = camera.aspect < 1.2 ? 1.25 : 1;
+    camera.position.set(
+      ox + vise[0] + (pos[0] - vise[0]) * recul,
+      vise[1] + (pos[1] - vise[1]) * recul,
+      vise[2] + (pos[2] - vise[2]) * recul,
+    );
+    camera.lookAt(ox + vise[0], vise[1], vise[2]);
+    camera.fov = fov;
     camera.updateProjectionMatrix();
+  };
+
+  // Lumière : la progression du rang, pis la teinte de l'endroit par-dessus.
+  let chaleur = 0;
+  const teinte = new THREE.Color();
+  const eclairer = () => {
+    const k = chaleur;
+    ciel.lerpColors(DEBUT.ciel, TARD.ciel, k);
+    let near = THREE.MathUtils.lerp(DEBUT.brume[0], TARD.brume[0], k);
+    let far = THREE.MathUtils.lerp(DEBUT.brume[1], TARD.brume[1], k);
+    hemi.color.lerpColors(DEBUT.hemiCiel, TARD.hemiCiel, k);
+    hemi.groundColor.lerpColors(DEBUT.hemiSol, TARD.hemiSol, k);
+    let hemiForce = THREE.MathUtils.lerp(DEBUT.hemiForce, TARD.hemiForce, k);
+    soleil.color.lerpColors(DEBUT.soleil, TARD.soleil, k);
+    let soleilForce = THREE.MathUtils.lerp(DEBUT.soleilForce, TARD.soleilForce, k);
+    soleil.position.lerpVectors(DEBUT.soleilPos, TARD.soleilPos, k);
+    const a = AMBIANCE[lieuActuel];
+    if (a) {
+      ciel.lerp(teinte.setHex(a.ciel), MELANGE);
+      hemi.color.lerp(teinte.setHex(a.lumiere), MELANGE);
+      soleil.color.lerp(teinte.setHex(a.soleil), MELANGE);
+      hemiForce *= a.force;
+      soleilForce *= a.force;
+      near *= a.brume;
+      far *= a.brume;
+    }
+    fog.color.copy(ciel);
+    fog.near = near;
+    fog.far = far;
+    hemi.intensity = hemiForce * Math.PI;
+    soleil.intensity = soleilForce * Math.PI;
   };
 
   const resize = () => {
@@ -682,6 +788,7 @@ export function createRang(
   const couper = (l: Lieu) => {
     lieuActuel = l;
     placerCamera();
+    eclairer();
   };
 
   return {
@@ -745,17 +852,8 @@ export function createRang(
       planifierLivraison(now);
     },
     setWarmth(w) {
-      const k = Math.min(1, Math.max(0, w));
-      ciel.lerpColors(DEBUT.ciel, TARD.ciel, k);
-      fog.color.copy(ciel);
-      fog.near = THREE.MathUtils.lerp(DEBUT.brume[0], TARD.brume[0], k);
-      fog.far = THREE.MathUtils.lerp(DEBUT.brume[1], TARD.brume[1], k);
-      hemi.color.lerpColors(DEBUT.hemiCiel, TARD.hemiCiel, k);
-      hemi.groundColor.lerpColors(DEBUT.hemiSol, TARD.hemiSol, k);
-      hemi.intensity = THREE.MathUtils.lerp(DEBUT.hemiForce, TARD.hemiForce, k) * Math.PI;
-      soleil.color.lerpColors(DEBUT.soleil, TARD.soleil, k);
-      soleil.intensity = THREE.MathUtils.lerp(DEBUT.soleilForce, TARD.soleilForce, k) * Math.PI;
-      soleil.position.lerpVectors(DEBUT.soleilPos, TARD.soleilPos, k);
+      chaleur = Math.min(1, Math.max(0, w));
+      eclairer();
       if (!raf) renderer.render(scene, camera);
     },
     setSaison(x) {

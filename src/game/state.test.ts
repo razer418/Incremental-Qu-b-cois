@@ -212,3 +212,12 @@ describe('achat en lot', () => {
     expect(buyMany(s, 'depanneur', 10)).toBe(5);
   });
 });
+
+describe('virgule flottante', () => {
+  it('10 canettes à 0,10 $ payent un article à 1 $', () => {
+    const s = newGame(0);
+    for (let i = 0; i < 10; i++) tap(s);
+    expect(buyMany(s, 'sac', 1)).toBe(1);
+    expect(s.cash).toBeGreaterThanOrEqual(0);
+  });
+});

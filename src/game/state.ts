@@ -28,8 +28,27 @@ export interface GameState {
   noAds: boolean;
   /** Secondes qui restent sur chaque article du magasin général. */
   magasin: Record<string, number>;
+  /** Succès débloqués (ids). Gardés au prestige. */
+  succes: string[];
+  /** Stats de jeu. Gardées au prestige (à vie). */
+  stats: Stats;
+  /** Étape du tuto; TUTO_FINI quand c'est fini. */
+  tuto: number;
   lastTick: number;
 }
+
+export interface Stats {
+  /** Temps joué, app ouverte. */
+  secondes: number;
+  tapsVie: number;
+  gagneVie: number;
+  boosts: number;
+  articles: number;
+}
+
+export const TUTO_FINI = 99;
+/** Chaque succès : +2 % sur tous tes gains. */
+export const SUCCES_BONUS = 0.02;
 
 export const BASE_TAP = 0.1; // une canette consignée
 export const DELIVERY_TAP = 1.5; // une livraison de pizza
@@ -50,8 +69,23 @@ export function newGame(now: number): GameState {
     boostSeconds: 0,
     noAds: false,
     magasin: {},
+    succes: [],
+    stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0 },
+    tuto: 0,
     lastTick: now,
   };
+}
+
+/**
+ * As-tu les moyens? Avec une marge d'une fraction de cenne : 10 canettes à 0,10 $
+ * donnent 0,9999999 $ en virgule flottante, pis ça doit acheter un article à 1 $.
+ */
+export function assez(state: GameState, cost: number): boolean {
+  return state.cash + 1e-6 >= cost;
+}
+
+function payer(state: GameState, cost: number): void {
+  state.cash = Math.max(0, state.cash - cost);
 }
 
 export function levelOf(state: GameState, id: string): number {
@@ -65,6 +99,7 @@ export function multiplier(state: GameState): number {
   }
   if (state.car.parts.carrosserie) mult *= CAR_TIP_MULT;
   mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
+  mult *= 1 + state.succes.length * SUCCES_BONUS;
   return mult;
 }
 
@@ -99,6 +134,7 @@ export function boostFactor(state: GameState): number {
 export function addBoost(state: GameState): boolean {
   if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return false;
   state.boostSeconds += BOOST_SECONDS;
+  state.stats.boosts += 1;
   return true;
 }
 
@@ -120,13 +156,14 @@ export function articleCost(state: GameState, id: string): number {
 /** On peut en reprendre quand il en reste moins que la durée d'un article (max 2 d'avance). */
 export function canBuyArticle(state: GameState, id: string): boolean {
   const a = getArticle(id);
-  return !!a && (state.magasin[id] ?? 0) <= a.seconds && state.cash >= articleCost(state, id);
+  return !!a && (state.magasin[id] ?? 0) <= a.seconds && assez(state, articleCost(state, id));
 }
 
 export function buyArticle(state: GameState, id: string): boolean {
   if (!canBuyArticle(state, id)) return false;
-  state.cash -= articleCost(state, id);
+  payer(state, articleCost(state, id));
   state.magasin[id] = (state.magasin[id] ?? 0) + getArticle(id)!.seconds;
+  state.stats.articles += 1;
   return true;
 }
 
@@ -163,12 +200,14 @@ export function passiveRate(state: GameState): number {
 function earn(state: GameState, amount: number): void {
   state.cash += amount;
   state.totalEarned += amount;
+  state.stats.gagneVie += amount;
 }
 
 export function tap(state: GameState): number {
   const value = tapValue(state);
   earn(state, value);
   state.taps += 1;
+  state.stats.tapsVie += 1;
   return value;
 }
 
@@ -176,6 +215,7 @@ export function tap(state: GameState): number {
 export function tick(state: GameState, now: number): number {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
+  state.stats.secondes += seconds;
   const gained = passiveOver(state, seconds);
   earn(state, gained);
   return gained;
@@ -208,7 +248,7 @@ export function bulkCost(state: GameState, id: string, want: number): { count: n
   let cost = 0;
   for (let level = levelOf(state, id); level < u.maxLevel && count < want; level++) {
     const next = upgradeCost(u, level);
-    if (want === Infinity && count > 0 && cost + next > state.cash) break;
+    if (want === Infinity && count > 0 && !assez(state, cost + next)) break;
     cost += next;
     count++;
   }
@@ -219,8 +259,8 @@ export function bulkCost(state: GameState, id: string, want: number): { count: n
 export function buyMany(state: GameState, id: string, want: number): number {
   const u = getUpgrade(id);
   const { count, cost } = bulkCost(state, id, want);
-  if (!u || !isUnlocked(state, u) || count === 0 || state.cash < cost) return 0;
-  state.cash -= cost;
+  if (!u || !isUnlocked(state, u) || count === 0 || !assez(state, cost)) return 0;
+  payer(state, cost);
   state.upgrades[id] = levelOf(state, id) + count;
   return count;
 }
@@ -240,8 +280,8 @@ export function buy(state: GameState, id: string): boolean {
   const u = getUpgrade(id);
   if (!u || !isUnlocked(state, u)) return false;
   const cost = nextCost(state, id);
-  if (cost === null || state.cash < cost) return false;
-  state.cash -= cost;
+  if (cost === null || !assez(state, cost)) return false;
+  payer(state, cost);
   state.upgrades[id] = levelOf(state, id) + 1;
   return true;
 }
@@ -249,8 +289,8 @@ export function buy(state: GameState, id: string): boolean {
 // --- Le bazou ---
 
 export function buyCar(state: GameState): boolean {
-  if (state.car.owned || state.cash < CAR_PRICE) return false;
-  state.cash -= CAR_PRICE;
+  if (state.car.owned || !assez(state, CAR_PRICE)) return false;
+  payer(state, CAR_PRICE);
   state.car.owned = true;
   return true;
 }
@@ -261,8 +301,8 @@ export function isRepaired(state: GameState, partId: string): boolean {
 
 export function repair(state: GameState, partId: string): boolean {
   const part = PARTS.find((p) => p.id === partId);
-  if (!part || !state.car.owned || isRepaired(state, partId) || state.cash < part.cost) return false;
-  state.cash -= part.cost;
+  if (!part || !state.car.owned || isRepaired(state, partId) || !assez(state, part.cost)) return false;
+  payer(state, part.cost);
   state.car.parts[partId] = true;
   return true;
 }
@@ -298,12 +338,12 @@ export function nextBuilding(state: GameState) {
 
 export function canBuyBuilding(state: GameState, id: BuildingId): boolean {
   const next = nextBuilding(state);
-  return next?.id === id && carRuns(state) && state.cash >= next.cost;
+  return next?.id === id && carRuns(state) && assez(state, next.cost);
 }
 
 export function buyBuilding(state: GameState, id: BuildingId): boolean {
   if (!canBuyBuilding(state, id)) return false;
-  state.cash -= nextBuilding(state)!.cost;
+  payer(state, nextBuilding(state)!.cost);
   state.buildings[id] = true;
   return true;
 }
@@ -322,6 +362,9 @@ export function prestige(state: GameState, now: number): number {
   Object.assign(state, newGame(now), {
     prestige: kept,
     noAds: state.noAds,
+    succes: state.succes,
+    stats: state.stats,
+    tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,
   });

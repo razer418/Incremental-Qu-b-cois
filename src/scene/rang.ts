@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BuildingId } from '../game/buildings';
 import type { FeteId } from '../game/fetes';
+import { creerBazou, type ChoixLook } from './bazou';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
 export const PAL = {
@@ -30,6 +31,11 @@ export const PAL = {
   bleu: 0x3c4a6e,
   // Les fenêtres pis l'enseigne allumées du bar : pas d'ombrage, ça luit dans la brunante.
   lampe: 0xe8c26a,
+  // Les feuilles du printemps pis de l'été, le sapin enneigé, la pluie
+  bourgeons: [0x8a9a56, 0x7d8c4a, 0x97a462],
+  feuilles: [0x4f6a36, 0x5e7a3e, 0x46602f],
+  sapinNeige: 0x6f7d72,
+  pluie: 0xb4c2c8,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -40,6 +46,46 @@ const SOL: Record<SaisonId, [number, number]> = {
   automne: [PAL.foin, PAL.herbeSombre],
   hiver: [PAL.neige, PAL.neigeOmbre],
 };
+
+// Chaque saison a sa lumière, ses arbres pis ce qui tombe du ciel.
+interface LookSaison {
+  ciel: number;
+  lumiere: number;
+  soleil: number;
+  force: number;
+  brume: number;
+  /** La couleur des érables (null : y'a pus de feuilles). */
+  erables: readonly number[] | null;
+  sapin: number;
+  tombe: { couleurs: readonly number[]; nb: number; taille: number; vitesse: number; vent: number } | null;
+}
+const LOOK_SAISON: Record<SaisonId, LookSaison> = {
+  // Gris-vert mouillé, bourgeons pis pluie
+  printemps: {
+    ciel: 0x98a4a2, lumiere: 0xd0dccc, soleil: 0xdde4d6, force: 0.85, brume: 0.7,
+    erables: PAL.bourgeons, sapin: PAL.sapin,
+    tombe: { couleurs: [PAL.pluie], nb: 500, taille: 0.16, vitesse: 16, vent: 0.3 },
+  },
+  // Grand ciel bleu, gros soleil, feuilles ben vertes
+  ete: {
+    ciel: 0x9db8c8, lumiere: 0xf4ecd0, soleil: 0xfff2c8, force: 1.2, brume: 1.3,
+    erables: PAL.feuilles, sapin: PAL.sapin, tombe: null,
+  },
+  // Lumière dorée pis les feuilles qui revolent
+  automne: {
+    ciel: 0xc49a6a, lumiere: 0xf0c890, soleil: 0xffb870, force: 1, brume: 1,
+    erables: PAL.erables, sapin: PAL.sapin,
+    tombe: { couleurs: PAL.erables, nb: 150, taille: 0.26, vitesse: 1.2, vent: 1.4 },
+  },
+  // Blanc bleuté, arbres nus, sapins enneigés pis la neige qui tombe
+  hiver: {
+    ciel: 0xc8d0d8, lumiere: 0xe4ecf4, soleil: 0xdce6f0, force: 1.1, brume: 0.75,
+    erables: null, sapin: PAL.sapinNeige,
+    tombe: { couleurs: [PAL.neige], nb: 500, taille: 0.22, vitesse: 1.6, vent: 0.6 },
+  },
+};
+// La saison passe par-dessus la teinte de l'endroit, assez pour qu'on la voie partout.
+const MELANGE_SAISON = 0.45;
 
 // Ambiance : le rang est gris pis brumeux au début, il se réchauffe avec la progression.
 const DEBUT = {
@@ -120,11 +166,8 @@ export interface CarLook {
   clean: boolean;
   /** Le bazou roule : il te suit d'un endroit à l'autre pis part livrer. */
   runs: boolean;
-  /** Le look choisi (voir game/look.ts) : couleurs, ou null pour rien. */
-  peinture: number;
-  collant: { id: string; couleur: number | null };
-  mags: number | null;
-  flaps: number | null;
+  /** Le look posé (voir game/look.ts). */
+  look: ChoixLook;
 }
 
 export type Lieu = 'maison' | 'magasin' | BuildingId;
@@ -276,6 +319,11 @@ export function createRang(
 
   // Décor commun à chaque endroit : collines, arbres, poteaux d'Hydro.
   const arbres: THREE.Group[] = [];
+  // Les feuilles ont leurs propres matériaux : elles changent avec la saison sans toucher au reste.
+  const feuillage = PAL.erables.map(
+    (c) => new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0, specular: 0x000000 }),
+  );
+  const cimes: THREE.Mesh[] = [];
   const tronc = G(new THREE.CylinderGeometry(0.18, 0.25, 2.2, 6));
   const troncSapin = G(new THREE.CylinderGeometry(0.15, 0.2, 1, 6));
   const sapinBas = G(new THREE.ConeGeometry(1.4, 2.6, 6));
@@ -294,7 +342,10 @@ export function createRang(
       t.position.set(ox + x, 0, z);
       scene.add(t);
       part(t, tronc, PAL.tronc, 0, 1.1, 0);
-      part(t, G(new THREE.IcosahedronGeometry(r, 0)), PAL.erables[i % 3], 0, 2.4 + r * 0.6, 0);
+      const cime = new THREE.Mesh(G(new THREE.IcosahedronGeometry(r, 0)), feuillage[i % 3]);
+      cime.position.set(0, 2.4 + r * 0.6, 0);
+      t.add(cime);
+      cimes.push(cime);
       arbres.push(t);
     });
     for (const [x, z] of sapins) {
@@ -406,84 +457,12 @@ export function createRang(
   plan(3.2, 5, PAL.gravier, 4.6, 0.02, 2.6);
 
   // Le bazou (à vendre pour l'instant : c'est l'objectif)
-  const bazou = new THREE.Group();
+  const leBazou = creerBazou();
+  const bazou = leBazou.groupe;
+  const carrosserie = leBazou.carrosserie;
   bazou.position.set(STATIONNEMENT.x, 0, STATIONNEMENT.z);
   bazou.rotation.y = STATIONNEMENT.ry;
   scene.add(bazou);
-  const carrosserie = new THREE.Group();
-  bazou.add(carrosserie);
-  // La peinture a son propre matériau : elle change avec le look.
-  const peinture = new THREE.MeshPhongMaterial({ color: PAL.carrosserie, flatShading: true, shininess: 0, specular: 0x000000 });
-  part(carrosserie, B(4.2, 0.8, 1.8), PAL.carrosserie, 0, 0.8, 0).material = peinture;
-  part(carrosserie, B(2.2, 0.66, 1.6), PAL.vitre, -0.25, 1.53, 0);
-  part(carrosserie, B(2.35, 0.12, 1.7), PAL.carrosserie, -0.25, 1.9, 0).material = peinture;
-  // Les collants, des deux bords. Un matériau par collant pour changer sa couleur.
-  const collantMat = () => new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, shininess: 0, specular: 0x000000 });
-  const collants: Record<string, { g: THREE.Group; mat: THREE.MeshPhongMaterial }> = {};
-  const collant = (id: string, faire: (g: THREE.Group, mat: THREE.Material) => void) => {
-    const g = new THREE.Group();
-    const mat = collantMat();
-    faire(g, mat);
-    g.visible = false;
-    carrosserie.add(g);
-    collants[id] = { g, mat };
-  };
-  collant('numero', (g, mat) => {
-    const rond = G(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 10));
-    for (const z of [0.91, -0.91]) {
-      part(g, rond, 0, -0.3, 0.8, z, { rx: Math.PI / 2 }).material = mat;
-      part(g, B(0.08, 0.36, 0.04), PAL.pneu, -0.3, 0.8, z * 1.012);
-    }
-  });
-  collant('bandes', (g, mat) => {
-    for (const z of [-0.22, 0.22]) {
-      part(g, B(4.22, 0.02, 0.18), 0, 0, 1.21, z).material = mat;
-      part(g, B(2.37, 0.02, 0.18), 0, -0.25, 1.97, z).material = mat;
-    }
-  });
-  collant('flammes', (g, mat) => {
-    // Des langues de feu qui partent du devant.
-    const f = new THREE.Shape();
-    f.moveTo(0, 0);
-    for (const [x, y] of [[-0.7, 0.08], [-0.4, 0.18], [-1.0, 0.25], [-0.45, 0.33], [-0.75, 0.45], [0, 0.5]]) f.lineTo(x, y);
-    const geo = G(new THREE.ShapeGeometry(f));
-    // Le bord de l'autre côté est viré de bord : on le décale pour qu'il parte aussi du devant.
-    part(g, geo, 0, 2.05, 0.55, 0.905).material = mat;
-    part(g, geo, 0, 1.05, 0.55, -0.905, { ry: Math.PI }).material = mat;
-  });
-  const rouille = [
-    part(carrosserie, B(0.7, 0.45, 0.04), PAL.rouille, 1.2, 0.75, 0.92),
-    part(carrosserie, B(0.4, 0.3, 0.04), PAL.rouille, -1.5, 0.95, 0.92),
-  ];
-  part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, 2.15, 0.55, 0);
-  part(carrosserie, B(0.2, 0.25, 1.9), PAL.chrome, -2.15, 0.55, 0);
-  const roue = G(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 8));
-  const bloc = B(0.5, 0.42, 0.5);
-  const roues: THREE.Mesh[] = [];
-  const blocs: THREE.Mesh[] = [];
-  // Mags pis flaps de bouette : cachés tant que t'en as pas.
-  const magsMat = collantMat();
-  const flapsMat = collantMat();
-  const mag = G(new THREE.CylinderGeometry(0.24, 0.24, 0.34, 8));
-  const flap = B(0.05, 0.38, 0.3);
-  const mags: THREE.Mesh[] = [];
-  const flaps: THREE.Mesh[] = [];
-  for (const [x, z] of [
-    [1.35, 0.9],
-    [1.35, -0.9],
-    [-1.35, 0.9],
-    [-1.35, -0.9],
-  ]) {
-    const r = part(bazou, roue, PAL.pneu, x, 0.42, z, { rx: Math.PI / 2 });
-    roues.push(r);
-    const m = new THREE.Mesh(mag, magsMat);
-    r.add(m);
-    mags.push(m);
-    flaps.push(part(bazou, flap, 0, x - 0.52, 0.32, z));
-    flaps.at(-1)!.material = flapsMat;
-    // Sur les blocs de béton tant qu'y a pas de pneus.
-    blocs.push(part(bazou, bloc, PAL.gravier, x, 0.21, z * 0.8));
-  }
 
   // Pancarte « à vendre » du bonhomme Gagnon
   const pancarte = new THREE.Group();
@@ -512,6 +491,7 @@ export function createRang(
   part(pancarteMaison, B(4.2, 1.2, 0.08), PAL.tronc, 0, 1.7, 0);
   enseigne(pancarteMaison, 'CHEZ NOUS', 4, 1.05, 0, 1.7, 0.05, { fond: PAL.tronc, encre: PAL.declin });
 
+  const roue = G(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 8));
   const miniChar = (parent: THREE.Object3D, c: number, x: number, z: number, ry: number) => {
     const g = new THREE.Group();
     g.position.set(x, 0, z);
@@ -783,8 +763,38 @@ export function createRang(
     camera.updateProjectionMatrix();
   };
 
-  // Lumière : la progression du rang, pis la teinte de l'endroit par-dessus.
+  // Ce qui tombe du ciel (pluie, feuilles, neige) : une boîte de points autour de l'endroit.
+  const NB_TOMBE = 500;
+  const tombePos = new Float32Array(NB_TOMBE * 3);
+  const tombeCouleurs = new Float32Array(NB_TOMBE * 3);
+  for (let i = 0; i < NB_TOMBE; i++) {
+    tombePos[i * 3] = (Math.random() - 0.5) * 34;
+    tombePos[i * 3 + 1] = Math.random() * 14;
+    tombePos[i * 3 + 2] = -10 + Math.random() * 24;
+  }
+  const tombeGeo = G(new THREE.BufferGeometry());
+  tombeGeo.setAttribute('position', new THREE.BufferAttribute(tombePos, 3));
+  tombeGeo.setAttribute('color', new THREE.BufferAttribute(tombeCouleurs, 3));
+  const tombeMat = new THREE.PointsMaterial({ size: 0.2, vertexColors: true });
+  const tombe = new THREE.Points(tombeGeo, tombeMat);
+  tombe.frustumCulled = false;
+  tombe.visible = false;
+  scene.add(tombe);
+  const faireTomber = (dt: number, t: number) => {
+    const x = LOOK_SAISON[saison].tombe;
+    if (!x) return;
+    for (let i = 0; i < NB_TOMBE; i++) {
+      let y = tombePos[i * 3 + 1] - x.vitesse * dt * (0.7 + (i % 5) * 0.1);
+      if (y < 0) y += 14;
+      tombePos[i * 3 + 1] = y;
+      tombePos[i * 3] += Math.sin(t * 0.8 + i) * x.vent * dt;
+    }
+    tombeGeo.attributes.position.needsUpdate = true;
+  };
+
+  // Lumière : la progression du rang, la teinte de l'endroit pis la saison par-dessus.
   let chaleur = 0;
+  let saison: SaisonId = 'ete';
   const teinte = new THREE.Color();
   const eclairer = () => {
     const k = chaleur;
@@ -797,16 +807,19 @@ export function createRang(
     soleil.color.lerpColors(DEBUT.soleil, TARD.soleil, k);
     let soleilForce = THREE.MathUtils.lerp(DEBUT.soleilForce, TARD.soleilForce, k);
     soleil.position.lerpVectors(DEBUT.soleilPos, TARD.soleilPos, k);
+    const teinter = (a: Ambiance, k: number) => {
+      ciel.lerp(teinte.setHex(a.ciel), k);
+      hemi.color.lerp(teinte.setHex(a.lumiere), k);
+      soleil.color.lerp(teinte.setHex(a.soleil), k);
+      const f = THREE.MathUtils.lerp(1, a.force, k);
+      hemiForce *= f;
+      soleilForce *= f;
+      near *= THREE.MathUtils.lerp(1, a.brume, k);
+      far *= THREE.MathUtils.lerp(1, a.brume, k);
+    };
     const a = AMBIANCE[lieuActuel];
-    if (a) {
-      ciel.lerp(teinte.setHex(a.ciel), MELANGE);
-      hemi.color.lerp(teinte.setHex(a.lumiere), MELANGE);
-      soleil.color.lerp(teinte.setHex(a.soleil), MELANGE);
-      hemiForce *= a.force;
-      soleilForce *= a.force;
-      near *= a.brume;
-      far *= a.brume;
-    }
+    if (a) teinter(a, MELANGE);
+    teinter(LOOK_SAISON[saison], MELANGE_SAISON);
     fog.color.copy(ciel);
     fog.near = near;
     fog.far = far;
@@ -912,9 +925,12 @@ export function createRang(
 
   const t0 = performance.now();
   let raf = 0;
+  let tAvant = 0;
   const frame = (now: number) => {
     const t = (now - t0) / 1000;
     arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * 1.1 + i) * 0.025));
+    faireTomber(Math.min(0.1, t - tAvant), t);
+    tAvant = t;
     carrosserie.position.y = Math.sin(t * 28) * 0.012;
     avancer(now);
     renderer.render(scene, camera);
@@ -933,6 +949,7 @@ export function createRang(
 
   const couper = (l: Lieu) => {
     lieuActuel = l;
+    tombe.position.x = ORIGINE[l];
     placerCamera();
     eclairer();
   };
@@ -947,18 +964,8 @@ export function createRang(
       // La pile de pneus déménage dans le garage, la pancarte disparaît avec la vente.
       pilePneus.forEach((p) => (p.visible = !look.lieux.concession));
       pancarte.visible = !look.owned;
-      roues.forEach((r) => (r.visible = look.wheels));
-      blocs.forEach((b) => (b.visible = !look.wheels));
-      rouille.forEach((r) => (r.visible = !look.clean));
-      peinture.color.setHex(look.peinture);
-      for (const [id, c] of Object.entries(collants)) {
-        c.g.visible = id === look.collant.id;
-        if (look.collant.couleur !== null) c.mat.color.setHex(look.collant.couleur);
-      }
-      mags.forEach((m) => (m.visible = look.mags !== null));
-      if (look.mags !== null) magsMat.color.setHex(look.mags);
-      flaps.forEach((f) => (f.visible = look.wheels && look.flaps !== null));
-      if (look.flaps !== null) flapsMat.color.setHex(look.flaps);
+      leBazou.setEtat(look);
+      leBazou.setLook(look.look);
       if (look.runs && !roule) planifierLivraison(performance.now());
       roule = look.runs;
       // Un bazou qui roule pas reste dans la cour chez vous.
@@ -1014,6 +1021,21 @@ export function createRang(
     setSaison(x) {
       (M(PAL.herbe) as THREE.MeshPhongMaterial).color.setHex(SOL[x][0]);
       (M(PAL.herbeSombre) as THREE.MeshPhongMaterial).color.setHex(SOL[x][1]);
+      saison = x;
+      const look = LOOK_SAISON[x];
+      cimes.forEach((c) => (c.visible = !!look.erables));
+      if (look.erables) feuillage.forEach((m, i) => m.color.setHex(look.erables![i % look.erables!.length]));
+      (M(PAL.sapin) as THREE.MeshPhongMaterial).color.setHex(look.sapin);
+      tombe.visible = !!look.tombe;
+      if (look.tombe) {
+        tombeMat.size = look.tombe.taille;
+        tombeGeo.setDrawRange(0, look.tombe.nb);
+        for (let i = 0; i < NB_TOMBE; i++) {
+          teinte.setHex(look.tombe.couleurs[i % look.tombe.couleurs.length]).toArray(tombeCouleurs, i * 3);
+        }
+        tombeGeo.attributes.color.needsUpdate = true;
+      }
+      eclairer();
       if (!raf) renderer.render(scene, camera);
     },
     setFete(f) {
@@ -1030,8 +1052,10 @@ export function createRang(
       document.removeEventListener('visibilitychange', onVisibility);
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => m.dispose());
-      [peinture, magsMat, flapsMat, ...Object.values(collants).map((c) => c.mat)].forEach((m) => m.dispose());
+      leBazou.dispose();
       filMat.dispose();
+      tombeMat.dispose();
+      feuillage.forEach((m) => m.dispose());
       enseignes.forEach((e) => (e.tex.dispose(), e.mat.dispose()));
       renderer.dispose();
       renderer.domElement.remove();

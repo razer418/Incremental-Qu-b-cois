@@ -1,14 +1,13 @@
 // Les mini-jeux à l'écran : une liste pour les lancer, pis une boîte avec un petit canvas pixelisé.
 // Tout se joue au doigt (ou à la souris, pis aux flèches/espace sur l'ordi).
-import { MINIJEUX, finirPartie, getMiniJeu, peutJouer, recompense, repos, type MiniJeuId } from './game/minijeux';
 import { choisie } from './game/look';
-import type { GameState } from './game/state';
+import { MINIJEUX, finirPartie, getMiniJeu, peutJouer, recompense, repos, type MiniJeuId } from './game/minijeux';
+import { TUTO_FINI, type GameState } from './game/state';
 import { formatMoney } from './game/format';
 import { t } from './game/i18n';
 
 const W = 160;
 const H = 120;
-const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
 const C = {
   fond: '#151714',
   ecrit: '#d8d2bf',
@@ -44,10 +43,10 @@ const texte = (g: CanvasRenderingContext2D, s: string, x: number, y: number, cou
   g.textAlign = 'center';
   g.fillText(s, x, y);
 };
-const barreTemps = (g: CanvasRenderingContext2D, reste: number) => {
+const barreTemps = (g: CanvasRenderingContext2D, reste: number, couleur?: string) => {
   g.fillStyle = C.ligne;
   g.fillRect(0, 0, W, 4);
-  g.fillStyle = reste < 0.25 ? C.alerte : C.or;
+  g.fillStyle = couleur ?? (reste < 0.25 ? C.alerte : C.or);
   g.fillRect(0, 0, W * Math.max(0, reste), 4);
 };
 
@@ -155,68 +154,90 @@ function deneiger(): Partie {
   return p;
 }
 
-// Derby de démolition : change de voie pour éviter les autres chars.
-function demolition(couleur: string): Partie {
-  const DUREE = 20;
+// Swimming dans le trafic : la trend de TikTok. Tu zigzagues avec le bazou entre les chars,
+// pis ça va de plus en plus vite. Frôler un char sans le toucher, c'est ça le swimming.
+function trafic(couleur: string): Partie {
+  /** Secondes de route (plus les frôlés) pour une partie parfaite. */
+  const OBJECTIF = 30;
   const VIES = 3;
-  const VOIES = [W / 6, W / 2, (W * 5) / 6];
+  const VOIES = [W / 8, (W * 3) / 8, (W * 5) / 8, (W * 7) / 8];
   const MOI_Y = 100;
-  const couleurs = ['#6e2f28', '#8a835a', '#7f7f78', '#5f7488', '#a47a3c'];
+  const couleurs = ['#6e2f28', '#8a835a', '#7f7f78', '#5f7488', '#a47a3c', '#bfb7a4'];
   let voie = 1;
   let temps = 0;
   let coups = 0;
-  let prochain = 0.5;
+  let froles = 0;
+  let prochain = 0.4;
   let secousse = 0;
-  const autres: { voie: number; y: number; c: string }[] = [];
+  let bravo = 0;
+  /** Quand t'as changé de voie la dernière fois : un frôlé compte juste si tu zigzagues. */
+  let saut = -9;
+  const autres: { voie: number; y: number; c: string; passe: boolean }[] = [];
+  const vitesse = () => 60 + temps * 7;
   const char = (g: CanvasRenderingContext2D, x: number, y: number, c: string) => {
     g.fillStyle = C.pneu;
-    g.fillRect(x - 12, y - 9, 24, 5);
-    g.fillRect(x - 12, y + 4, 24, 5);
+    g.fillRect(x - 10, y - 8, 20, 4);
+    g.fillRect(x - 10, y + 4, 20, 4);
     g.fillStyle = c;
-    g.fillRect(x - 10, y - 11, 20, 22);
+    g.fillRect(x - 8, y - 11, 16, 22);
     g.fillStyle = C.ligne;
-    g.fillRect(x - 7, y - 5, 14, 6);
+    g.fillRect(x - 6, y - 7, 12, 5);
   };
   const p: Partie = {
-    aide: t('Tape à gauche ou à droite pour changer de voie.'),
+    aide: t('Tape à gauche ou à droite pour zigzaguer entre les chars. Frôle-les sans les accrocher!'),
     score: null,
     avancer(dt) {
       temps += dt;
       secousse = Math.max(0, secousse - dt);
-      const vitesse = 55 + temps * 4;
+      bravo = Math.max(0, bravo - dt);
       prochain -= dt;
       if (prochain <= 0) {
-        autres.push({ voie: Math.floor(Math.random() * 3), y: -15, c: couleurs[Math.floor(Math.random() * couleurs.length)] });
-        prochain = Math.max(0.45, 0.9 - temps * 0.02);
+        // Jamais les 4 voies bouchées en même temps : y'a toujours un trou où nager.
+        autres.push({ voie: Math.floor(Math.random() * 4), y: -15, c: couleurs[Math.floor(Math.random() * couleurs.length)], passe: false });
+        prochain = Math.max(0.22, 0.7 - temps * 0.015);
       }
-      for (const a of autres) a.y += vitesse * dt;
+      for (const a of autres) a.y += vitesse() * dt;
       for (let i = autres.length - 1; i >= 0; i--) {
         const a = autres[i];
-        if (a.voie === voie && Math.abs(a.y - MOI_Y) < 18) {
+        if (a.voie === voie && Math.abs(a.y - MOI_Y) < 20) {
           coups++;
           secousse = 0.3;
           autres.splice(i, 1);
-        } else if (a.y > H + 20) autres.splice(i, 1);
+          continue;
+        }
+        // Un char qui passe juste à côté, pendant que tu zigzagues : frôlé!
+        if (!a.passe && a.y > MOI_Y + 20) {
+          a.passe = true;
+          if (Math.abs(a.voie - voie) === 1 && temps - saut < 0.8) {
+            froles++;
+            bravo = 0.5;
+          }
+        }
+        if (a.y > H + 20) autres.splice(i, 1);
       }
-      if (coups >= VIES) p.score = 0;
-      else if (temps >= DUREE) p.score = 1 - coups / VIES;
+      if (coups >= VIES) p.score = Math.min(1, (temps + froles) / OBJECTIF);
     },
     dessiner(g) {
       g.save();
       if (secousse > 0) g.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
-      g.fillStyle = C.boue;
+      g.fillStyle = C.tole;
       g.fillRect(-4, -4, W + 8, H + 8);
-      g.fillStyle = C.ligne;
-      for (const x of [W / 3, (W * 2) / 3]) for (let y = (temps * 60) % 16; y < H; y += 16) g.fillRect(x - 1, y, 2, 8);
+      g.fillStyle = C.ecrit;
+      const d = (temps * vitesse()) % 16;
+      for (const x of [W / 4, W / 2, (W * 3) / 4]) for (let y = d - 16; y < H; y += 16) g.fillRect(x - 1, y, 2, 8);
       for (const a of autres) char(g, VOIES[a.voie], a.y, a.c);
       char(g, VOIES[voie], MOI_Y, couleur);
       g.restore();
-      barreTemps(g, 1 - temps / DUREE);
+      const total = Math.min(1, (temps + froles) / OBJECTIF);
+      barreTemps(g, total, total >= 1 ? C.vert : C.or);
+      texte(g, `${Math.round(vitesse() * 0.8)} km/h`, 26, 16, C.ecrit, 12);
       texte(g, '♥'.repeat(VIES - coups), W - 16, 16, C.alerte, 12);
-      if (secousse > 0) texte(g, t('BANG!'), W / 2, 50, C.or, 24);
+      if (secousse > 0) texte(g, t('POUET POUET!'), W / 2, 50, C.alerte, 22);
+      else if (bravo > 0) texte(g, t('FRÔLÉ!'), W / 2, 50, C.vert, 22);
     },
     toucher(x) {
-      voie = Math.max(0, Math.min(2, voie + (x < W / 2 ? -1 : 1)));
+      voie = Math.max(0, Math.min(VOIES.length - 1, voie + (x < W / 2 ? -1 : 1)));
+      saut = temps;
     },
     touche(k) {
       if (k === 'ArrowLeft') p.toucher(0, 0);
@@ -269,8 +290,7 @@ export function createMiniJeux(o: {
   };
   const lancer = (id: MiniJeuId) => {
     if (!peutJouer(o.etat(), id, Date.now())) return;
-    const peinture = choisie(o.etat(), 'peinture').couleur!;
-    const p = id === 'moteur' ? moteur() : id === 'deneiger' ? deneiger() : demolition(hex(peinture));
+    const p = id === 'moteur' ? moteur() : id === 'deneiger' ? deneiger() : trafic(`#${choisie(o.etat(), 'peinture').couleur!.toString(16).padStart(6, '0')}`);
     partie = { id, p };
     titre.textContent = t(getMiniJeu(id)!.nom).toUpperCase();
     aide.textContent = p.aide;
@@ -323,7 +343,8 @@ export function createMiniJeux(o: {
     render(): void {
       const s = o.etat();
       const now = Date.now();
-      o.section.hidden = MINIJEUX.every((m) => m.bloque(s) !== null) && !s.car.owned;
+      // Pas pendant le tuto : on garde le début simple.
+      o.section.hidden = s.tuto !== TUTO_FINI;
       if (o.section.hidden) return;
       for (const r of rows) {
         const bloque = r.m.bloque(s);

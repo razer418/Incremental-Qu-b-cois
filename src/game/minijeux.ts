@@ -4,7 +4,7 @@ import { saisonA } from './saisons';
 import { t } from './i18n';
 import { carRuns, earn, revenuRef, type GameState } from './state';
 
-export type MiniJeuId = 'moteur' | 'deneiger' | 'demolition';
+export type MiniJeuId = 'moteur' | 'deneiger' | 'trafic';
 
 export interface MiniJeu {
   id: MiniJeuId;
@@ -37,9 +37,9 @@ export const MINIJEUX: readonly MiniJeu[] = [
     bloque: (s) => (saisonA(s.lastTick).id === 'hiver' ? null : t("Y'a pas de neige. Reviens l'hiver.")),
   },
   {
-    id: 'demolition',
-    nom: 'Derby de démolition',
-    description: "À l'expo agricole. Change de voie pour éviter les autres chars pendant 20 secondes.",
+    id: 'trafic',
+    nom: 'Swimming dans le trafic',
+    description: "La trend du moment : zigzague avec le bazou entre les chars, de plus en plus vite. Frôler un char sans l'accrocher donne du bonus.",
     secondes: 90,
     bloque: (s) => (carRuns(s) ? null : t('Le bazou doit rouler.')),
   },

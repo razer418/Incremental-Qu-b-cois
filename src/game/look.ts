@@ -1,15 +1,15 @@
-// Le look du bazou : peinture, collants, mags pis flaps de bouette.
+// Le look du bazou : peinture, collants, mags, flaps de bouette, toit pis antenne.
 // C'est juste cosmétique (aucun bonus), pis ça se voit dans le rang en 3D.
 // Gardé au prestige : tu repars à pied, mais ton style te suit.
 import { assez, payer, type GameState } from './state';
 
-export type Categorie = 'peinture' | 'collant' | 'mags' | 'flaps';
+export type Categorie = 'peinture' | 'collant' | 'mags' | 'flaps' | 'toit' | 'antenne';
 
 export interface Option {
   id: string;
   nom: string;
   prix: number;
-  /** Couleur dans le rang (palette Bazou VHS); null = rien à montrer. */
+  /** Couleur dans le rang (palette Bazou VHS), pis la pastille dans l'atelier; null = rien à montrer. */
   couleur: number | null;
 }
 
@@ -50,6 +50,25 @@ export const LOOK: Record<Categorie, { nom: string; options: readonly Option[] }
       { id: 'noirs', nom: 'Flaps noirs', prix: 300, couleur: 0x1c1c1a },
       { id: 'rouges', nom: 'Flaps rouges', prix: 3000, couleur: 0x8a2f26 },
       { id: 'chrome', nom: 'Flaps chromés', prix: 30_000, couleur: 0xb8b8ae },
+    ],
+  },
+  toit: {
+    nom: 'Sur le toit',
+    options: [
+      { id: 'aucun', nom: 'Rien sur le toit', prix: 0, couleur: null },
+      { id: 'galerie', nom: 'Galerie de toit', prix: 600, couleur: 0x1c1c1a },
+      { id: 'matelas', nom: 'Matelas du 1er juillet', prix: 2500, couleur: 0xbfb7a4 },
+      { id: 'canot', nom: 'Canot de chalet', prix: 20_000, couleur: 0x8a2f26 },
+      { id: 'sapin', nom: 'Sapin de Noël attaché', prix: 120_000, couleur: 0x2e3b2c },
+    ],
+  },
+  antenne: {
+    nom: 'Antenne',
+    options: [
+      { id: 'aucune', nom: "Pas d'antenne", prix: 0, couleur: null },
+      { id: 'cb', nom: 'Antenne de CB', prix: 150, couleur: 0x7f7f78 },
+      { id: 'drapeau', nom: 'Drapeau fleurdelisé', prix: 1500, couleur: 0x3c4a6e },
+      { id: 'raton', nom: 'Queue de raton laveur', prix: 15_000, couleur: 0x6e5a48 },
     ],
   },
 };

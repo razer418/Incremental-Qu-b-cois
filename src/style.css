@@ -61,7 +61,7 @@ p {
   }
   .col-jeu {
     position: sticky;
-    top: 104px;
+    top: 128px;
   }
 }
 
@@ -900,5 +900,39 @@ dialog p.resume {
   .tuto-cible,
   .toast.entre {
     animation: none;
+  }
+}
+
+/* La radio du char : une ligne sous le cash, qui défile si le texte est trop long. Tape = poste suivant. */
+.radio {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: left;
+  font: 400 18px/1.2 var(--pixel);
+  color: var(--gold);
+  opacity: 0.85;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.radio.fermee {
+  color: var(--muted);
+}
+.radio span {
+  display: inline-block;
+}
+.radio .defile {
+  animation: defile var(--duree) linear infinite alternate;
+}
+@keyframes defile {
+  0%, 15% {
+    transform: translateX(0);
+  }
+  85%, 100% {
+    transform: translateX(var(--trop));
   }
 }

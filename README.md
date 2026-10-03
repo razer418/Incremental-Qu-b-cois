@@ -46,9 +46,16 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Le rang passe du gris brumeux à une lumière plus chaude à mesure que tu gagnes du cash
 - Interface nette par-dessus : VT323 pour les chiffres, IBM Plex Mono pour les textes
 
-## Sons
+## Sons pis radio du char
 
-Faits à la main avec Web Audio (`src/platform/sons.ts`), aucun fichier à télécharger : canette ou sonnette quand tu tapes, ka-ching quand tu achètes, trois notes country pour une quête, le moteur du bazou pis la neige VHS pendant les trajets. Le bouton SON en haut à droite les coupe (choix gardé sur l'appareil).
+Faits à la main avec Web Audio, aucun fichier à télécharger.
+
+- Effets (`src/platform/sons.ts`) : canette ou sonnette quand tu tapes, ka-ching quand tu achètes, trois notes country pour une quête, le moteur du bazou pis la neige VHS pendant les trajets.
+- Radio (`src/platform/radio.ts`) : deux stations, Radio Rang 98,7 (country/folk) pis Garage FM 103,3 (rock de garage), 4 tounes chacune composées en code, avec un son « radio AM ». Aux deux tounes, une fausse pub de radio locale en joual, lue par la voix du navigateur (en français canadien si l'appareil en a une) pis affichée en texte.
+- Le titre de la toune ou la pub défile sous ton cash. Tape dessus pour changer de poste (ou fermer la radio).
+- Dans MENU > OPTIONS : station, volume radio pis volume des effets (gardés sur l'appareil).
+
+**Crédits et licences** : toute la musique pis les sons sont composés dans le code du jeu, donc 100 % à nous, usage commercial correct. La voix des pubs est celle du système du joueur (synthèse vocale du navigateur), rien n'est enregistré ni distribué avec le jeu. Tounes, artistes, stations pis commerces : tous inventés.
 
 ## Lancer le jeu
 

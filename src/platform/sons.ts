@@ -5,12 +5,16 @@ export type Son = 'canette' | 'livraison' | 'achat' | 'quete' | 'boost' | 'moteu
 
 export interface Sons {
   jouer(son: Son): void;
-  actif: boolean;
+  /** Volume des effets, de 0 (coupés) à 1. */
+  volume: number;
+  /** L'AudioContext partagé avec la radio (créé au premier geste). */
+  contexte(): AudioContext | null;
 }
 
 export function createSons(): Sons {
   let ctx: AudioContext | null = null;
   let bruit: AudioBuffer | null = null;
+  let sortie: GainNode | null = null;
   const audio = () => {
     if (!ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -19,6 +23,8 @@ export function createSons(): Sons {
       bruit = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = bruit.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      sortie = ctx.createGain();
+      sortie.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') void ctx.resume();
     return ctx;
@@ -34,7 +40,7 @@ export function createSons(): Sons {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(sortie!);
     o.start(t);
     o.stop(t + dur + 0.02);
   };
@@ -47,17 +53,19 @@ export function createSons(): Sons {
     const g = c.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(b).connect(g).connect(c.destination);
+    s.connect(b).connect(g).connect(sortie!);
     s.start(t);
     s.stop(t + dur);
   };
 
   const sons: Sons = {
-    actif: true,
+    volume: 1,
+    contexte: audio,
     jouer(son) {
-      if (!sons.actif) return;
+      if (sons.volume <= 0) return;
       const c = audio();
       if (!c) return;
+      sortie!.gain.value = sons.volume;
       const t = c.currentTime;
       switch (son) {
         case 'canette': // une canette qui tombe dans le sac

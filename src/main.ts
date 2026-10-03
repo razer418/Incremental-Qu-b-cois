@@ -21,6 +21,7 @@ import {
   buyBuilding,
   canBuyBuilding,
   canPrestige,
+  earn,
   nextBuilding,
   prestige,
   applyOffline,
@@ -53,8 +54,8 @@ import {
   TUTO_FINI,
 } from './game/state';
 import { load, save, wipe } from './game/save';
-import { saisonA } from './game/saisons';
-import { bonusFete, feteA, grosseFeteA } from './game/fetes';
+import { resteSaison, saisonA } from './game/saisons';
+import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
 import { PROJETS } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
@@ -167,6 +168,13 @@ langueBtn.addEventListener('click', () => {
   save(localStorage, state);
   location.reload();
 });
+
+// Outils de dev (npm run dev seulement) : l'horloge du jeu peut avancer, pour changer de saison.
+const devHorloge = { decalage: import.meta.env.DEV ? Number(localStorage.getItem('dev-decalage')) || 0 : 0 };
+if (import.meta.env.DEV) {
+  const vrai = Date.now;
+  Date.now = () => vrai() + devHorloge.decalage;
+}
 
 let state = load(localStorage, Date.now());
 
@@ -292,7 +300,7 @@ const montrerCode = (aide: string, importer: boolean) => {
   codeAide.textContent = aide;
 };
 // Le menu : trois onglets, succès, stats pis options.
-type Onglet = 'succes' | 'stats' | 'reglages';
+type Onglet = 'succes' | 'stats' | 'reglages' | 'dev';
 const ongletBtns = [...optionsDlg.querySelectorAll<HTMLButtonElement>('[data-onglet]')];
 const panneaux = [...optionsDlg.querySelectorAll<HTMLElement>('[data-panneau]')];
 let onglet: Onglet = 'reglages';
@@ -1056,6 +1064,30 @@ function loop(): void {
   }
   render();
   renderToast(now);
+}
+
+// Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.
+if (import.meta.env.DEV) {
+  ongletBtns.find((b) => b.dataset.onglet === 'dev')!.hidden = false;
+  const avancer = (ms: number, gagner: boolean) => {
+    devHorloge.decalage += ms;
+    localStorage.setItem('dev-decalage', String(devHorloge.decalage));
+    if (!gagner) state.lastTick = Date.now();
+  };
+  const outil = (id: string, f: () => void) =>
+    $(id).addEventListener('click', () => {
+      f();
+      save(localStorage, state);
+      render();
+    });
+  outil('dev-cash', () => earn(state, Math.max(1000, state.cash * 9)));
+  outil('dev-saison', () => avancer(resteSaison(Date.now()) * 1000 + 1, false));
+  outil('dev-fete', () => avancer(Math.max(0, resteSaison(Date.now()) - FETE_SECONDES) * 1000 + 1, false));
+  outil('dev-heure', () => avancer(3600 * 1000, true));
+  outil('dev-vraie', () => avancer(-devHorloge.decalage, false));
+  outil('dev-evenement', () => (prochainEvenement = 0));
+  outil('dev-minijeux', () => (state.minijeux = {}));
+  outil('dev-tuto', finirTuto);
 }
 
 setInterval(loop, 100);

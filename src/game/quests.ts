@@ -1,5 +1,3 @@
-import { JALON5 } from './features';
-
 export interface Character {
   id: string;
   name: string;
@@ -38,7 +36,7 @@ export interface Quest {
 }
 
 // Une seule quête active à la fois, dans l'ordre.
-const ALL_QUESTS: readonly Quest[] = [
+export const QUESTS: readonly Quest[] = [
   {
     id: 'sous-sol',
     giver: 'mere',
@@ -166,8 +164,3 @@ const ALL_QUESTS: readonly Quest[] = [
     reward: 1_000_000,
   },
 ];
-
-// Sans le Jalon 5, l'histoire s'arrête avant que Ti-Guy parle du garage.
-export const QUESTS: readonly Quest[] = JALON5
-  ? ALL_QUESTS
-  : ALL_QUESTS.slice(0, ALL_QUESTS.findIndex((q) => q.id === 'garage'));

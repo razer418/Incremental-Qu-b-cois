@@ -51,7 +51,7 @@ npm install
 npm run dev     # ouvre http://localhost:5173
 npm test        # tests de la logique du jeu
 npm run build   # version web dans dist/
-npm run dev:sans-j5   # mode dev sans le Jalon 5 (garage, concessionnaire, prestige)
+npm run dev:sans-pubs # mode dev sans pubs : boost direct, boutique cachée
 npm run android # build web, sync pis ouvre le projet dans Android Studio
 ```
 
@@ -63,7 +63,6 @@ npm run android # build web, sync pis ouvre le projet dans Android Studio
 - `src/style.css` : le style (clair et sombre)
 
 - `src/platform/` : pubs pis achats (démo sur le web)
-- `src/game/features.ts` : les jalons qu'on peut cacher en dev (`.env.sans-j5`)
 
 Pour l'APK, il faut Android Studio sur ton ordi (le SDK Android est pas dans le conteneur).
 

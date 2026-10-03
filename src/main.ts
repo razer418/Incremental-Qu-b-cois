@@ -6,7 +6,6 @@ import { createRang } from './scene/rang';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
-import { JALON5 } from './game/features';
 import { CAR_PRICE, PARTS } from './game/car';
 import { CHARACTERS } from './game/quests';
 import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
@@ -80,6 +79,7 @@ const prestigeBtn = $<HTMLButtonElement>('prestige-btn');
 const boostBtn = $<HTMLButtonElement>('boost');
 const boostSub = $('boost-sub');
 const noAdsBuy = $<HTMLButtonElement>('noads-buy');
+const boutiqueEl = $('boutique');
 const ads = createDemoAds($<HTMLDialogElement>('ad'), $('ad-count'), $<HTMLButtonElement>('ad-close'));
 const store = webStore;
 const messageDialog = $<HTMLDialogElement>('message');
@@ -188,10 +188,15 @@ qClaim.addEventListener('click', () => {
   render();
 });
 
+// Mode dev sans pubs (npm run dev:sans-pubs) : le boost est direct pis la boutique est cachée.
+const PUBS = import.meta.env.VITE_PUBS !== 'off';
+const sansPubs = (): boolean => state.noAds || !PUBS;
+boutiqueEl.hidden = !PUBS;
+
 // Boost x2 : jamais forcé, toujours sur demande.
 boostBtn.addEventListener('click', async () => {
   if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return;
-  if (!state.noAds) {
+  if (!sansPubs()) {
     boostBtn.disabled = true;
     const watched = await ads.showRewarded();
     if (!watched) return render();
@@ -281,8 +286,8 @@ function render(): void {
   jobEl.textContent = roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES';
   tapLabel.textContent = roule ? '[ LIVRER ]' : '[ RAMASSER ]';
   const look = {
-    garage: JALON5 && state.buildings.garage,
-    concession: JALON5 && state.buildings.concession,
+    garage: state.buildings.garage,
+    concession: state.buildings.concession,
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
@@ -333,8 +338,8 @@ function renderEmpire(roule: boolean): void {
   repEl.hidden = pts === 0;
   repEl.textContent = `RÉPUTATION ${pts} (+${Math.round(pts * PRESTIGE_BONUS_PER_POINT * 100)} %)`;
 
-  empireEl.hidden = !roule || !JALON5;
-  if (empireEl.hidden) return;
+  empireEl.hidden = !roule;
+  if (!roule) return;
   const b = nextBuilding(state);
   batEl.hidden = b === null;
   if (b) {
@@ -358,12 +363,12 @@ function renderBoost(): void {
   const left = Math.ceil(state.boostSeconds);
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
-  boostBtn.textContent = state.noAds ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]';
+  boostBtn.textContent = sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]';
   boostSub.classList.toggle('on', left > 0);
   const mm = Math.floor(left / 60);
   const ss = String(left % 60).padStart(2, '0');
   boostSub.textContent =
-    left > 0 ? `x2 ACTIF : ${mm}:${ss}` : state.noAds ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
+    left > 0 ? `x2 ACTIF : ${mm}:${ss}` : sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
   noAdsBuy.textContent = state.noAds ? 'ACHETÉ' : NO_ADS_PRICE;
   noAdsBuy.disabled = state.noAds;
 }

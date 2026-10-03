@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { BuildingId } from '../game/buildings';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
 export const PAL = {
@@ -58,8 +59,8 @@ const TARD = {
 };
 
 export interface CarLook {
-  garage: boolean;
-  concession: boolean;
+  /** Les endroits achetés (garage, cabane, lot, bar, aréna). */
+  lieux: Record<BuildingId, boolean>;
   owned: boolean;
   wheels: boolean;
   clean: boolean;
@@ -67,7 +68,7 @@ export interface CarLook {
   runs: boolean;
 }
 
-export type Lieu = 'maison' | 'magasin' | 'garage' | 'concession';
+export type Lieu = 'maison' | 'magasin' | BuildingId;
 
 export interface Rang {
   setCar(look: CarLook): void;
@@ -81,7 +82,15 @@ export interface Rang {
 }
 
 // Chaque endroit est sa propre scène, loin sur le même rang : la brume cache les autres.
-const ORIGINE: Record<Lieu, number> = { maison: 0, magasin: 150, garage: 300, concession: 450 };
+const ORIGINE: Record<Lieu, number> = {
+  maison: 0,
+  magasin: 150,
+  garage: 300,
+  concession: 450,
+  cabane: 600,
+  bar: 750,
+  arena: 900,
+};
 // Où le bazou se stationne, par rapport à l'origine de l'endroit (face à la route).
 const STATIONNEMENT = { x: 4.6, z: 2.4, ry: -0.55 };
 const ROUTE_Z = 6.4;
@@ -149,8 +158,8 @@ export function createRang(
     part(scene, G(new THREE.PlaneGeometry(w, d)), c, x, y, z, { rx: -Math.PI / 2 });
 
   // Sol pis route : une longue bande pour tous les endroits.
-  plan(800, 160, PAL.herbe, 225, 0, 0);
-  plan(800, 3.8, PAL.gravier, 225, 0.02, ROUTE_Z);
+  plan(1300, 160, PAL.herbe, 450, 0, 0);
+  plan(1300, 3.8, PAL.gravier, 450, 0.02, ROUTE_Z);
   plan(30, 14, PAL.champ, -6, 0.01, -14);
 
   // Décor commun à chaque endroit : collines, arbres, poteaux d'Hydro.
@@ -237,6 +246,9 @@ export function createRang(
   decorAilleurs(ORIGINE.magasin);
   decorAilleurs(ORIGINE.garage);
   decorAilleurs(ORIGINE.concession);
+  decorAilleurs(ORIGINE.cabane);
+  decorAilleurs(ORIGINE.bar);
+  decorAilleurs(ORIGINE.arena);
 
   // Maison de rang
   const maison = new THREE.Group();
@@ -409,6 +421,64 @@ export function createRang(
   part(lot, B(1.4, 0.16, 0.12), PAL.rougeGrange, 3.2, 3.2, -2);
   lot.visible = false;
 
+  // La cabane à sucre : en bois, avec la cheminée qui boucane pis des chaudières aux érables.
+  const cabane = new THREE.Group();
+  cabane.position.set(ORIGINE.cabane - 2, 0, -1.6);
+  cabane.scale.setScalar(1.5);
+  scene.add(cabane);
+  part(cabane, B(4.6, 2.4, 3.6), PAL.bois, 0, 1.2, 0);
+  part(cabane, B(5, 0.18, 2.3), PAL.tole, 0, 2.95, 0.95, { rx: 0.55 });
+  part(cabane, B(5, 0.18, 2.3), PAL.tole, 0, 2.95, -0.95, { rx: -0.55 });
+  part(cabane, B(1.4, 0.7, 3.8), PAL.bois, 0, 3.6, 0);
+  part(cabane, B(1, 1.9, 0.08), PAL.tronc, 0.6, 0.95, 1.82);
+  part(cabane, B(0.7, 0.6, 0.08), PAL.vitre, -1.3, 1.5, 1.82);
+  part(cabane, G(new THREE.CylinderGeometry(0.16, 0.16, 1.6, 6)), PAL.poteau, -1.6, 3.6, -0.6);
+  const boucane = G(new THREE.IcosahedronGeometry(0.4, 0));
+  for (let i = 0; i < 3; i++)
+    part(cabane, boucane, PAL.neigeOmbre, -1.6 + i * 0.25, 4.7 + i * 0.6, -0.6, { s: [1 + i * 0.3, 0.8, 1] });
+  const chaudiere = G(new THREE.CylinderGeometry(0.16, 0.12, 0.3, 6));
+  for (const [x, z] of [
+    [3.6, -1.4],
+    [4.4, 1.2],
+    [-3.4, 1.6],
+  ]) {
+    part(cabane, tronc, PAL.tronc, x, 1.1, z);
+    part(cabane, chaudiere, PAL.chrome, x, 0.9, z + 0.28);
+  }
+  part(cabane, B(1.6, 0.5, 0.6), PAL.bois, 2.6, 0.25, 2.6);
+  cabane.visible = false;
+
+  // Le bar du village : la bâtisse en brique, l'enseigne pis les chars des habitués.
+  const bar = new THREE.Group();
+  bar.position.set(ORIGINE.bar - 2, 0, -1.6);
+  bar.scale.setScalar(1.5);
+  scene.add(bar);
+  part(bar, B(5.2, 2.8, 3.8), PAL.brique, 0, 1.4, 0);
+  part(bar, B(5.4, 0.25, 4), PAL.tole, 0, 2.9, 0);
+  part(bar, B(1, 2, 0.08), PAL.tronc, -1.4, 1, 1.92);
+  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 0.6, 1.5, 1.92);
+  part(bar, B(1.4, 0.8, 0.08), PAL.vitre, 2.1, 1.5, 1.92);
+  part(bar, B(3, 0.6, 0.12), PAL.declin, 0.4, 3.4, 1.9);
+  part(bar, B(2.4, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.5, 1.97);
+  part(bar, B(1.6, 0.14, 0.14), PAL.rougeGrange, 0.4, 3.28, 1.97);
+  miniChar(bar, PAL.rougeGrange, 4, 2.6, 0.5);
+  miniChar(bar, PAL.chrome, -4.2, 2.4, 0.5);
+  bar.visible = false;
+
+  // L'aréna : un grand hangar au toit de tôle arrondi, avec la Zamboni qui attend devant.
+  const arena = new THREE.Group();
+  arena.position.set(ORIGINE.arena - 2, 0, -3);
+  arena.scale.setScalar(1.5);
+  scene.add(arena);
+  part(arena, B(7, 2.4, 5), PAL.declin, 0, 1.2, 0);
+  const toitArena = G(new THREE.CylinderGeometry(3.5, 3.5, 5.2, 10, 1, false, -Math.PI / 2, Math.PI));
+  part(arena, toitArena, PAL.tole, 0, 2.4, 0, { rx: Math.PI / 2, s: [1, 1, 0.45] });
+  part(arena, B(1.8, 2, 0.08), PAL.tole, 0, 1, 2.52);
+  part(arena, B(3, 0.5, 0.1), PAL.rougeGrange, 0, 2.7, 2.55);
+  part(arena, B(1.2, 0.8, 0.9), PAL.declin, 3.4, 0.5, 3.6);
+  part(arena, B(0.6, 0.5, 0.8), PAL.vitre, 3.4, 1.15, 3.6);
+  arena.visible = false;
+
   // Caméra : même angle partout, centrée sur l'endroit.
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
   let lieuActuel: Lieu = 'maison';
@@ -548,10 +618,13 @@ export function createRang(
 
   return {
     setCar(look) {
-      garage.visible = look.garage;
-      lot.visible = look.concession;
+      garage.visible = look.lieux.garage;
+      lot.visible = look.lieux.concession;
+      cabane.visible = look.lieux.cabane;
+      bar.visible = look.lieux.bar;
+      arena.visible = look.lieux.arena;
       // La pile de pneus déménage dans le garage, la pancarte disparaît avec la vente.
-      pilePneus.forEach((p) => (p.visible = !look.concession));
+      pilePneus.forEach((p) => (p.visible = !look.lieux.concession));
       pancarte.visible = !look.owned;
       roues.forEach((r) => (r.visible = look.wheels));
       blocs.forEach((b) => (b.visible = !look.wheels));

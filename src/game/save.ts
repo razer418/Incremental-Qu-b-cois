@@ -1,4 +1,5 @@
 import { TUTO_FINI, newGame, type GameState } from './state';
+import { BUILDINGS } from './buildings';
 
 const num = (v: unknown) => Math.max(0, Number(v) || 0);
 
@@ -21,7 +22,7 @@ export function load(storage: Storage, now: number): GameState {
       ...data,
       upgrades: { ...(data.upgrades ?? {}) },
       car: { owned: data.car?.owned === true, parts: { ...(data.car?.parts ?? {}) } },
-      buildings: { garage: data.buildings?.garage === true, concession: data.buildings?.concession === true },
+      buildings: Object.fromEntries(BUILDINGS.map((b) => [b.id, data.buildings?.[b.id] === true])) as GameState['buildings'],
       prestige: {
         points: Math.max(0, Number(data.prestige?.points) || 0),
         count: Math.max(0, Number(data.prestige?.count) || 0),

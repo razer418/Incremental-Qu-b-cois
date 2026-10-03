@@ -17,15 +17,15 @@ export const SAISONS: readonly Saison[] = [
   {
     id: 'printemps',
     nom: 'PRINTEMPS',
-    description: 'Le dégel pis les nids-de-poule : baies du garage x2, remorquage x1,5.',
-    bonus: { baie: 2, remorquage: 1.5 },
+    description: "Le dégel pis les nids-de-poule : baies du garage x2, remorquage x1,5. L'eau d'érable coule : chaudières x2.",
+    bonus: { baie: 2, remorquage: 1.5, chaudieres: 2 },
     tap: 1,
   },
   {
     id: 'ete',
     nom: 'ÉTÉ',
-    description: 'Les touristes laissent traîner des canettes : tapes x1,5. Bicycle x2, pis les chars usagés partent vite (lot x1,5).',
-    bonus: { velo: 2, lot: 1.5 },
+    description: 'Les touristes laissent traîner des canettes : tapes x1,5. Bicycle x2, les chars usagés partent vite (lot x1,5), pis la terrasse du bar est pleine (chansonnier x1,5).',
+    bonus: { velo: 2, lot: 1.5, chansonnier: 1.5 },
     tap: 1.5,
   },
   {
@@ -38,8 +38,8 @@ export const SAISONS: readonly Saison[] = [
   {
     id: 'hiver',
     nom: 'HIVER',
-    description: 'Déneigement x3 pis remorquage x2. Le bicycle dans la neige, par exemple... x0,5.',
-    bonus: { deneigement: 3, remorquage: 2, velo: 0.5 },
+    description: "Déneigement x3, remorquage x2 pis la glace de l'aréna x2. Le bicycle dans la neige, par exemple... x0,5.",
+    bonus: { deneigement: 3, remorquage: 2, glace: 2, velo: 0.5 },
     tap: 1,
   },
 ];

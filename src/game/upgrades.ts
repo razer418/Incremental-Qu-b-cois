@@ -1,3 +1,5 @@
+import type { BuildingId } from './buildings';
+
 export type UpgradeEffect =
   | { kind: 'tapAdd'; amount: number }
   | { kind: 'passiveAdd'; amount: number }
@@ -12,7 +14,7 @@ export interface Upgrade {
   maxLevel: number;
   effect: UpgradeEffect;
   /** Visible seulement quand le bazou roule, ou quand le bâtiment est acheté. */
-  requires?: 'roule' | 'garage' | 'concession';
+  requires?: 'roule' | BuildingId;
 }
 
 // Jalon 1 : on est à pied, on ramasse des canettes consignées.
@@ -67,7 +69,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'circulaires',
     name: 'Route de circulaires',
     description: '+15 $/s. Le Publisac, ça se livre pas tout seul.',
-    baseCost: 20000,
+    baseCost: 20_000,
     costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 15 },
@@ -77,7 +79,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'deneigement',
     name: 'Déneigement des entrées',
     description: '+60 $/s. Une pelle sur le bazou pis envoye.',
-    baseCost: 300000,
+    baseCost: 300_000,
     costGrowth: 1.65,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 60 },
@@ -87,7 +89,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'remorquage',
     name: 'Remorquage chez les voisins',
     description: "+250 $/s. Tout le monde reste pogné dans le fossé l'hiver.",
-    baseCost: 4000000,
+    baseCost: 4_000_000,
     costGrowth: 1.7,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 250 },
@@ -98,7 +100,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'baie',
     name: 'Une baie de plus',
     description: '+400 $/s. Un pont élévateur usagé pis un char de plus à la fois.',
-    baseCost: 8000000,
+    baseCost: 8_000_000,
     costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 400 },
@@ -108,18 +110,39 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'mecano',
     name: 'Engager un vrai mécano',
     description: 'x2 sur tous tes gains. Ti-Guy est content, y peut enfin prendre son break.',
-    baseCost: 10000000,
+    baseCost: 10_000_000,
     costGrowth: 20,
     maxLevel: 2,
     effect: { kind: 'globalMult', factor: 2 },
     requires: 'garage',
+  },
+  // La cabane à sucre
+  {
+    id: 'chaudieres',
+    name: "Des chaudières d'eau d'érable",
+    description: '+1 500 $/s. Ton oncle Gérald fait bouillir, toi tu ramasses.',
+    baseCost: 60_000_000,
+    costGrowth: 1.6,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 1500 },
+    requires: 'cabane',
+  },
+  {
+    id: 'tire',
+    name: 'La tire sur la neige',
+    description: 'x1,5 sur tous tes gains. Les touristes font la file jusque dans le rang.',
+    baseCost: 80_000_000,
+    costGrowth: 12,
+    maxLevel: 1,
+    effect: { kind: 'globalMult', factor: 1.5 },
+    requires: 'cabane',
   },
   // Le concessionnaire
   {
     id: 'lot',
     name: 'Des chars sur le lot',
     description: '+4 000 $/s. Des bazous retapés, garantie de 30 jours (ou 30 km).',
-    baseCost: 300000000,
+    baseCost: 300_000_000,
     costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 4000 },
@@ -129,7 +152,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'radio',
     name: 'Une pub à la radio locale',
     description: "x1,5 sur tous tes gains. « Chez Gagnon pis fils, on vous fait un prix! »",
-    baseCost: 2000000000,
+    baseCost: 2_000_000_000,
     costGrowth: 10,
     maxLevel: 3,
     effect: { kind: 'globalMult', factor: 1.5 },
@@ -139,11 +162,53 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'vendeur',
     name: 'Un vendeur de chars',
     description: '+30 000 $/s. Y parle vite pis y a une moustache.',
-    baseCost: 15000000000,
+    baseCost: 15_000_000_000,
     costGrowth: 1.7,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 30_000 },
     requires: 'concession',
+  },
+  // Le bar du village
+  {
+    id: 'chansonnier',
+    name: 'Le chansonnier du vendredi',
+    description: '+12 000 $/s. Y connaît juste trois tounes, mais y les fait ben.',
+    baseCost: 5000000000,
+    costGrowth: 1.65,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 12_000 },
+    requires: 'bar',
+  },
+  {
+    id: 'karaoke',
+    name: 'La soirée karaoké',
+    description: 'x1,5 sur tous tes gains. Ginette chante la même toune depuis 1998.',
+    baseCost: 6000000000,
+    costGrowth: 10,
+    maxLevel: 1,
+    effect: { kind: 'globalMult', factor: 1.5 },
+    requires: 'bar',
+  },
+  // L'aréna
+  {
+    id: 'glace',
+    name: 'Louer la glace',
+    description: "+60 000 $/s. Les ligues de garage jouent jusqu'à minuit.",
+    baseCost: 12000000000,
+    costGrowth: 1.7,
+    maxLevel: 25,
+    effect: { kind: 'passiveAdd', amount: 60_000 },
+    requires: 'arena',
+  },
+  {
+    id: 'tournoi',
+    name: 'Le tournoi de hockey bottine',
+    description: 'x1,5 sur tous tes gains. Tout le comté vient voir la finale.',
+    baseCost: 20000000000,
+    costGrowth: 10,
+    maxLevel: 1,
+    effect: { kind: 'globalMult', factor: 1.5 },
+    requires: 'arena',
   },
 ];
 

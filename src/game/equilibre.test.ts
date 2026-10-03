@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { simuler } from './simulation';
 
 // Le rythme visé (« long », choisi par Etienne) pour un joueur actif qui tape 2 fois par seconde :
-// bazou ~4 min, garage ~1 h 20, lot ~5 h 20, prestige ~12 h.
+// bazou ~4 min, garage ~1 h 20, cabane ~3 h 10, lot ~5 h 15, bar ~7 h 30, aréna ~10 h, prestige ~11 h 20.
 // Si un changement de chiffres fait sortir de ces bornes, c'est que le rythme a changé.
 describe('équilibre', () => {
   it('chaque palier prend le bon temps', () => {
@@ -13,8 +13,14 @@ describe('équilibre', () => {
     expect(min(t.roule)).toBeLessThan(18);
     expect(min(t.garage)).toBeGreaterThan(60);
     expect(min(t.garage)).toBeLessThan(110);
+    expect(min(t.cabane)).toBeGreaterThan(150);
+    expect(min(t.cabane)).toBeLessThan(240);
     expect(min(t.concession)).toBeGreaterThan(260);
     expect(min(t.concession)).toBeLessThan(380);
+    expect(min(t.bar)).toBeGreaterThan(400);
+    expect(min(t.bar)).toBeLessThan(520);
+    expect(min(t.arena)).toBeGreaterThan(540);
+    expect(min(t.arena)).toBeLessThan(660);
     expect(min(t.prestige)).toBeGreaterThan(600);
     expect(min(t.prestige)).toBeLessThan(840);
   }, 60_000);

@@ -11,7 +11,7 @@ import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
-import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
+import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
@@ -526,11 +526,7 @@ batBuy.addEventListener('click', () => {
   sons.jouer('achat');
   save(localStorage, state);
   allerA(b.id);
-  showMessage(
-    b.id === 'garage'
-      ? t('Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués.')
-      : t("Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend."),
-  );
+  showMessage(t(b.message));
   render();
 });
 
@@ -753,18 +749,16 @@ function render(): void {
   jobEl.textContent = t(roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES');
   tapLabel.textContent = t(roule ? '[ LIVRER ]' : '[ RAMASSER ]');
   const look = {
-    garage: state.buildings.garage,
-    concession: state.buildings.concession,
+    lieux: { ...state.buildings },
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
   };
   lieuxEl.hidden = !rang;
-  lieuBtn('garage').hidden = !look.garage;
-  lieuBtn('concession').hidden = !look.concession;
+  for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];
   // Après le prestige, les bâtiments sont partis : on revient à la maison.
-  if ((lieu === 'garage' || lieu === 'concession') && !state.buildings[lieu]) allerA('maison');
+  if (lieu !== 'maison' && lieu !== 'magasin' && !state.buildings[lieu]) allerA('maison');
   const lookKey = JSON.stringify(look);
   if (rang && lookKey !== lastLook) {
     rang.setCar(look);
@@ -835,8 +829,8 @@ function renderEmpire(roule: boolean): void {
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
   }
-  prestigeEl.hidden = !state.buildings.concession;
-  if (state.buildings.concession) {
+  prestigeEl.hidden = !state.buildings.arena;
+  if (state.buildings.arena) {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
     prestigeDesc.textContent = ready

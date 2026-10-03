@@ -1,6 +1,7 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
 // Il tape à un rythme fixe, réclame ses quêtes, pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
+import { BUILDINGS, type BuildingId } from './buildings';
 import { PARTS } from './car';
 import { PROJETS } from './chars';
 import {
@@ -26,7 +27,7 @@ import {
   type GameState,
 } from './state';
 
-export type Jalon = 'bazou' | 'roule' | 'garage' | 'concession' | 'prestige';
+export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige';
 
 /** Coût d'un char à retaper qui reste à payer (achat + pièces). */
 function resteProjet(s: GameState, id: string): number {
@@ -103,8 +104,7 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     journal?.(t, s);
     if (!temps.bazou && s.car.owned) temps.bazou = t;
     if (!temps.roule && carRuns(s)) temps.roule = t;
-    if (!temps.garage && s.buildings.garage) temps.garage = t;
-    if (!temps.concession && s.buildings.concession) temps.concession = t;
+    for (const b of BUILDINGS) if (!temps[b.id] && s.buildings[b.id]) temps[b.id] = t;
     if (!temps.prestige && canPrestige(s)) {
       temps.prestige = t;
       break;

@@ -20,7 +20,7 @@ function cles(): string[] {
   const k: string[] = [
     ...UPGRADES.flatMap((u) => [u.name, u.description]),
     ...PARTS.flatMap((p) => [p.name, p.description]),
-    ...BUILDINGS.flatMap((b) => [b.name, b.description]),
+    ...BUILDINGS.flatMap((b) => [b.name, b.description, b.message]),
     ...Object.values(CHARACTERS).map((c) => c.name),
     ...QUESTS.flatMap((q) => [q.ask, q.thanks, q.goal]),
     ...ARTICLES.flatMap((a) => [a.name, a.description]),

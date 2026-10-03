@@ -69,7 +69,7 @@ export function newGame(now: number): GameState {
     upgrades: {},
     car: { owned: false, parts: {} },
     questIndex: 0,
-    buildings: { garage: false, concession: false },
+    buildings: { garage: false, cabane: false, concession: false, bar: false, arena: false },
     prestige: { points: 0, count: 0 },
     boostSeconds: 0,
     noAds: false,
@@ -336,8 +336,7 @@ export function warmth(state: GameState): number {
   return (
     Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 +
     repairedFraction(state) * 0.2 +
-    (state.buildings.garage ? 0.2 : 0) +
-    (state.buildings.concession ? 0.3 : 0)
+    (BUILDINGS.filter((b) => state.buildings[b.id]).length / BUILDINGS.length) * 0.5
   );
 }
 
@@ -363,7 +362,7 @@ export function buyBuilding(state: GameState, id: BuildingId): boolean {
 // --- Prestige ---
 
 export function canPrestige(state: GameState): boolean {
-  return state.buildings.concession && state.totalEarned >= PRESTIGE_MIN_EARNED;
+  return state.buildings.arena && state.totalEarned >= PRESTIGE_MIN_EARNED;
 }
 
 /** Vend l'empire : tout repart à zéro sauf la réputation. Retourne les points gagnés. */

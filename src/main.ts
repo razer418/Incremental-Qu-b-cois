@@ -25,7 +25,8 @@ import {
   applyOffline,
   claimQuest,
   questProgress,
-  buy,
+  buyMany,
+  bulkCost,
   buyCar,
   carRuns,
   isRepaired,
@@ -44,7 +45,7 @@ import {
   warmth,
 } from './game/state';
 import { load, save, wipe } from './game/save';
-import { formatDuration, formatMoney } from './game/format';
+import { formatDuration, formatMoney, notation } from './game/format';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -94,31 +95,63 @@ function showMessage(text: string): void {
   if (!messageDialog.open) messageDialog.showModal();
 }
 
+// Oui ou non, dans le style du jeu (au lieu du confirm() du navigateur).
+const confirmDialog = $<HTMLDialogElement>('confirm');
+function demander(text: string): Promise<boolean> {
+  $('confirm-text').textContent = text;
+  confirmDialog.showModal();
+  return new Promise((resolve) => {
+    const fin = (ok: boolean) => {
+      $('confirm-oui').onclick = $('confirm-non').onclick = confirmDialog.oncancel = null;
+      confirmDialog.close();
+      resolve(ok);
+    };
+    $('confirm-oui').onclick = () => fin(true);
+    $('confirm-non').onclick = () => fin(false);
+    confirmDialog.oncancel = (e) => {
+      e.preventDefault();
+      fin(false);
+    };
+  });
+}
+
+// Petits réglages gardés sur l'appareil.
+const pref = {
+  get: (k: string) => {
+    try {
+      return localStorage.getItem(`incremental-quebecois-${k}`);
+    } catch {
+      return null;
+    }
+  },
+  set: (k: string, v: string) => {
+    try {
+      localStorage.setItem(`incremental-quebecois-${k}`, v);
+    } catch {
+      // stockage bloqué : le réglage dure juste le temps de la partie
+    }
+  },
+};
+const bascule = (btn: HTMLElement, on: boolean, oui = 'OUI', non = 'NON') => {
+  btn.setAttribute('aria-pressed', String(on));
+  btn.textContent = on ? oui : non;
+};
+
 let state = load(localStorage, Date.now());
 
 // Le rang en 3D, style Bazou VHS. Si WebGL marche pas, le jeu roule pareil.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Sons : on peut les couper, choix gardé sur l'appareil.
-const SON_KEY = 'incremental-quebecois-son';
 const sons = createSons();
 const sonBtn = $<HTMLButtonElement>('son');
 const setSon = (on: boolean) => {
   sons.actif = on;
-  sonBtn.setAttribute('aria-pressed', String(on));
-  sonBtn.setAttribute('aria-label', on ? 'Son : oui' : 'Son : non');
+  bascule(sonBtn, on);
 };
-try {
-  setSon(localStorage.getItem(SON_KEY) !== 'off');
-} catch {
-  setSon(true);
-}
+setSon(pref.get('son') !== 'off');
 sonBtn.addEventListener('click', () => {
   setSon(!sons.actif);
-  try {
-    localStorage.setItem(SON_KEY, sons.actif ? 'on' : 'off');
-  } catch {
-    // rien à faire
-  }
+  pref.set('son', sons.actif ? 'on' : 'off');
 });
 
 const rang = createRang($('ecran'), {
@@ -129,30 +162,82 @@ const rang = createRang($('ecran'), {
 let lastWarmth = -1;
 let lastLook = '';
 
-// Lignes VHS : désactivables pour le confort des yeux, choix gardé sur l'appareil.
-const VHS_KEY = 'incremental-quebecois-vhs';
+// Lignes VHS : désactivables pour le confort des yeux.
 const vhsBtn = $<HTMLButtonElement>('vhs');
 const scanEl = $('scan');
+let vhsOn = pref.get('vhs') !== 'off';
 const setVhs = (on: boolean) => {
   scanEl.hidden = !on;
-  vhsBtn.setAttribute('aria-pressed', String(on));
-  vhsBtn.setAttribute('aria-label', on ? 'Lignes VHS : oui' : 'Lignes VHS : non');
+  bascule(vhsBtn, on);
 };
-let vhsOn = true;
-try {
-  vhsOn = localStorage.getItem(VHS_KEY) !== 'off';
-} catch {
-  // stockage bloqué : on garde les lignes
-}
 setVhs(vhsOn);
 vhsBtn.addEventListener('click', () => {
   vhsOn = !vhsOn;
   setVhs(vhsOn);
+  pref.set('vhs', vhsOn ? 'on' : 'off');
+});
+
+// Gros chiffres : 1,23 M $ (courts) ou 1 234 567,89 $ (complets).
+const nombresBtn = $<HTMLButtonElement>('nombres');
+const setNombres = (complets: boolean) => {
+  notation.complets = complets;
+  bascule(nombresBtn, !complets, 'COURTS', 'COMPLETS');
+};
+setNombres(pref.get('nombres') === 'complets');
+nombresBtn.addEventListener('click', () => {
+  setNombres(!notation.complets);
+  pref.set('nombres', notation.complets ? 'complets' : 'courts');
+  render();
+});
+
+// Options : son, VHS, chiffres, sauvegarde pis recommencer.
+const optionsDlg = $<HTMLDialogElement>('options-dlg');
+const codeEl = $<HTMLTextAreaElement>('code');
+const codeAide = $('code-aide');
+const codeOk = $<HTMLButtonElement>('code-ok');
+const montrerCode = (aide: string, importer: boolean) => {
+  codeEl.hidden = codeAide.hidden = false;
+  codeOk.hidden = !importer;
+  codeAide.textContent = aide;
+};
+$('options').addEventListener('click', () => {
+  codeEl.hidden = codeAide.hidden = codeOk.hidden = true;
+  optionsDlg.showModal();
+});
+$('exporter').addEventListener('click', async () => {
+  save(localStorage, state);
+  codeEl.value = btoa(encodeURIComponent(JSON.stringify(state)));
+  let copie = false;
   try {
-    localStorage.setItem(VHS_KEY, vhsOn ? 'on' : 'off');
+    await navigator.clipboard.writeText(codeEl.value);
+    copie = true;
   } catch {
-    // rien à faire
+    // presse-papier bloqué : le code est dans la boîte
   }
+  montrerCode(copie ? 'Code copié! Garde-le en lieu sûr.' : 'Copie ce code pis garde-le en lieu sûr.', false);
+  codeEl.select();
+});
+$('importer').addEventListener('click', () => {
+  codeEl.value = '';
+  montrerCode('Colle ton code de sauvegarde ici.', true);
+  codeEl.focus();
+});
+codeOk.addEventListener('click', async () => {
+  let raw = '';
+  try {
+    raw = decodeURIComponent(atob(codeEl.value.trim()));
+    JSON.parse(raw);
+  } catch {
+    codeAide.textContent = "Ce code-là marche pas. Vérifie que t'as tout copié.";
+    return;
+  }
+  if (!(await demander('Remplacer ta partie par celle du code?'))) return;
+  localStorage.setItem('incremental-quebecois-save', raw);
+  state = load(localStorage, Date.now());
+  save(localStorage, state);
+  optionsDlg.close();
+  showMessage('Partie chargée!');
+  render();
 });
 
 const offline = applyOffline(state, Date.now());
@@ -162,8 +247,24 @@ if (offline.gained >= 0.01 && offline.seconds >= 60) {
   );
 }
 
+// Achat en lot : x1, x10 ou MAX, comme dans les grands jeux du genre.
+const LOTS = [1, 10, Infinity];
+const lotBtn = $<HTMLButtonElement>('lot-mode');
+let lotMode = Math.max(0, LOTS.map(String).indexOf(pref.get('lot') ?? '1'));
+const paintLot = () => (lotBtn.textContent = LOTS[lotMode] === Infinity ? 'MAX' : `x${LOTS[lotMode]}`);
+paintLot();
+lotBtn.addEventListener('click', () => {
+  lotMode = (lotMode + 1) % LOTS.length;
+  pref.set('lot', String(LOTS[lotMode]));
+  paintLot();
+  render();
+});
+
 // Une ligne par achat, créée une fois.
-const rows = new Map<string, { li: HTMLLIElement; btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
+const rows = new Map<
+  string,
+  { li: HTMLLIElement; btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement; combien: HTMLElement }
+>();
 for (const u of UPGRADES) {
   const li = document.createElement('li');
   li.className = 'upgrade';
@@ -172,16 +273,16 @@ for (const u of UPGRADES) {
       <strong>${u.name} <span class="level"></span></strong>
       <small>${u.description}</small>
     </div>
-    <button type="button" class="buy"><span class="cost"></span></button>`;
+    <button type="button" class="buy"><span class="cost"></span><span class="combien"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
-    if (buy(state, u.id)) {
+    if (buyMany(state, u.id, LOTS[lotMode])) {
       sons.jouer('achat');
       save(localStorage, state);
       render();
     }
   });
-  rows.set(u.id, { li, btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')! });
+  rows.set(u.id, { li, btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')!, combien: li.querySelector('.combien')! });
   upgradesEl.append(li);
 }
 
@@ -312,6 +413,7 @@ function renderMagasin(): void {
     const cost = articleCost(state, a.id);
     row.cost.textContent = formatMoney(cost);
     row.btn.disabled = !canBuyArticle(state, a.id);
+    progres(row.btn, cost);
   }
 }
 lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
@@ -330,9 +432,9 @@ batBuy.addEventListener('click', () => {
   render();
 });
 
-prestigeBtn.addEventListener('click', () => {
+prestigeBtn.addEventListener('click', async () => {
   const points = prestigePointsFor(state.totalEarned);
-  const ok = confirm(
+  const ok = await demander(
     `Vendre l'empire? Tu repars à pied avec 0 $, mais tu gagnes ${points} points de réputation (+${points * PRESTIGE_BONUS_PER_POINT * 100} % sur tous tes gains, pour toujours).`,
   );
   if (!ok) return;
@@ -354,8 +456,9 @@ buyCarBtn.addEventListener('click', () => {
   render();
 });
 
-tapBtn.addEventListener('click', () => {
-  tap(state);
+tapBtn.addEventListener('click', (e) => {
+  const gain = tap(state);
+  if (!reduceMotion) flotter(gain, e);
   sons.jouer(carRuns(state) ? 'livraison' : 'canette');
   tapBtn.classList.remove('pop');
   void tapBtn.offsetWidth;
@@ -363,11 +466,39 @@ tapBtn.addEventListener('click', () => {
   render();
 });
 
-$('reset').addEventListener('click', () => {
-  if (!confirm('Tout effacer pis recommencer à zéro?')) return;
+$('reset').addEventListener('click', async () => {
+  if (!(await demander('Tout effacer pis recommencer à zéro? Ta réputation pis ton achat « pas de pubs » restent pas.'))) return;
   wipe(localStorage);
   state = newGame(Date.now());
-  render();
+  optionsDlg.close();
+  allerA('maison');
+});
+
+/** Le bouton se remplit à mesure que tu t'approches du prix. */
+function progres(btn: HTMLElement, cost: number): void {
+  btn.style.setProperty('--p', `${Math.min(100, (state.cash / cost) * 100).toFixed(1)}%`);
+}
+
+// Le montant gagné monte au-dessus du bouton, comme dans Cookie Clicker.
+function flotter(gain: number, e: MouseEvent): void {
+  if (tapBtn.querySelectorAll('.flotte').length > 8) return;
+  const r = tapBtn.getBoundingClientRect();
+  const span = document.createElement('span');
+  span.className = 'flotte';
+  span.textContent = `+${formatMoney(gain)}`;
+  // Au doigt, sinon (clavier) quelque part au milieu.
+  const x = e.clientX ? e.clientX - r.left : r.width * (0.3 + Math.random() * 0.4);
+  span.style.left = `${Math.max(40, Math.min(r.width - 40, x))}px`;
+  span.addEventListener('animationend', () => span.remove());
+  tapBtn.append(span);
+}
+
+// Ordi : la barre d'espace ramasse aussi.
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || e.repeat || document.querySelector('dialog[open]')) return;
+  if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLTextAreaElement) return;
+  e.preventDefault();
+  tapBtn.click();
 });
 
 function render(): void {
@@ -410,7 +541,8 @@ function render(): void {
 
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
   goalEl.hidden = state.car.owned;
-  garageEl.hidden = !state.car.owned;
+  // Tout réparé : la section disparaît, le bouton LIVRER dit déjà que ça roule.
+  garageEl.hidden = !state.car.owned || PARTS.every((p) => isRepaired(state, p.id));
   if (!state.car.owned) {
     const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
     goalBar.style.width = `${progress * 100}%`;
@@ -418,7 +550,6 @@ function render(): void {
     buyCarBtn.hidden = state.cash < CAR_PRICE;
   } else {
     carStatus.textContent = roule ? 'ÇA ROULE!' : 'SUR LES BLOCS';
-    partsEl.hidden = PARTS.every((p) => isRepaired(state, p.id));
     carStatus.classList.toggle('roule', roule);
     for (const p of PARTS) {
       const row = partRows.get(p.id)!;
@@ -426,17 +557,22 @@ function render(): void {
       row.li.classList.toggle('done', done);
       row.cost.textContent = done ? 'RÉPARÉ' : formatMoney(p.cost);
       row.btn.disabled = done || state.cash < p.cost;
+      if (!done) progres(row.btn, p.cost);
     }
   }
 
   for (const u of UPGRADES) {
     const row = rows.get(u.id)!;
     row.li.hidden = !isUnlocked(state, u);
-    const cost = nextCost(state, u.id);
     const level = levelOf(state, u.id);
+    const max = nextCost(state, u.id) === null;
+    const lot = bulkCost(state, u.id, LOTS[lotMode]);
+    row.li.classList.toggle('max', max);
     row.level.textContent = level > 0 ? `NIV. ${level}` : '';
-    row.cost.textContent = cost === null ? 'AU MAX' : formatMoney(cost);
-    row.btn.disabled = cost === null || state.cash < cost;
+    row.cost.textContent = max ? 'AU MAX' : formatMoney(lot.cost);
+    row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} NIV.`;
+    row.btn.disabled = max || state.cash < lot.cost;
+    progres(row.btn, lot.cost);
   }
 }
 
@@ -454,6 +590,7 @@ function renderEmpire(roule: boolean): void {
     batDesc.textContent = b.description;
     batCost.textContent = formatMoney(b.cost);
     batBuy.disabled = !canBuyBuilding(state, b.id);
+    progres(batBuy, b.cost);
   }
   prestigeEl.hidden = !state.buildings.concession;
   if (state.buildings.concession) {

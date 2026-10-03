@@ -405,8 +405,8 @@ export function createRang(
     recul = camera.aspect < 1.2 ? 1.25 : 1;
     const ox = ORIGINE[lieuActuel];
     camera.position.set(ox + 11 * recul, 8.5 * recul, 21 * recul);
-    // Visé un peu haut : le décor descend dans le cadre pis laisse le ciel au HUD.
-    camera.lookAt(ox + 0.5, 3.4, 0);
+    // Rien par-dessus l'image : on vise le centre de l'endroit.
+    camera.lookAt(ox + 1.2, 2.4, 0);
     camera.updateProjectionMatrix();
   };
 

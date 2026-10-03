@@ -61,7 +61,7 @@ p {
   }
   .col-jeu {
     position: sticky;
-    top: 128px;
+    top: 144px;
   }
 }
 
@@ -339,8 +339,44 @@ main section:not(.ecran),
   color: var(--muted);
 }
 
-.boost-sub.on {
-  color: var(--cash);
+/* Buffs actifs : l'icône se vide par le haut à mesure que le temps passe. */
+.buffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.buffs[hidden] {
+  display: none;
+}
+.buff {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 3px;
+  background: var(--surface);
+  border: 2px solid var(--cash);
+  cursor: pointer;
+}
+.buff svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.buff::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc((1 - var(--reste, 1)) * 100%);
+  background: rgb(21 23 20 / 0.75);
+}
+.buff.fin {
+  border-color: var(--alert);
+  animation: clignote 1s steps(2) infinite;
+}
+@keyframes clignote {
+  50% {
+    border-color: var(--line);
+  }
 }
 
 .ad-tag {

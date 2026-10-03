@@ -1,0 +1,227 @@
+:root {
+  --bg: #f4efe4;
+  --card: #fffaf0;
+  --ink: #2b2620;
+  --muted: #6f665a;
+  --accent: #2f6b3a;
+  --accent-ink: #ffffff;
+  --rust: #b5542a;
+  --line: #e2d8c6;
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1b18;
+    --card: #282520;
+    --ink: #f1ebe0;
+    --muted: #b0a696;
+    --accent: #4f9a5c;
+    --rust: #d9784b;
+    --line: #3a352e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  text-align: center;
+}
+
+.job {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+#cash {
+  margin: 4px 0 0;
+  font-size: 2.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rate {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+#goal-text {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--rust);
+  transition: width 0.2s;
+}
+
+.tap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.tap-icon {
+  font-size: 2.5rem;
+}
+
+.tap-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.tap.pop {
+  animation: pop 0.12s ease-out;
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(0.96);
+  }
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.upgrades {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upgrade {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.upgrade-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.upgrade-info small {
+  color: var(--muted);
+}
+
+.level {
+  color: var(--rust);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.buy {
+  min-width: 96px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--rust);
+  color: #fff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.buy:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
+.foot {
+  text-align: center;
+}
+
+.link {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+dialog {
+  border: 0;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: min(360px, calc(100vw - 32px));
+  background: var(--card);
+  color: var(--ink);
+  text-align: center;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+dialog button {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}

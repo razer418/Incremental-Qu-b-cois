@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr-CA">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2f4f2f" />
+    <title>Incremental Québécois</title>
+  </head>
+  <body>
+    <main id="app">
+      <header class="top">
+        <p class="job">Job : ramasser des canettes dans le rang</p>
+        <h1 id="cash">0,00 $</h1>
+        <p id="rate" class="rate">0,00 $/s</p>
+      </header>
+
+      <section class="goal">
+        <div class="goal-label">
+          <span>Prochain objectif : ton premier bazou</span>
+          <span id="goal-text"></span>
+        </div>
+        <div class="bar"><div id="goal-bar" class="bar-fill"></div></div>
+      </section>
+
+      <button id="tap" class="tap" type="button">
+        <span class="tap-icon" aria-hidden="true">🥫</span>
+        <span>Ramasser une canette</span>
+        <span id="tap-value" class="tap-value">+0,10 $</span>
+      </button>
+
+      <section>
+        <h2>Achats</h2>
+        <ul id="upgrades" class="upgrades"></ul>
+      </section>
+
+      <footer class="foot">
+        <button id="reset" type="button" class="link">Recommencer à zéro</button>
+      </footer>
+    </main>
+
+    <dialog id="offline">
+      <p id="offline-text"></p>
+      <form method="dialog"><button type="submit">Envoye donc!</button></form>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

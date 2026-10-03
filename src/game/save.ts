@@ -43,10 +43,16 @@ export function load(storage: Storage, now: number): GameState {
         boosts: num(data.stats?.boosts),
         articles: num(data.stats?.articles),
         evenements: num(data.stats?.evenements),
+        minijeux: num(data.stats?.minijeux),
       },
       projets: Object.fromEntries(
         Object.entries(data.projets ?? {}).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.filter((x) => typeof x === 'string')]),
       ),
+      look: {
+        achetes: Array.isArray(data.look?.achetes) ? data.look.achetes.filter((x) => typeof x === 'string') : [],
+        choix: { ...newGame(now).look.choix, ...(data.look?.choix ?? {}) },
+      },
+      minijeux: Object.fromEntries(Object.entries(data.minijeux ?? {}).filter(([, v]) => typeof v === 'number')),
       // Une partie déjà commencée saute le tuto.
       tuto: Number.isInteger(data.tuto) ? data.tuto! : (data.taps ?? 0) > 0 ? TUTO_FINI : 0,
       questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,

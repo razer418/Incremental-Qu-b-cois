@@ -973,3 +973,48 @@ dialog p.resume {
 .upgrade.piece {
   margin-left: 16px;
 }
+
+/* Le look du bazou : ‹ nom › pis le bouton */
+.upgrade.look {
+  gap: 6px;
+  padding: 8px;
+}
+.fleche {
+  min-width: 36px;
+  min-height: 44px;
+  font: 400 30px/1 var(--pixel);
+  color: var(--fg);
+  background: var(--raised);
+  border: 2px solid var(--line);
+  cursor: pointer;
+}
+.upgrade.look .upgrade-info {
+  text-align: center;
+}
+.upgrade.look .buy {
+  min-width: 84px;
+}
+
+/* Mini-jeux : un petit écran pixelisé */
+dialog.minijeu {
+  width: min(360px, calc(100vw - 32px));
+}
+.minijeu canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin: 0 auto 12px;
+  image-rendering: pixelated;
+  border: 2px solid var(--line);
+  touch-action: none;
+  cursor: pointer;
+}
+.minijeu .mj-titre {
+  margin-bottom: 10px;
+  font: 400 26px/1 var(--pixel);
+  color: var(--gold);
+}
+.minijeu .mj-aide {
+  font: 400 18px/1.3 var(--mono);
+  color: var(--muted);
+}

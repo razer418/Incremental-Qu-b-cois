@@ -2,7 +2,7 @@ import '@fontsource/vt323';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
-import { createRang } from './scene/rang';
+import { createRang, type Lieu } from './scene/rang';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
@@ -220,10 +220,22 @@ noAdsBuy.addEventListener('click', async () => {
   }
 });
 
+// Les endroits du rang : la caméra glisse d'un à l'autre.
+const lieuxEl = $('lieux');
+const lieuBtns = [...lieuxEl.querySelectorAll<HTMLButtonElement>('button')];
+let lieu: Lieu = 'maison';
+function allerA(l: Lieu): void {
+  lieu = l;
+  rang?.allerA(l);
+  lieuBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lieu === l)));
+}
+lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
+
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
   if (!b || !buyBuilding(state, b.id)) return;
   save(localStorage, state);
+  allerA(b.id);
   showMessage(
     b.id === 'garage'
       ? "Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués."
@@ -292,6 +304,10 @@ function render(): void {
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
   };
+  lieuxEl.hidden = !rang || !look.garage;
+  lieuBtns[2].hidden = !look.concession;
+  // Après le prestige, les bâtiments sont partis : on revient à la maison.
+  if (lieu !== 'maison' && !state.buildings[lieu]) allerA('maison');
   const lookKey = JSON.stringify(look);
   if (rang && lookKey !== lastLook) {
     rang.setCar(look);

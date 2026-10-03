@@ -52,8 +52,12 @@ export interface CarLook {
   clean: boolean;
 }
 
+export type Lieu = 'maison' | 'garage' | 'concession';
+
 export interface Rang {
   setCar(look: CarLook): void;
+  /** Glisse la caméra vers un endroit du rang. */
+  allerA(lieu: Lieu): void;
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
   setPixelScale(scale: number): void;
@@ -315,13 +319,39 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
 
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
   // Visé un peu haut : le décor descend dans le cadre pis laisse le ciel au HUD.
-  const cible = new THREE.Vector3(0.5, 3.4, 0);
+  // Chaque endroit : où on vise, pis à quelle distance (1 = vue du rang au complet).
+  const LIEUX: Record<Lieu, { cible: THREE.Vector3; dist: number }> = {
+    maison: { cible: new THREE.Vector3(0.5, 3.4, 0), dist: 1 },
+    garage: { cible: new THREE.Vector3(-7.6, 3.7, 1.6), dist: 0.55 },
+    concession: { cible: new THREE.Vector3(10, 3.6, 2.6), dist: 0.6 },
+  };
+  const DIRECTION = new THREE.Vector3(11, 8.5, 21).sub(LIEUX.maison.cible);
+  let recul = 1;
+  const vue = (lieu: Lieu) => {
+    const { cible, dist } = LIEUX[lieu];
+    return { cible, pos: cible.clone().addScaledVector(DIRECTION, dist * recul) };
+  };
+  // La caméra glisse d'une vue à l'autre.
+  let depart = vue('maison');
+  let arrivee = depart;
+  let lieuActuel: Lieu = 'maison';
+  let glisseDebut = -Infinity;
+  const GLISSE_MS = 1400;
+  const cibleCam = new THREE.Vector3();
+  const poserCamera = (now: number) => {
+    const t = Math.min(1, (now - glisseDebut) / GLISSE_MS);
+    const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    camera.position.lerpVectors(depart.pos, arrivee.pos, k);
+    cibleCam.lerpVectors(depart.cible, arrivee.cible, k);
+    camera.lookAt(cibleCam);
+    return t < 1;
+  };
   const placerCamera = (aspect: number) => {
     camera.aspect = aspect;
     // Écran étroit (téléphone) : on recule pour garder la maison pis le bazou dans le cadre.
-    const recul = aspect < 1.2 ? 1.25 : 1;
-    camera.position.set(11 * recul, 8.5 * recul, 21 * recul);
-    camera.lookAt(cible);
+    recul = aspect < 1.2 ? 1.25 : 1;
+    depart = arrivee = vue(lieuActuel);
+    poserCamera(Infinity);
     camera.updateProjectionMatrix();
   };
 
@@ -343,8 +373,16 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
     const t = (now - t0) / 1000;
     arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * 1.1 + i) * 0.025));
     carrosserie.position.y = Math.sin(t * 28) * 0.012;
+    poserCamera(now);
     renderer.render(scene, camera);
     raf = requestAnimationFrame(frame);
+  };
+  // Sans animation du décor, on anime quand même la caméra le temps du glissement.
+  let glisseRaf = 0;
+  const glisse = (now: number) => {
+    const encore = poserCamera(now);
+    renderer.render(scene, camera);
+    glisseRaf = encore && !raf ? requestAnimationFrame(glisse) : 0;
   };
   const start = () => {
     if (!opts.reduceMotion && !raf) raf = requestAnimationFrame(frame);
@@ -369,6 +407,21 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
       rouille.forEach((r) => (r.visible = !look.clean));
       if (!raf) renderer.render(scene, camera);
     },
+    allerA(lieu) {
+      if (lieu === lieuActuel) return;
+      const now = performance.now();
+      poserCamera(now);
+      depart = { cible: cibleCam.clone(), pos: camera.position.clone() };
+      arrivee = vue(lieu);
+      lieuActuel = lieu;
+      if (opts.reduceMotion) {
+        poserCamera(Infinity);
+        renderer.render(scene, camera);
+        return;
+      }
+      glisseDebut = now;
+      if (!raf && !glisseRaf) glisseRaf = requestAnimationFrame(glisse);
+    },
     setWarmth(w) {
       const k = Math.min(1, Math.max(0, w));
       ciel.lerpColors(DEBUT.ciel, TARD.ciel, k);
@@ -389,6 +442,7 @@ export function createRang(host: HTMLElement, opts: { pixelScale?: number; reduc
     },
     dispose() {
       stop();
+      cancelAnimationFrame(glisseRaf);
       ro.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       geos.forEach((g) => g.dispose());

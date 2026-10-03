@@ -125,6 +125,43 @@ p {
   cursor: pointer;
 }
 
+/* Endroits du rang */
+.lieux {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+.lieux[hidden],
+.lieux button[hidden] {
+  display: none;
+}
+.lieux button {
+  font: 400 20px/1 var(--pixel);
+  color: var(--fg);
+  background: rgb(20 22 19 / 0.75);
+  border: 2px solid var(--line);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.lieux button[aria-pressed='true'] {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/* Les sections arrivent en glissant quand elles se débloquent. */
+main > section:not(.ecran),
+.boost-row {
+  animation: entre 0.45s ease-out;
+}
+@keyframes entre {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
 /* Objectif */
 .goal-label {
   display: flex;
@@ -447,6 +484,10 @@ button:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  main > section,
+  .boost-row {
+    animation: none;
+  }
   .tap.pop {
     animation: none;
   }

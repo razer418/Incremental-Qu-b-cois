@@ -19,6 +19,11 @@ export function load(storage: Storage, now: number): GameState {
       ...data,
       upgrades: { ...(data.upgrades ?? {}) },
       car: { owned: data.car?.owned === true, parts: { ...(data.car?.parts ?? {}) } },
+      buildings: { garage: data.buildings?.garage === true, concession: data.buildings?.concession === true },
+      prestige: {
+        points: Math.max(0, Number(data.prestige?.points) || 0),
+        count: Math.max(0, Number(data.prestige?.count) || 0),
+      },
       questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,
     };
   } catch {

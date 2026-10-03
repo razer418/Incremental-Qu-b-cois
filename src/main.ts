@@ -6,9 +6,15 @@ import { createRang } from './scene/rang';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
 import { CHARACTERS } from './game/quests';
+import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
+  buyBuilding,
+  canBuyBuilding,
+  canPrestige,
+  nextBuilding,
+  prestige,
   applyOffline,
   claimQuest,
   questProgress,
@@ -54,6 +60,16 @@ const qBar = $('q-bar');
 const qGoal = $('q-goal');
 const qReward = $('q-reward');
 const qClaim = $<HTMLButtonElement>('q-claim');
+const repEl = $('rep');
+const empireEl = $('empire');
+const batEl = $('bat');
+const batName = $('bat-name');
+const batDesc = $('bat-desc');
+const batCost = $('bat-cost');
+const batBuy = $<HTMLButtonElement>('bat-buy');
+const prestigeEl = $('prestige');
+const prestigeDesc = $('prestige-desc');
+const prestigeBtn = $<HTMLButtonElement>('prestige-btn');
 const messageDialog = $<HTMLDialogElement>('message');
 const messageText = $('message-text');
 
@@ -160,6 +176,32 @@ qClaim.addEventListener('click', () => {
   render();
 });
 
+batBuy.addEventListener('click', () => {
+  const b = nextBuilding(state);
+  if (!b || !buyBuilding(state, b.id)) return;
+  save(localStorage, state);
+  showMessage(
+    b.id === 'garage'
+      ? "Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués."
+      : "Le bonhomme Gagnon : « Prends soin de mon lot. » Le concessionnaire est à toé, pis la radio locale t'attend.",
+  );
+  render();
+});
+
+prestigeBtn.addEventListener('click', () => {
+  const points = prestigePointsFor(state.totalEarned);
+  const ok = confirm(
+    `Vendre l'empire? Tu repars à pied avec 0 $, mais tu gagnes ${points} points de réputation (+${points * PRESTIGE_BONUS_PER_POINT * 100} % sur tous tes gains, pour toujours).`,
+  );
+  if (!ok) return;
+  const gained = prestige(state, Date.now());
+  save(localStorage, state);
+  showMessage(
+    `Le rang au complet parle de toé. +${gained} points de réputation. Envoye, on recommence, mais plus vite cette fois-citte.`,
+  );
+  render();
+});
+
 buyCarBtn.addEventListener('click', () => {
   if (!buyCar(state)) return;
   save(localStorage, state);
@@ -199,6 +241,8 @@ function render(): void {
   jobEl.textContent = roule ? 'LIVRER DES PIZZAS' : 'RAMASSER DES CANETTES';
   tapLabel.textContent = roule ? '[ LIVRER ]' : '[ RAMASSER ]';
   const look = {
+    garage: state.buildings.garage,
+    concession: state.buildings.concession,
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
@@ -210,6 +254,7 @@ function render(): void {
   }
 
   renderQuest();
+  renderEmpire(roule);
 
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
   goalEl.hidden = state.car.owned;
@@ -221,6 +266,7 @@ function render(): void {
     buyCarBtn.hidden = state.cash < CAR_PRICE;
   } else {
     carStatus.textContent = roule ? 'ÇA ROULE!' : 'SUR LES BLOCS';
+    partsEl.hidden = PARTS.every((p) => isRepaired(state, p.id));
     carStatus.classList.toggle('roule', roule);
     for (const p of PARTS) {
       const row = partRows.get(p.id)!;
@@ -239,6 +285,32 @@ function render(): void {
     row.level.textContent = level > 0 ? `NIV. ${level}` : '';
     row.cost.textContent = cost === null ? 'AU MAX' : formatMoney(cost);
     row.btn.disabled = cost === null || state.cash < cost;
+  }
+}
+
+function renderEmpire(roule: boolean): void {
+  const pts = state.prestige.points;
+  repEl.hidden = pts === 0;
+  repEl.textContent = `RÉPUTATION ${pts} (+${Math.round(pts * PRESTIGE_BONUS_PER_POINT * 100)} %)`;
+
+  empireEl.hidden = !roule;
+  if (!roule) return;
+  const b = nextBuilding(state);
+  batEl.hidden = b === null;
+  if (b) {
+    batName.textContent = b.name;
+    batDesc.textContent = b.description;
+    batCost.textContent = formatMoney(b.cost);
+    batBuy.disabled = !canBuyBuilding(state, b.id);
+  }
+  prestigeEl.hidden = !state.buildings.concession;
+  if (state.buildings.concession) {
+    const ready = canPrestige(state);
+    const points = prestigePointsFor(state.totalEarned);
+    prestigeDesc.textContent = ready
+      ? `Tu repars à zéro avec ${points} points de réputation (+${points * PRESTIGE_BONUS_PER_POINT * 100} % pour toujours).`
+      : `Disponible à ${formatMoney(PRESTIGE_MIN_EARNED)} gagnés au total. T'es rendu à ${formatMoney(state.totalEarned)}.`;
+    prestigeBtn.disabled = !ready;
   }
 }
 

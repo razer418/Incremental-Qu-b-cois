@@ -9,9 +9,16 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Sauvegarde locale et gains hors-ligne (plafonnés à 8 h)
 - Objectif affiché : ton premier bazou (500 $)
 
+## Jalon 5 : garage, concessionnaire et prestige
+
+- Le garage à Ti-Guy (50 000 $) pis le concessionnaire (1 000 000 $), chacun avec ses achats
+- Les deux apparaissent dans la scène 3D, pis le rang finit au plus chaud
+- Prestige : à 25 M$ gagnés avec le concessionnaire, tu vends l'empire pis tu repars avec de la réputation (+10 % par point, pour toujours)
+- 4 nouvelles quêtes pour mener jusque-là
+
 ## Jalon 4 : quêtes et personnages
 
-- 10 quêtes en joual, une à la fois : ta mère, Ginette du dépanneur, Ti-Guy pis le bonhomme Gagnon
+- 14 quêtes en joual, une à la fois : ta mère, Ginette du dépanneur, Ti-Guy pis le bonhomme Gagnon
 - Chaque quête suit ta progression (canettes, achats, bazou) pis donne du cash quand tu la réclames
 - La dernière (gagner 50 000 $) prépare le garage du prochain jalon
 

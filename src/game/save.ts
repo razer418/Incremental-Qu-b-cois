@@ -19,6 +19,7 @@ export function load(storage: Storage, now: number): GameState {
       ...data,
       upgrades: { ...(data.upgrades ?? {}) },
       car: { owned: data.car?.owned === true, parts: { ...(data.car?.parts ?? {}) } },
+      questIndex: Number.isInteger(data.questIndex) && data.questIndex! >= 0 ? data.questIndex! : 0,
     };
   } catch {
     return newGame(now);

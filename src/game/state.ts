@@ -1,5 +1,6 @@
 import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
+import { QUESTS, type Quest } from './quests';
 
 export interface GameState {
   version: 1;
@@ -8,6 +9,8 @@ export interface GameState {
   taps: number;
   upgrades: Record<string, number>;
   car: { owned: boolean; parts: Record<string, boolean> };
+  /** Index de la quête active dans QUESTS (= nombre de quêtes réclamées). */
+  questIndex: number;
   lastTick: number;
 }
 
@@ -24,6 +27,7 @@ export function newGame(now: number): GameState {
     taps: 0,
     upgrades: {},
     car: { owned: false, parts: {} },
+    questIndex: 0,
     lastTick: now,
   };
 }
@@ -141,4 +145,45 @@ export function repairedFraction(state: GameState): number {
 /** Réchauffement du rang : 0 au début, 0,3 avec de quoi payer le bazou, 0,5 une fois le bazou tout réparé. */
 export function warmth(state: GameState): number {
   return Math.min(1, state.totalEarned / FIRST_CAR_GOAL) * 0.3 + repairedFraction(state) * 0.2;
+}
+
+// --- Quêtes ---
+
+export function activeQuest(state: GameState): Quest | null {
+  return QUESTS[state.questIndex] ?? null;
+}
+
+/** Progrès de 0 à 1 vers l'objectif. */
+export function questProgress(state: GameState, quest: Quest): number {
+  const o = quest.objective;
+  switch (o.kind) {
+    case 'taps':
+      return Math.min(1, state.taps / o.target);
+    case 'earned':
+      return Math.min(1, state.totalEarned / o.target);
+    case 'upgrade':
+      return Math.min(1, levelOf(state, o.id) / o.target);
+    case 'ownCar':
+      return state.car.owned ? 1 : Math.min(0.99, state.cash / CAR_PRICE);
+    case 'repair':
+      return isRepaired(state, o.part) ? 1 : 0;
+    case 'carRuns': {
+      const essentials = PARTS.filter((p) => p.essential);
+      return essentials.filter((p) => isRepaired(state, p.id)).length / essentials.length;
+    }
+  }
+}
+
+export function questDone(state: GameState): boolean {
+  const q = activeQuest(state);
+  return q !== null && questProgress(state, q) >= 1;
+}
+
+/** Réclame la récompense et passe à la quête suivante. */
+export function claimQuest(state: GameState): Quest | null {
+  const q = activeQuest(state);
+  if (!q || questProgress(state, q) < 1) return null;
+  earn(state, q.reward);
+  state.questIndex += 1;
+  return q;
 }

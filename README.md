@@ -9,6 +9,12 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Sauvegarde locale et gains hors-ligne (plafonnés à 8 h)
 - Objectif affiché : ton premier bazou (500 $)
 
+## Jalon 4 : quêtes et personnages
+
+- 10 quêtes en joual, une à la fois : ta mère, Ginette du dépanneur, Ti-Guy pis le bonhomme Gagnon
+- Chaque quête suit ta progression (canettes, achats, bazou) pis donne du cash quand tu la réclames
+- La dernière (gagner 50 000 $) prépare le garage du prochain jalon
+
 ## Jalon 2 : le premier bazou
 
 - À 500 $, tu achètes le bazou du bonhomme Gagnon (sur les blocs, pas de batterie)
@@ -34,7 +40,7 @@ npm run build   # version web dans dist/
 
 ## Structure
 
-- `src/game/` : la logique du jeu (état, achats, bazou, sauvegarde), sans rien d'affichage, testée avec Vitest
+- `src/game/` : la logique du jeu (état, achats, bazou, quêtes, sauvegarde), sans rien d'affichage, testée avec Vitest
 - `src/scene/rang.ts` : la scène 3D du rang
 - `src/main.ts` : l'interface web
 - `src/style.css` : le style (clair et sombre)

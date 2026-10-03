@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Incremental Québécois</string>
+    <string name="title_activity_main">Incremental Québécois</string>
+    <string name="package_name">com.razer418.incrementalquebecois</string>
+    <string name="custom_url_scheme">com.razer418.incrementalquebecois</string>
+</resources>

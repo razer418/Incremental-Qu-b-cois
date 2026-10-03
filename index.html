@@ -16,13 +16,38 @@
           <p id="rate" class="rate">+0,00 $/s</p>
           <p id="rep" class="rep" hidden></p>
         </div>
-        <button id="vhs" class="vhs" type="button" aria-pressed="true">VHS</button>
+        <div class="reglages">
+          <button id="vhs" class="vhs" type="button" aria-pressed="true">VHS</button>
+          <button id="son" class="vhs" type="button" aria-pressed="true">SON</button>
+        </div>
+        <nav id="lieux" class="lieux" aria-label="Endroits du rang" hidden>
+          <button type="button" data-lieu="maison" aria-pressed="true">MAISON</button>
+          <button type="button" data-lieu="magasin" aria-pressed="false">MAGASIN</button>
+          <button type="button" data-lieu="garage" aria-pressed="false">GARAGE</button>
+          <button type="button" data-lieu="concession" aria-pressed="false">LOT</button>
+        </nav>
       </section>
 
       <button id="tap" class="tap" type="button">
         <span id="tap-label">[ RAMASSER ]</span>
         <span id="tap-value" class="tap-value">+0,10 $</span>
       </button>
+
+      <div class="boost-row">
+        <button id="boost" class="boost" type="button">[ BOOST x2 ]</button>
+        <span id="boost-sub" class="boost-sub"></span>
+      </div>
+
+      <section id="magasin" class="magasin" hidden>
+        <div class="quest">
+          <div id="m-portrait" class="portrait" aria-hidden="true">RJ</div>
+          <div class="quest-body">
+            <p class="quest-who">RÉJEAN DU MAGASIN GÉNÉRAL</p>
+            <p id="m-line" class="quest-line"></p>
+          </div>
+        </div>
+        <ul id="articles" class="upgrades"></ul>
+      </section>
 
       <section id="quest" class="quest" aria-live="polite">
         <div id="q-portrait" class="portrait" aria-hidden="true"></div>
@@ -80,6 +105,19 @@
         <ul id="upgrades" class="upgrades"></ul>
       </section>
 
+      <section id="boutique" class="garage">
+        <h2>BOUTIQUE</h2>
+        <ul class="upgrades">
+          <li id="noads" class="upgrade">
+            <div class="upgrade-info">
+              <strong>Pas de pubs</strong>
+              <small>Le boost x2 devient gratuit, sans pub. Pour toujours, même après le prestige.</small>
+            </div>
+            <button id="noads-buy" type="button" class="buy"></button>
+          </li>
+        </ul>
+      </section>
+
       <footer class="foot">
         <button id="reset" type="button" class="link">Recommencer à zéro</button>
       </footer>
@@ -88,6 +126,13 @@
     <dialog id="message">
       <p id="message-text"></p>
       <form method="dialog"><button type="submit">[ ENVOYE DONC ]</button></form>
+    </dialog>
+
+    <dialog id="ad" class="ad">
+      <p class="ad-tag">PUB DE DÉMO</p>
+      <p class="ad-body">Ici, une vraie pub va jouer dans l'app Android. Pour l'instant, on fait semblant.</p>
+      <p id="ad-count" class="ad-count"></p>
+      <button id="ad-close" type="button"></button>
     </dialog>
 
     <script type="module" src="/src/main.ts"></script>

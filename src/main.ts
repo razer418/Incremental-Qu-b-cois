@@ -2,14 +2,21 @@ import '@fontsource/vt323';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/600.css';
 import './style.css';
-import { createRang } from './scene/rang';
+import { createRang, type Lieu } from './scene/rang';
+import { ARTICLES } from './game/magasin';
+import { createSons } from './platform/sons';
+import { CHARACTERS } from './game/quests';
+import { createDemoAds } from './platform/ads';
+import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, PARTS } from './game/car';
-import { CHARACTERS } from './game/quests';
 import { PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
   activeQuest,
+  addBoost,
+  BOOST_MAX_SECONDS,
+  BOOST_SECONDS,
   buyBuilding,
   canBuyBuilding,
   canPrestige,
@@ -27,7 +34,10 @@ import {
   levelOf,
   newGame,
   nextCost,
-  passiveRate,
+  currentRate,
+  articleCost,
+  buyArticle,
+  canBuyArticle,
   tap,
   tapValue,
   tick,
@@ -70,6 +80,12 @@ const batBuy = $<HTMLButtonElement>('bat-buy');
 const prestigeEl = $('prestige');
 const prestigeDesc = $('prestige-desc');
 const prestigeBtn = $<HTMLButtonElement>('prestige-btn');
+const boostBtn = $<HTMLButtonElement>('boost');
+const boostSub = $('boost-sub');
+const noAdsBuy = $<HTMLButtonElement>('noads-buy');
+const boutiqueEl = $('boutique');
+const ads = createDemoAds($<HTMLDialogElement>('ad'), $('ad-count'), $<HTMLButtonElement>('ad-close'));
+const store = webStore;
 const messageDialog = $<HTMLDialogElement>('message');
 const messageText = $('message-text');
 
@@ -82,7 +98,34 @@ let state = load(localStorage, Date.now());
 
 // Le rang en 3D, style Bazou VHS. Si WebGL marche pas, le jeu roule pareil.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const rang = createRang($('ecran'), { pixelScale: 3, reduceMotion });
+// Sons : on peut les couper, choix gardé sur l'appareil.
+const SON_KEY = 'incremental-quebecois-son';
+const sons = createSons();
+const sonBtn = $<HTMLButtonElement>('son');
+const setSon = (on: boolean) => {
+  sons.actif = on;
+  sonBtn.setAttribute('aria-pressed', String(on));
+  sonBtn.setAttribute('aria-label', on ? 'Son : oui' : 'Son : non');
+};
+try {
+  setSon(localStorage.getItem(SON_KEY) !== 'off');
+} catch {
+  setSon(true);
+}
+sonBtn.addEventListener('click', () => {
+  setSon(!sons.actif);
+  try {
+    localStorage.setItem(SON_KEY, sons.actif ? 'on' : 'off');
+  } catch {
+    // rien à faire
+  }
+});
+
+const rang = createRang($('ecran'), {
+  pixelScale: 3,
+  reduceMotion,
+  onTrajet: (e) => sons.jouer(e === 'coupe' ? 'coupe' : 'moteur'),
+});
 let lastWarmth = -1;
 let lastLook = '';
 
@@ -93,7 +136,7 @@ const scanEl = $('scan');
 const setVhs = (on: boolean) => {
   scanEl.hidden = !on;
   vhsBtn.setAttribute('aria-pressed', String(on));
-  vhsBtn.textContent = on ? 'VHS : OUI' : 'VHS : NON';
+  vhsBtn.setAttribute('aria-label', on ? 'Lignes VHS : oui' : 'Lignes VHS : non');
 };
 let vhsOn = true;
 try {
@@ -133,6 +176,7 @@ for (const u of UPGRADES) {
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (buy(state, u.id)) {
+      sons.jouer('achat');
       save(localStorage, state);
       render();
     }
@@ -156,6 +200,7 @@ for (const p of PARTS) {
   btn.addEventListener('click', () => {
     const roulait = carRuns(state);
     if (!repair(state, p.id)) return;
+    sons.jouer('achat');
     save(localStorage, state);
     if (!roulait && carRuns(state)) {
       showMessage(
@@ -171,15 +216,112 @@ for (const p of PARTS) {
 qClaim.addEventListener('click', () => {
   const q = claimQuest(state);
   if (!q) return;
+  sons.jouer('quete');
   save(localStorage, state);
   showMessage(`${CHARACTERS[q.giver].name} : « ${q.thanks} » (+${formatMoney(q.reward)})`);
   render();
 });
 
+// Mode dev sans pubs (npm run dev:sans-pubs) : le boost est direct pis la boutique est cachée.
+const PUBS = import.meta.env.VITE_PUBS !== 'off';
+const sansPubs = (): boolean => state.noAds || !PUBS;
+boutiqueEl.hidden = !PUBS;
+
+// Boost x2 : jamais forcé, toujours sur demande.
+boostBtn.addEventListener('click', async () => {
+  if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return;
+  if (!sansPubs()) {
+    boostBtn.disabled = true;
+    const watched = await ads.showRewarded();
+    if (!watched) return render();
+  }
+  addBoost(state);
+  sons.jouer('boost');
+  save(localStorage, state);
+  render();
+});
+
+noAdsBuy.addEventListener('click', async () => {
+  if (state.noAds) return;
+  if (!store.available) {
+    showMessage(`« Pas de pubs » (${NO_ADS_PRICE}) va s'acheter dans l'app Android, via Google Play. Sur le web, y'a juste des pubs de démo.`);
+    return;
+  }
+  if (await store.buyNoAds()) {
+    state.noAds = true;
+    save(localStorage, state);
+    showMessage('Merci! Le boost est gratuit pour toujours, pis y aura pu jamais de pubs.');
+    render();
+  }
+});
+
+// Les endroits du rang : la caméra glisse d'un à l'autre.
+const lieuxEl = $('lieux');
+const lieuBtns = [...lieuxEl.querySelectorAll<HTMLButtonElement>('button')];
+let lieu: Lieu = 'maison';
+const lieuBtn = (l: Lieu) => lieuBtns.find((b) => b.dataset.lieu === l)!;
+function allerA(l: Lieu): void {
+  lieu = l;
+  rang?.allerA(l);
+  lieuBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lieu === l)));
+  if (l === 'magasin') mLine.textContent = `« ${REJEAN[Math.floor(Math.random() * REJEAN.length)]} »`;
+  render();
+}
+
+// Le magasin général : on le voit quand on y est (ou tout le temps sans le décor 3D).
+const REJEAN = [
+  "Salut mon gars! Y'a de la frette dans le frigidaire pis du café sur le rond.",
+  "Cash seulement, la machine à cartes est encore brisée.",
+  "Ta mère est passée tantôt. A m'a dit que tu travaillais fort, astheure.",
+  "Le vin est en spécial. Ben, y'est toujours en spécial.",
+  "Si tu vas à la pêche, prends des vers. Les miens sont frais d'à matin.",
+];
+const magasinEl = $('magasin');
+const mLine = $('m-line');
+const mPortrait = $('m-portrait');
+mPortrait.style.background = CHARACTERS.rejean.color;
+mLine.textContent = `« ${REJEAN[0]} »`;
+const articleRows = new Map<string, { btn: HTMLButtonElement; level: HTMLElement; cost: HTMLElement }>();
+for (const a of ARTICLES) {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong>${a.name} <span class="level"></span></strong>
+      <small>${a.description}</small>
+    </div>
+    <button type="button" class="buy"><span class="cost"></span></button>`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    if (buyArticle(state, a.id)) {
+      sons.jouer('achat');
+      save(localStorage, state);
+      render();
+    }
+  });
+  articleRows.set(a.id, { btn, level: li.querySelector('.level')!, cost: li.querySelector('.cost')! });
+  $('articles').append(li);
+}
+function renderMagasin(): void {
+  magasinEl.hidden = !!rang && lieu !== 'magasin';
+  if (magasinEl.hidden) return;
+  for (const a of ARTICLES) {
+    const row = articleRows.get(a.id)!;
+    const left = Math.ceil(state.magasin[a.id] ?? 0);
+    row.level.textContent = left > 0 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+    const cost = articleCost(state, a.id);
+    row.cost.textContent = formatMoney(cost);
+    row.btn.disabled = !canBuyArticle(state, a.id);
+  }
+}
+lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
+
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
   if (!b || !buyBuilding(state, b.id)) return;
+  sons.jouer('achat');
   save(localStorage, state);
+  allerA(b.id);
   showMessage(
     b.id === 'garage'
       ? "Ti-Guy : « On est en affaires! » Le garage est à toé. De nouveaux achats sont débloqués."
@@ -204,6 +346,7 @@ prestigeBtn.addEventListener('click', () => {
 
 buyCarBtn.addEventListener('click', () => {
   if (!buyCar(state)) return;
+  sons.jouer('achat');
   save(localStorage, state);
   showMessage(
     "Le bonhomme Gagnon : « Y'é à toé, mon gars. Y roule pas, y'a pu de batterie pis y'é sur les blocs, mais c'est un bon char. »",
@@ -213,6 +356,7 @@ buyCarBtn.addEventListener('click', () => {
 
 tapBtn.addEventListener('click', () => {
   tap(state);
+  sons.jouer(carRuns(state) ? 'livraison' : 'canette');
   tapBtn.classList.remove('pop');
   void tapBtn.offsetWidth;
   tapBtn.classList.add('pop');
@@ -228,7 +372,8 @@ $('reset').addEventListener('click', () => {
 
 function render(): void {
   cashEl.textContent = formatMoney(state.cash);
-  rateEl.textContent = `+${formatMoney(passiveRate(state))}/s`;
+  rateEl.textContent = `+${formatMoney(currentRate(state))}/s`;
+  renderBoost();
   tapValueEl.textContent = `+${formatMoney(tapValue(state))}`;
 
   const w = Math.round(warmth(state) * 200) / 200;
@@ -246,7 +391,13 @@ function render(): void {
     owned: state.car.owned,
     wheels: isRepaired(state, 'pneus'),
     clean: isRepaired(state, 'carrosserie'),
+    runs: roule,
   };
+  lieuxEl.hidden = !rang;
+  lieuBtn('garage').hidden = !look.garage;
+  lieuBtn('concession').hidden = !look.concession;
+  // Après le prestige, les bâtiments sont partis : on revient à la maison.
+  if ((lieu === 'garage' || lieu === 'concession') && !state.buildings[lieu]) allerA('maison');
   const lookKey = JSON.stringify(look);
   if (rang && lookKey !== lastLook) {
     rang.setCar(look);
@@ -254,6 +405,7 @@ function render(): void {
   }
 
   renderQuest();
+  renderMagasin();
   renderEmpire(roule);
 
   // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
@@ -312,6 +464,20 @@ function renderEmpire(roule: boolean): void {
       : `Disponible à ${formatMoney(PRESTIGE_MIN_EARNED)} gagnés au total. T'es rendu à ${formatMoney(state.totalEarned)}.`;
     prestigeBtn.disabled = !ready;
   }
+}
+
+function renderBoost(): void {
+  const left = Math.ceil(state.boostSeconds);
+  const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
+  boostBtn.disabled = full;
+  boostBtn.textContent = sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]';
+  boostSub.classList.toggle('on', left > 0);
+  const mm = Math.floor(left / 60);
+  const ss = String(left % 60).padStart(2, '0');
+  boostSub.textContent =
+    left > 0 ? `x2 ACTIF : ${mm}:${ss}` : sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB';
+  noAdsBuy.textContent = state.noAds ? 'ACHETÉ' : NO_ADS_PRICE;
+  noAdsBuy.disabled = state.noAds;
 }
 
 let lastQuestId = '';

@@ -9,6 +9,16 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Sauvegarde locale et gains hors-ligne (plafonnés à 8 h)
 - Objectif affiché : ton premier bazou (500 $)
 
+## Jalon 6 : monétisation et app Android
+
+- Boost x2 : une pub récompensée = 10 minutes de gains doublés (jusqu'à 60 min d'avance). Le boost compte aussi hors-ligne.
+- Jamais de pub forcée : si tu fermes la pub avant la fin, t'as juste pas de boost.
+- Achat « Pas de pubs » (3,99 $) : le boost devient gratuit. Gardé au prestige.
+- Sur le web, la pub est une pub de démo de 5 secondes. Les vraies pubs (AdMob) pis l'achat (Google Play) arrivent dans l'app Android.
+- Projet Android généré avec Capacitor dans `android/`.
+- Chaque endroit (maison, magasin général, garage, lot) est sa propre scène sur le rang. Quand tu changes d'endroit, ton bazou part, coupure VHS, pis il arrive plus loin en reculant dans l'entrée (environ 2 s). S'il roule pas, c'est juste la coupure. De temps en temps, il part livrer tout seul pis revient.
+- Le magasin général à Réjean : chips, café, bière, cigarettes, vape, vin, vers de terre pis bois de chauffage donnent des bonus courts sur tes tapes ou ton passif, payés avec le cash du jeu. Les prix suivent tes revenus. Marques inventées seulement.
+
 ## Jalon 5 : garage, concessionnaire et prestige
 
 - Le garage à Ti-Guy (50 000 $) pis le concessionnaire (1 000 000 $), chacun avec ses achats
@@ -36,6 +46,10 @@ Jeu incrémental mobile 100 % en joual, inspiré de Mon Bazou. Tu pars à pied, 
 - Le rang passe du gris brumeux à une lumière plus chaude à mesure que tu gagnes du cash
 - Interface nette par-dessus : VT323 pour les chiffres, IBM Plex Mono pour les textes
 
+## Sons
+
+Faits à la main avec Web Audio (`src/platform/sons.ts`), aucun fichier à télécharger : canette ou sonnette quand tu tapes, ka-ching quand tu achètes, trois notes country pour une quête, le moteur du bazou pis la neige VHS pendant les trajets. Le bouton SON en haut à droite les coupe (choix gardé sur l'appareil).
+
 ## Lancer le jeu
 
 ```bash
@@ -43,6 +57,8 @@ npm install
 npm run dev     # ouvre http://localhost:5173
 npm test        # tests de la logique du jeu
 npm run build   # version web dans dist/
+npm run dev:sans-pubs # mode dev sans pubs : boost direct, boutique cachée
+npm run android # build web, sync pis ouvre le projet dans Android Studio
 ```
 
 ## Structure
@@ -52,4 +68,8 @@ npm run build   # version web dans dist/
 - `src/main.ts` : l'interface web
 - `src/style.css` : le style (clair et sombre)
 
-Stack : TypeScript + Vite + Three.js. Capacitor (app Android) arrive au Jalon 6.
+- `src/platform/` : pubs pis achats (démo sur le web)
+
+Pour l'APK, il faut Android Studio sur ton ordi (le SDK Android est pas dans le conteneur).
+
+Stack : TypeScript + Vite + Three.js + Capacitor (Android).

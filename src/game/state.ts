@@ -4,7 +4,7 @@ import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
 import { saisonA } from './saisons';
 import { bonusFete, feteA, type FeteId } from './fetes';
-import { PROJETS, facteurPieces, getAnnonce, getProjet, prixAnnonce, prixVente, type Annonce, type Projet } from './chars';
+import { MOD_NIVEAUX, PROJETS, bonusChar, coutMod, facteurPieces, getAnnonce, getProjet, prixAnnonce, prixVente, type Annonce, type Mods, type Projet, type SlotMod } from './chars';
 import {
   BUILDINGS,
   PRESTIGE_BONUS_PER_POINT,
@@ -47,6 +47,10 @@ export interface GameState {
   annonces: Record<string, string>;
   /** Les annonces déjà achetées pis revendues : on peut pas flipper le même char deux fois avant le prestige. */
   vendus: string[];
+  /** Les mods posés sur chaque char retapé : id du char -> niveau par slot. */
+  mods: Record<string, Mods>;
+  /** Ce que les mods de chaque char ont coûté (pour la revente). */
+  modsPayes: Record<string, number>;
   /** Le look du bazou (voir look.ts) : options achetées (« peinture:rouge ») pis celles posées. Gardé au prestige. */
   look: { achetes: string[]; choix: Record<'peinture' | 'collant' | 'mags' | 'flaps' | 'toit' | 'antenne', string> };
   /** Mini-jeux : quand chacun est prêt à rejouer (ms, heure de l'appareil). */
@@ -102,6 +106,8 @@ export function newGame(now: number): GameState {
     projets: {},
     annonces: {},
     vendus: [],
+    mods: {},
+    modsPayes: {},
     look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun', toit: 'aucun', antenne: 'aucune' } },
     minijeux: {},
     expo: { periode: -1, trophees: 0 },
@@ -134,7 +140,7 @@ export function multiplier(state: GameState): number {
   if (state.car.parts.carrosserie) mult *= CAR_TIP_MULT;
   mult *= 1 + state.prestige.points * PRESTIGE_BONUS_PER_POINT;
   mult *= 1 + state.succes.length * SUCCES_BONUS;
-  for (const p of PROJETS) if (projetFini(state, p)) mult *= p.bonus;
+  for (const p of PROJETS) if (projetFini(state, p)) mult *= bonusChar(p, state.mods[p.id]);
   mult *= bonusFete(state.lastTick);
   return mult;
 }
@@ -544,9 +550,34 @@ export function vendreProjet(state: GameState, id: string): boolean {
   const p = getProjet(id);
   if (!p || !projetFini(state, p)) return false;
   // Une revente, c'est pas un revenu : ça compte pas dans le total gagné.
-  state.cash += prixVente(p);
+  state.cash += prixVente(p, state.modsPayes[id]);
   state.vendus.push(annonceDe(state, id).id);
   delete state.projets[id];
   delete state.annonces[id];
+  delete state.mods[id];
+  delete state.modsPayes[id];
+  return true;
+}
+
+/** Le niveau d'un slot de mod sur un char. */
+export function niveauMod(state: GameState, id: string, slot: SlotMod): number {
+  return state.mods[id]?.[slot] ?? 0;
+}
+
+/** Prix du prochain niveau de ce slot, ou null s'il est au max. */
+export function prochainMod(state: GameState, id: string, slot: SlotMod): number | null {
+  const p = getProjet(id);
+  const n = niveauMod(state, id, slot);
+  return p && n < MOD_NIVEAUX ? coutMod(p, n, revenuRef(state)) : null;
+}
+
+/** Pose le prochain niveau d'un mod sur un char retapé. */
+export function modifierProjet(state: GameState, id: string, slot: SlotMod): boolean {
+  const p = getProjet(id);
+  const cost = prochainMod(state, id, slot);
+  if (!p || !projetFini(state, p) || cost === null || !assez(state, cost)) return false;
+  payer(state, cost);
+  state.mods[id] = { ...state.mods[id], [slot]: niveauMod(state, id, slot) + 1 };
+  state.modsPayes[id] = (state.modsPayes[id] ?? 0) + cost;
   return true;
 }

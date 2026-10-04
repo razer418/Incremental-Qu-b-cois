@@ -40,7 +40,7 @@ export const PROJETS: readonly Projet[] = [
       { id: 'suspension', nom: 'Suspension', cost: 7_000_000 },
       { id: 'vinyle', nom: 'Toit de vinyle', cost: 11_000_000 },
     ],
-    bonus: 1.4,
+    bonus: 1.35,
   },
   {
     id: 'bolide',
@@ -53,7 +53,7 @@ export const PROJETS: readonly Projet[] = [
       { id: 'chrome', nom: 'Les chromes', cost: 1_500_000_000 },
       { id: 'flammes', nom: 'Des flammes sur le capot', cost: 2_500_000_000 },
     ],
-    bonus: 1.5,
+    bonus: 1.45,
   },
   {
     id: 'motorise',
@@ -66,7 +66,7 @@ export const PROJETS: readonly Projet[] = [
       { id: 'roues', nom: 'Les roues doubles', cost: 25_000_000_000 },
       { id: 'interieur', nom: "L'intérieur en tapis", cost: 40_000_000_000 },
     ],
-    bonus: 1.6,
+    bonus: 1.55,
   },
   {
     id: 'resurfaceuse',
@@ -79,7 +79,7 @@ export const PROJETS: readonly Projet[] = [
       { id: 'aileron', nom: "L'aileron", cost: 100_000_000_000 },
       { id: 'legende', nom: 'La peinture de légende', cost: 160_000_000_000 },
     ],
-    bonus: 1.7,
+    bonus: 1.65,
   },
 ];
 
@@ -162,14 +162,57 @@ export function prixAnnonce(a: Annonce): number {
   return getProjet(a.projet)!.prix * ETATS[a.etat].prix;
 }
 
-/** Multiplicateur sur les pièces : ce que t'as sauvé (ou payé de trop) à l'achat se répartit sur les pièces. */
-/** Ce que tu reçois en revendant un char retapé : ce qu'il t'a coûté, plus un profit. */
-export const PROFIT_VENTE = 0.1;
-export function prixVente(projet: Projet): number {
-  return (projet.prix + projet.pieces.reduce((t, x) => t + x.cost, 0)) * (1 + PROFIT_VENTE);
+// --- Les mods ---
+// Une fois retapé, chaque char se modifie : 3 slots, 5 niveaux chacun.
+// Chaque niveau monte son bonus sur tes gains, pis ce qu'il vaut à la revente.
+
+export type SlotMod = 'moteur' | 'carrosserie' | 'interieur';
+export type Mods = Partial<Record<SlotMod, number>>;
+
+export const MODS: Record<SlotMod, { nom: string; niveaux: readonly string[] }> = {
+  moteur: { nom: 'Moteur', niveaux: ['Un tune-up', 'Un carbu double', 'Des headers', 'Un arbre à cames de course', 'Un turbo maison'] },
+  carrosserie: { nom: 'Carrosserie', niveaux: ['Débosser les ailes', 'Une peinture neuve', 'Un kit de lift', 'Des chromes partout', 'Une peinture de concours'] },
+  interieur: { nom: 'Intérieur', niveaux: ['Un bon ménage', 'Des bancs neufs', 'Une radio CB', 'Du tapis shag', 'Du cuir de luxe'] },
+};
+export const SLOTS = Object.keys(MODS) as SlotMod[];
+export const MOD_NIVEAUX = 5;
+/** Chaque niveau ajoute ça au bonus du char (x1,30 -> x1,34). */
+export const MOD_BONUS = 0.04;
+/**
+ * Le 1er niveau coûte le plus gros entre une fraction des pièces de base pis quelques minutes de tes revenus,
+ * pis chaque niveau coûte x MOD_CROISSANCE le précédent. Comme ça, les mods restent un vrai choix toute la partie.
+ */
+export const MOD_COUT = 0.5;
+export const MOD_SECONDES = 40 * 60;
+export const MOD_CROISSANCE = 2;
+
+export function coutPiecesBase(p: Projet): number {
+  return p.pieces.reduce((t, x) => t + x.cost, 0);
 }
+
+/** Prix du prochain niveau quand le slot est rendu à `niveau`, selon tes revenus de référence ($/s). */
+export function coutMod(p: Projet, niveau: number, revenu: number): number {
+  return Math.round(Math.max(coutPiecesBase(p) * MOD_COUT, revenu * MOD_SECONDES) * MOD_CROISSANCE ** niveau);
+}
+
+export function niveauxMods(mods: Mods = {}): number {
+  return SLOTS.reduce((t, s) => t + (mods[s] ?? 0), 0);
+}
+
+/** Le bonus d'un char retapé, avec ses mods. */
+export function bonusChar(p: Projet, mods: Mods = {}): number {
+  return Math.round((p.bonus + MOD_BONUS * niveauxMods(mods)) * 100) / 100;
+}
+
+/** Ce que tu reçois en revendant un char retapé : ce qu'il t'a coûté (mods payés compris), plus un profit. */
+export const PROFIT_VENTE = 0.1;
+export function prixVente(projet: Projet, modsPayes = 0): number {
+  return (projet.prix + coutPiecesBase(projet) + modsPayes) * (1 + PROFIT_VENTE);
+}
+
+/** Multiplicateur sur les pièces : ce que t'as sauvé (ou payé de trop) à l'achat se répartit sur les pièces. */
 
 export function facteurPieces(a: Annonce): number {
   const p = getProjet(a.projet)!;
-  return 1 + (p.prix - prixAnnonce(a)) / p.pieces.reduce((t, x) => t + x.cost, 0);
+  return 1 + (p.prix - prixAnnonce(a)) / coutPiecesBase(p);
 }

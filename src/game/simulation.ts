@@ -1,12 +1,12 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
 // Il joue comme un vrai : il tape à un rythme fixe, a son boost x2 la moitié du temps, passe au magasin
 // à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
-// achète ses chars à retaper sur le Face-de-Bouc Marché (la meilleure annonce en ligne),
+// achète ses chars à retaper sur le Face-de-Bouc Marché (la meilleure annonce en ligne), les modifie,
 // pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
 import { BUILDINGS, EMPIRE_GOAL, type BuildingId } from './buildings';
 import { CAR_PRICE, PARTS } from './car';
-import { PROJETS, annoncesEnLigne, facteurPieces, prixAnnonce } from './chars';
+import { PROJETS, SLOTS, annoncesEnLigne, facteurPieces, prixAnnonce } from './chars';
 import { ARTICLES } from './magasin';
 import { MINIJEUX, finirPartie, peutJouer } from './minijeux';
 import { periode, peutInscrire, prixExpo } from './expo';
@@ -27,6 +27,8 @@ import {
   coutPiece,
   carRuns,
   claimQuest,
+  modifierProjet,
+  prochainMod,
   earn,
   isUnlocked,
   nextBuilding,
@@ -92,6 +94,12 @@ function meilleurAchat(s: GameState, now: number): { cost: number; faire: () => 
     if (s.projets[p.id]) {
       const total = reste(s, p.id);
       if (total > 0) essayer(total, (x) => ((x.cash = Math.max(x.cash, total)), finir(x)));
+      // Retapé : chaque prochain niveau de mod.
+      else
+        for (const slot of SLOTS) {
+          const c = prochainMod(s, p.id, slot);
+          if (c !== null) essayer(c, (x) => ((x.cash = Math.max(x.cash, c)), modifierProjet(x, p.id, slot)));
+        }
       continue;
     }
     for (const a of annoncesEnLigne(p.id, now).filter((x) => !s.vendus.includes(x.id))) {

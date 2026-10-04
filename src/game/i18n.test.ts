@@ -11,6 +11,7 @@ import { ARTICLES, REJEAN } from './magasin';
 import { SUCCES } from './succes';
 import { SAISONS } from './saisons';
 import { FETES } from './fetes';
+import { METEOS, MOMENTS } from './temps';
 import { PROJETS } from './chars';
 import { EVENEMENTS } from './evenements';
 import { LOOK } from './look';
@@ -32,6 +33,8 @@ function cles(): string[] {
     ...SUCCES.flatMap((x) => [x.nom, x.description]),
     ...SAISONS.flatMap((x) => [x.nom, x.description]),
     ...FETES.flatMap((x) => [x.nom, x.description]),
+    ...MOMENTS.map((x) => x.nom),
+    ...METEOS.map((x) => x.nom),
     ...PROJETS.flatMap((p) => [p.nom, p.description, ...p.pieces.map((x) => x.nom)]),
     ...EVENEMENTS.flatMap((e) => [e.texte, ...e.choix.map((c) => c.label)]),
     ...Object.values(LOOK).flatMap((c) => [c.nom, ...c.options.map((o) => o.nom)]),

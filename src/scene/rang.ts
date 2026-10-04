@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BuildingId } from '../game/buildings';
 import type { FeteId } from '../game/fetes';
+import type { MeteoId } from '../game/temps';
 import { creerBazou, type ChoixLook } from './bazou';
 
 // Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
@@ -47,7 +48,7 @@ const SOL: Record<SaisonId, [number, number]> = {
   hiver: [PAL.neige, PAL.neigeOmbre],
 };
 
-// Chaque saison a sa lumière, ses arbres pis ce qui tombe du ciel.
+// Chaque saison a sa lumière pis ses arbres.
 interface LookSaison {
   ciel: number;
   lumiere: number;
@@ -57,35 +58,63 @@ interface LookSaison {
   /** La couleur des érables (null : y'a pus de feuilles). */
   erables: readonly number[] | null;
   sapin: number;
-  tombe: { couleurs: readonly number[]; nb: number; taille: number; vitesse: number; vent: number } | null;
 }
 const LOOK_SAISON: Record<SaisonId, LookSaison> = {
   // Gris-vert mouillé, bourgeons pis pluie
   printemps: {
     ciel: 0x98a4a2, lumiere: 0xd0dccc, soleil: 0xdde4d6, force: 0.85, brume: 0.7,
     erables: PAL.bourgeons, sapin: PAL.sapin,
-    tombe: { couleurs: [PAL.pluie], nb: 500, taille: 0.16, vitesse: 16, vent: 0.3 },
   },
   // Grand ciel bleu, gros soleil, feuilles ben vertes
   ete: {
     ciel: 0x9db8c8, lumiere: 0xf4ecd0, soleil: 0xfff2c8, force: 1.2, brume: 1.3,
-    erables: PAL.feuilles, sapin: PAL.sapin, tombe: null,
+    erables: PAL.feuilles, sapin: PAL.sapin,
   },
   // Lumière dorée pis les feuilles qui revolent
   automne: {
     ciel: 0xc49a6a, lumiere: 0xf0c890, soleil: 0xffb870, force: 1, brume: 1,
     erables: PAL.erables, sapin: PAL.sapin,
-    tombe: { couleurs: PAL.erables, nb: 150, taille: 0.26, vitesse: 1.2, vent: 1.4 },
   },
   // Blanc bleuté, arbres nus, sapins enneigés pis la neige qui tombe
   hiver: {
     ciel: 0xc8d0d8, lumiere: 0xe4ecf4, soleil: 0xdce6f0, force: 1.1, brume: 0.75,
     erables: null, sapin: PAL.sapinNeige,
-    tombe: { couleurs: [PAL.neige], nb: 500, taille: 0.22, vitesse: 1.6, vent: 0.6 },
   },
 };
 // La saison passe par-dessus la teinte de l'endroit, assez pour qu'on la voie partout.
 const MELANGE_SAISON = 0.45;
+
+// La météo assombrit ou éclaircit, pis brasse les arbres.
+const LOOK_METEO: Record<MeteoId, Ambiance & { vent: number }> = {
+  beau: { ciel: 0, lumiere: 0, soleil: 0, force: 1, brume: 1, vent: 0.025 },
+  pluie: { ciel: 0x7e8a8e, lumiere: 0xb8c2c4, soleil: 0xb8c0c4, force: 0.7, brume: 0.65, vent: 0.045 },
+  neige: { ciel: 0xc4ccd4, lumiere: 0xdde4ec, soleil: 0xd4dce4, force: 0.85, brume: 0.7, vent: 0.04 },
+  vent: { ciel: 0xa8b0b0, lumiere: 0xdde0d8, soleil: 0xe8e8e0, force: 1, brume: 1.1, vent: 0.1 },
+  brouillard: { ciel: 0xb0b4b0, lumiere: 0xd0d4cc, soleil: 0xc8ccc4, force: 0.85, brume: 0.4, vent: 0.015 },
+};
+const MELANGE_METEO = 0.6;
+
+// Ce qui tombe du ciel, selon la saison pis la météo.
+interface Tombe {
+  couleurs: readonly number[];
+  nb: number;
+  taille: number;
+  vitesse: number;
+  vent: number;
+}
+function quiTombe(s: SaisonId, m: MeteoId): Tombe | null {
+  const neige = (nb: number, vent: number): Tombe => ({ couleurs: [PAL.neige], nb, taille: 0.22, vitesse: 1.6, vent });
+  const feuilles = (nb: number, vent: number): Tombe => ({ couleurs: PAL.erables, nb, taille: 0.26, vitesse: 1.2, vent });
+  if (m === 'pluie') return { couleurs: [PAL.pluie], nb: 500, taille: 0.16, vitesse: 16, vent: 0.3 };
+  if (m === 'neige') return neige(500, 0.6);
+  if (m === 'vent') return s === 'hiver' ? neige(350, 6) : s === 'automne' ? feuilles(300, 6) : null;
+  if (m === 'beau') return s === 'hiver' ? neige(100, 0.5) : s === 'automne' ? feuilles(120, 1.4) : null;
+  return null;
+}
+
+// La nuit : bleu foncé, pis l'orange du lever pis du coucher de soleil.
+const NUIT = { ciel: 0x1c2232, lumiere: 0x3c4862 };
+const AUBE = { ciel: 0xc8805a, soleil: 0xff8a4a };
 
 // Ambiance : le rang est gris pis brumeux au début, il se réchauffe avec la progression.
 const DEBUT = {
@@ -179,6 +208,8 @@ export interface Rang {
   /** 0 = début (gris), 1 = plus tard (chaud). */
   setWarmth(w: number): void;
   setSaison(s: SaisonId): void;
+  /** L'heure du jeu (0 à 24) pis la météo. */
+  setTemps(heure: number, meteo: MeteoId): void;
   /** Le décor de la fête (null : pas de fête). */
   setFete(f: FeteId | null): void;
   setPixelScale(scale: number): void;
@@ -451,6 +482,12 @@ export function createRang(
     part(maison, B(0.95, 0.95, 0.12), PAL.vitre, x, 1.95, 2.34);
   }
   part(maison, B(0.8, 0.8, 0.12), PAL.vitre, 0, 4.0, 2.33);
+  // Les lumières de la maison s'allument le soir.
+  const fenetres = new THREE.Group();
+  maison.add(fenetres);
+  for (const x of [-1.85, 1.85]) part(fenetres, B(0.95, 0.95, 0.12), PAL.lampe, x, 1.95, 2.36);
+  part(fenetres, B(0.8, 0.8, 0.12), PAL.lampe, 0, 4.0, 2.35);
+  fenetres.visible = false;
   part(maison, B(6.4, 0.25, 1.7), PAL.bois, 0, 0.18, 3.2);
   for (const x of [-3, 3]) part(maison, G(new THREE.CylinderGeometry(0.1, 0.1, 2.7, 6)), PAL.declin, x, 1.55, 3.9);
   part(maison, B(6.6, 0.15, 2), PAL.tole, 0, 2.95, 3.3, { rx: 0.12 });
@@ -780,14 +817,28 @@ export function createRang(
   tombe.frustumCulled = false;
   tombe.visible = false;
   scene.add(tombe);
+  let tombeActuel: Tombe | null = null;
+  const majTombe = () => {
+    const x = quiTombe(saison, meteo);
+    tombeActuel = x;
+    tombe.visible = !!x;
+    if (!x) return;
+    tombeMat.size = x.taille;
+    tombeGeo.setDrawRange(0, x.nb);
+    for (let i = 0; i < NB_TOMBE; i++) teinte.setHex(x.couleurs[i % x.couleurs.length]).toArray(tombeCouleurs, i * 3);
+    tombeGeo.attributes.color.needsUpdate = true;
+  };
   const faireTomber = (dt: number, t: number) => {
-    const x = LOOK_SAISON[saison].tombe;
+    const x = tombeActuel;
     if (!x) return;
     for (let i = 0; i < NB_TOMBE; i++) {
       let y = tombePos[i * 3 + 1] - x.vitesse * dt * (0.7 + (i % 5) * 0.1);
       if (y < 0) y += 14;
       tombePos[i * 3 + 1] = y;
-      tombePos[i * 3] += Math.sin(t * 0.8 + i) * x.vent * dt;
+      // Le vent pousse tout du même bord, avec un peu de zigzag.
+      let px = tombePos[i * 3] + (Math.sin(t * 0.8 + i) * 0.6 + 0.4) * x.vent * dt;
+      if (px > 17) px -= 34;
+      tombePos[i * 3] = px;
     }
     tombeGeo.attributes.position.needsUpdate = true;
   };
@@ -795,6 +846,8 @@ export function createRang(
   // Lumière : la progression du rang, la teinte de l'endroit pis la saison par-dessus.
   let chaleur = 0;
   let saison: SaisonId = 'ete';
+  let meteo: MeteoId = 'beau';
+  let heure = 12;
   const teinte = new THREE.Color();
   const eclairer = () => {
     const k = chaleur;
@@ -820,6 +873,19 @@ export function createRang(
     const a = AMBIANCE[lieuActuel];
     if (a) teinter(a, MELANGE);
     teinter(LOOK_SAISON[saison], MELANGE_SAISON);
+    if (meteo !== 'beau') teinter(LOOK_METEO[meteo], MELANGE_METEO);
+    // Le soleil fait le tour : jour = 1 à midi, 0 la nuit; l'aube pis le coucher virent orange.
+    const angle = ((heure - 5) / 16) * Math.PI;
+    const jour = THREE.MathUtils.clamp(Math.sin(angle) * 1.4 + 0.1, 0, 1);
+    const aube = Math.max(0, 1 - Math.min(Math.abs(heure - 6), Math.abs(heure - 19.5)) / 1.5);
+    ciel.lerp(teinte.setHex(AUBE.ciel), aube * 0.45);
+    soleil.color.lerp(teinte.setHex(AUBE.soleil), aube * 0.6);
+    ciel.lerp(teinte.setHex(NUIT.ciel), (1 - jour) * 0.85);
+    hemi.color.lerp(teinte.setHex(NUIT.lumiere), (1 - jour) * 0.8);
+    hemiForce *= THREE.MathUtils.lerp(0.45, 1, jour);
+    soleilForce *= THREE.MathUtils.lerp(0.05, 1, jour);
+    fenetres.visible = jour < 0.35;
+    soleil.position.set(-Math.cos(angle) * 12, Math.max(1, Math.sin(angle) * 11), 9);
     fog.color.copy(ciel);
     fog.near = near;
     fog.far = far;
@@ -928,7 +994,8 @@ export function createRang(
   let tAvant = 0;
   const frame = (now: number) => {
     const t = (now - t0) / 1000;
-    arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * 1.1 + i) * 0.025));
+    const vent = LOOK_METEO[meteo].vent;
+    arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * (1.1 + vent * 20) + i) * vent));
     faireTomber(Math.min(0.1, t - tAvant), t);
     tAvant = t;
     carrosserie.position.y = Math.sin(t * 28) * 0.012;
@@ -1026,14 +1093,15 @@ export function createRang(
       cimes.forEach((c) => (c.visible = !!look.erables));
       if (look.erables) feuillage.forEach((m, i) => m.color.setHex(look.erables![i % look.erables!.length]));
       (M(PAL.sapin) as THREE.MeshPhongMaterial).color.setHex(look.sapin);
-      tombe.visible = !!look.tombe;
-      if (look.tombe) {
-        tombeMat.size = look.tombe.taille;
-        tombeGeo.setDrawRange(0, look.tombe.nb);
-        for (let i = 0; i < NB_TOMBE; i++) {
-          teinte.setHex(look.tombe.couleurs[i % look.tombe.couleurs.length]).toArray(tombeCouleurs, i * 3);
-        }
-        tombeGeo.attributes.color.needsUpdate = true;
+      majTombe();
+      eclairer();
+      if (!raf) renderer.render(scene, camera);
+    },
+    setTemps(h, m) {
+      heure = h;
+      if (m !== meteo) {
+        meteo = m;
+        majTombe();
       }
       eclairer();
       if (!raf) renderer.render(scene, camera);

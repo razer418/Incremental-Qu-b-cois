@@ -1364,6 +1364,19 @@ descriptionsBtn.addEventListener('click', () => {
   pref.set('descriptions', stats ? 'stats' : 'tout');
 });
 
+// Texte des quêtes : la réplique pis le portrait s'en vont, l'objectif reste.
+const queteTexteBtn = $<HTMLButtonElement>('quete-texte');
+const setQueteTexte = (on: boolean) => {
+  $('quest').classList.toggle('sans-texte', !on);
+  bascule(queteTexteBtn, on);
+};
+setQueteTexte(pref.get('quete-texte') !== 'off');
+queteTexteBtn.addEventListener('click', () => {
+  const on = $('quest').classList.contains('sans-texte');
+  setQueteTexte(on);
+  pref.set('quete-texte', on ? 'on' : 'off');
+});
+
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.
 const ecranBtn = $<HTMLButtonElement>('ecran-taille');
 const setEcran = (petit: boolean) => {

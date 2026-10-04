@@ -608,4 +608,5 @@ export const EN: Record<string, string> = {
   "JEUX": "GAMES",
   "EMPIRE": "EMPIRE",
   "CHARS": "CARS",
+  "Texte des quêtes": "Quest text",
 };

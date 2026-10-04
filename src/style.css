@@ -1337,6 +1337,7 @@ section.replie h2 {
   font: 400 14px/1 var(--pixel);
   color: var(--bg);
   background: var(--cash);
+}
 
 /* L'inventaire, sous LIVRER : petit pis serré. */
 .sac {
@@ -1373,4 +1374,11 @@ section.replie h2 {
 .inventaire .buy {
   min-width: 0;
   font-size: 20px;
+}
+
+/* Quête sans texte : juste l'objectif, la barre pis la récompense. */
+.quest.sans-texte .portrait,
+.quest.sans-texte .quest-who,
+.quest.sans-texte .quest-line {
+  display: none;
 }

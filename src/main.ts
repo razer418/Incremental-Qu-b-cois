@@ -1186,6 +1186,7 @@ function loop(): void {
   }
   render();
   renderToast(now);
+  pastilles();
 }
 
 // Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.
@@ -1253,6 +1254,15 @@ for (const h2 of titres) {
   });
 }
 
+// Catégorie repliée : un petit chiffre discret dit combien de choses sont prêtes (mini-jeu, achat).
+function pastilles(): void {
+  for (const h2 of titres) {
+    if (h2.closest('#boutique')) continue; // pas de pastille pour de l'argent réel
+    const n = String(h2.closest('section')!.querySelectorAll('.upgrade:not([hidden]) .buy:not(:disabled)').length);
+    if (h2.dataset.prets !== n) h2.dataset.prets = n;
+  }
+}
+
 const lignes = [...colListes.querySelectorAll<HTMLElement>('li.upgrade')];
 const compacter = (li: HTMLElement, oui: boolean) => {
   li.classList.toggle('compacte', oui);
@@ -1285,6 +1295,30 @@ accordeonBtn.addEventListener('click', () => {
   accordeon = !accordeon;
   bascule(accordeonBtn, accordeon);
   pref.set('accordeon', accordeon ? 'on' : 'off');
+});
+
+// Descriptions : juste les phrases avec un chiffre d'effet (+1 $/s, x1,5), sans les jokes.
+const stat = (texte: string) =>
+  texte
+    .split(/(?<=\.)\s+/)
+    .filter((x) => /[+x]\s?\$?\d/.test(x))
+    .join(' ');
+const descriptions = ['upgrades', 'parts', 'articles', 'projets-liste'].flatMap((id) =>
+  [...$(id).querySelectorAll('small')].map((el) => ({ el, tout: el.textContent! })),
+);
+const descriptionsBtn = $<HTMLButtonElement>('descriptions');
+const setDescriptions = (stats: boolean) => {
+  for (const d of descriptions) {
+    d.el.textContent = stats ? stat(d.tout) : d.tout;
+    d.el.hidden = !d.el.textContent;
+  }
+  bascule(descriptionsBtn, !stats, 'TOUT', 'STATS');
+};
+setDescriptions(pref.get('descriptions') === 'stats');
+descriptionsBtn.addEventListener('click', () => {
+  const stats = descriptionsBtn.getAttribute('aria-pressed') === 'true';
+  setDescriptions(stats);
+  pref.set('descriptions', stats ? 'stats' : 'tout');
 });
 
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.

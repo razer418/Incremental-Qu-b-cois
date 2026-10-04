@@ -10,13 +10,14 @@
   <body>
     <main id="app">
       <header class="barre">
-        <div class="hud">
+        <div class="b-argent">
           <p id="job" class="job">RAMASSER DES CANETTES</p>
           <p id="cash" class="cash">0,00 $</p>
-          <p class="sous-cash"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span> <button id="saison" class="saison" type="button"></button> <button id="heure" class="saison" type="button"></button> <span id="buffs" class="buffs" hidden></span></p>
-          <button id="radio" class="radio" type="button"><span id="radio-texte"></span></button>
+          <p class="b-gains"><span id="rate" class="rate">+0,00 $/s</span> <span id="rep" class="rep" hidden></span></p>
         </div>
         <button id="options" class="options" type="button" aria-label="Menu : succès, stats pis options">MENU<span id="badge" class="badge" hidden></span></button>
+        <div class="b-temps"><button id="saison" class="saison" type="button"></button> <button id="heure" class="saison" type="button"></button> <span id="buffs" class="buffs" hidden></span></div>
+        <button id="radio" class="radio" type="button"><span id="radio-texte"></span></button>
       </header>
 
       <div class="col-jeu">
@@ -199,6 +200,7 @@
         <li><span data-t>Chiffres</span><button id="nombres" type="button" class="bascule"></button></li>
         <li><span data-t>Catégories</span><span class="paire"><button id="tout-replier" type="button" class="bascule" data-t>REPLIER</button><button id="tout-deplier" type="button" class="bascule" data-t>DÉPLIER</button></span></li>
         <li><span data-t>Lignes</span><span class="paire"><button id="tout-compact" type="button" class="bascule" data-t>COMPACTES</button><button id="tout-normal" type="button" class="bascule" data-t>NORMALES</button></span></li>
+        <li><span data-t>Descriptions</span><button id="descriptions" type="button" class="bascule"></button></li>
         <li><span data-t>Une catégorie à la fois</span><button id="accordeon" type="button" class="bascule"></button></li>
         <li><span data-t>Écran 3D</span><button id="ecran-taille" type="button" class="bascule"></button></li>
         <li class="astuce" data-t>Touche un titre pour replier sa catégorie, pis le nom d'un achat pour rapetisser sa ligne.</li>

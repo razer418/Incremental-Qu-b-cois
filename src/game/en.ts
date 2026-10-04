@@ -326,8 +326,8 @@ export const EN: Record<string, string> = {
   "SUR LES BLOCS": "ON BLOCKS",
   "[ BOOST x2 ]": "[ BOOST x2 ]",
   "[ PUB : BOOST x2 ]": "[ AD: BOOST x2 ]",
-  "10 MIN GRATUITES": "10 FREE MIN",
-  "10 MIN POUR UNE PUB": "10 MIN FOR AN AD",
+  "1 H GRATUITE": "1 FREE HOUR",
+  "1 H POUR UNE PUB": "1 HOUR FOR AN AD",
   "ACHETÉ": "BOUGHT",
   "[ CHERCHER MON BOOST ]": "[ GET MY BOOST ]",
   // La radio du char

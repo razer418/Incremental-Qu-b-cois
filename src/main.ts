@@ -983,7 +983,7 @@ function renderBoost(): void {
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
   boostBtn.textContent = t(sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]');
-  boostSub.textContent = t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
+  boostSub.textContent = t(sansPubs() ? '1 H GRATUITE' : '1 H POUR UNE PUB');
   noAdsBuy.textContent = t(state.noAds ? 'ACHETÉ' : NO_ADS_PRICE);
   noAdsBuy.disabled = state.noAds;
 }

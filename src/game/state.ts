@@ -69,6 +69,8 @@ export const SUCCES_BONUS = 0.02;
 
 export const BASE_TAP = 0.1; // une canette consignée
 export const DELIVERY_TAP = 1.5; // une livraison de pizza
+/** Chaque tape ajoute aussi 2 % de ton revenu passif : taper vaut la peine toute la partie. */
+export const TAP_PART_PASSIF = 0.02;
 export const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
 export const FIRST_CAR_GOAL = CAR_PRICE;
 
@@ -134,7 +136,7 @@ function baseTapValue(state: GameState): number {
   for (const u of UPGRADES) {
     if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
   }
-  return value * multiplier(state) * saisonA(state.lastTick).tap;
+  return (value * multiplier(state) + TAP_PART_PASSIF * passiveRate(state)) * saisonA(state.lastTick).tap;
 }
 
 export function tapValue(state: GameState): number {
@@ -147,15 +149,15 @@ export function currentRate(state: GameState): number {
 }
 
 export const BOOST_FACTOR = 2;
-export const BOOST_SECONDS = 10 * 60;
-/** On peut cumuler jusqu'à une heure de boost. */
-export const BOOST_MAX_SECONDS = 60 * 60;
+export const BOOST_SECONDS = 60 * 60;
+/** On peut cumuler jusqu'à 4 h de boost. */
+export const BOOST_MAX_SECONDS = 4 * 60 * 60;
 
 export function boostFactor(state: GameState): number {
   return state.boostSeconds > 0 ? BOOST_FACTOR : 1;
 }
 
-/** Ajoute 10 min de boost x2 (après une pub récompensée, ou gratuit avec « pas de pubs »). */
+/** Ajoute 1 h de boost x2 (après une pub récompensée, ou gratuit avec « pas de pubs »). */
 export function addBoost(state: GameState): boolean {
   if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return false;
   state.boostSeconds += BOOST_SECONDS;

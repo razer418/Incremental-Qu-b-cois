@@ -1,5 +1,5 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
-// Il joue comme un vrai : il tape à un rythme fixe, garde son boost x2 allumé, passe au magasin
+// Il joue comme un vrai : il tape à un rythme fixe, a son boost x2 la moitié du temps, passe au magasin
 // à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
 // pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
@@ -103,8 +103,8 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     dette += tapesParSeconde;
     for (; dette >= 1; dette--) tap(s);
     while (activeQuest(s) && claimQuest(s));
-    // Une pub quand le boost achève, pis un tour au magasin quand c'est pas cher pour lui.
-    if (s.boostSeconds < 60) addBoost(s);
+    // Une pub (1 h de boost) une heure sur deux : le boost est allumé la moitié du temps.
+    if (s.boostSeconds <= 0 && Math.floor(t / 3600) % 2 === 0) addBoost(s);
     // Quand un buff finit, il achète le plus fort qu'il peut pis le prend drette.
     for (const a of PAR_FORCE)
       if (magasinFactor(s, a.boosts) === 1 && canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) {

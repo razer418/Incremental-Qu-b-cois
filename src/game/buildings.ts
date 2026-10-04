@@ -36,14 +36,14 @@ export const BUILDINGS: readonly Building[] = [
     id: 'bar',
     name: 'Le bar du village',
     description: 'Le Bar chez Rollande, avec sa table de pool pis son juke-box. Rollande veut prendre sa retraite.',
-    cost: 4_000_000_000,
+    cost: 9_000_000_000,
     message: 'Rollande : « Prends soin de mes habitués. » Le bar du village est à toé.',
   },
   {
     id: 'arena',
     name: "L'aréna",
     description: "L'aréna du village, avec sa Zamboni de 1974 pis ses estrades en bois. Le conseil municipal la vend.",
-    cost: 25_000_000_000,
+    cost: 45_000_000_000,
     message: "Le maire : « Le hockey du samedi est sauvé! » L'aréna est à toé.",
   },
 ];

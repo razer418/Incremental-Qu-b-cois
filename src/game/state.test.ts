@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BASE_TAP,
+  TAP_PART_PASSIF,
   OFFLINE_CAP_SECONDS,
   applyOffline,
   buy,
@@ -55,7 +56,7 @@ describe('boucle de base', () => {
     const s = newGame(0);
     s.upgrades = { velo: 1, depanneur: 1 };
     expect(passiveRate(s)).toBeCloseTo(0.375);
-    expect(tapValue(s)).toBeCloseTo(0.15);
+    expect(tapValue(s)).toBeCloseTo(0.15 + TAP_PART_PASSIF * 0.375);
   });
 
   it('le revenu passif suit le temps', () => {

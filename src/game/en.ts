@@ -618,4 +618,9 @@ export const EN: Record<string, string> = {
   "Pièce {i} sur {n} du {x}": "Part {i} of {n} for the {x}",
   "Débloque {n} achats pis le prestige": "Unlocks {n} purchases and prestige",
   "Débloque {n} achats": "Unlocks {n} purchases",
+  "PROCHAIN : {nom}": "NEXT: {nom}",
+  "TON PREMIER BAZOU": "YOUR FIRST BEATER",
+  "PRÊT!": "READY!",
+  "FÊTE DANS {temps}": "PARTY IN {temps}",
+  "Tes gains de la prochaine partie : {x}. Si t'attends, un point de plus à {cash} gagnés.": "Your earnings next run: {x}. If you wait, one more point at {cash} earned.",
 };

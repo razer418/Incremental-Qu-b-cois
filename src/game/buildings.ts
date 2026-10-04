@@ -56,3 +56,8 @@ export const PRESTIGE_BONUS_PER_POINT = 0.1;
 export function prestigePointsFor(totalEarned: number): number {
   return Math.floor(Math.sqrt(totalEarned / 4e10));
 }
+
+/** Combien faut gagner au total pour avoir `points` points. */
+export function gainsPourPoints(points: number): number {
+  return points * points * 4e10;
+}

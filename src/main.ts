@@ -12,9 +12,10 @@ import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './game/car';
-import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
+import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, gainsPourPoints, prestigePointsFor } from './game/buildings';
 import {
-  FIRST_CAR_GOAL,
+  prochainObjectif,
+  prestigeDebloque,
   activeQuest,
   addBoost,
   BOOST_MAX_SECONDS,
@@ -912,16 +913,22 @@ function render(): void {
   renderMenu();
   renderEmpire(roule);
 
-  // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
-  goalEl.hidden = state.car.owned;
+  // La barre du prochain objectif, toujours là, avec le temps qui reste à ton $/s.
+  const obj = prochainObjectif(state);
+  goalEl.hidden = !obj;
+  if (obj) {
+    const reste = obj.cout - obj.avoir;
+    const taux = currentRate(state);
+    $('goal-nom').textContent = t('PROCHAIN : {nom}', { nom: t(obj.nom).toUpperCase() });
+    goalBar.style.width = `${Math.min(1, obj.avoir / obj.cout) * 100}%`;
+    goalText.textContent =
+      `${formatMoney(obj.avoir)} / ${formatMoney(obj.cout)}` +
+      (reste <= 0 ? ` · ${t('PRÊT!')}` : taux > 0 && reste / taux < 100 * 3600 ? ` · ~${formatDuration(reste / taux)}` : '');
+  }
+  buyCarBtn.hidden = state.car.owned || !assez(state, CAR_PRICE);
   // Tout réparé : la section disparaît, le bouton LIVRER dit déjà que ça roule.
   garageEl.hidden = !state.car.owned || PARTS.every((p) => isRepaired(state, p.id));
-  if (!state.car.owned) {
-    const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
-    goalBar.style.width = `${progress * 100}%`;
-    goalText.textContent = `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
-    buyCarBtn.hidden = !assez(state, CAR_PRICE);
-  } else {
+  if (state.car.owned) {
     carStatus.textContent = t(roule ? 'ÇA ROULE!' : 'SUR LES BLOCS');
     carStatus.classList.toggle('roule', roule);
     for (const p of PARTS) {
@@ -968,12 +975,20 @@ function renderEmpire(roule: boolean): void {
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
   }
-  prestigeEl.hidden = !state.buildings.arena;
+  prestigeEl.hidden = !prestigeDebloque(state);
   if (state.buildings.arena) {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
+    // L'aperçu : de combien tes gains montent, pis quand tu gagnes le point suivant si t'attends.
+    const avant = 1 + pts * PRESTIGE_BONUS_PER_POINT;
+    const apres = 1 + (pts + points) * PRESTIGE_BONUS_PER_POINT;
     prestigeDesc.textContent = ready
-      ? t('Tu repars à zéro avec {points} points de réputation (+{pc} % pour toujours).', { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 })
+      ? t('Tu repars à zéro avec {points} points de réputation (+{pc} % pour toujours).', { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 }) +
+        ' ' +
+        t('Tes gains de la prochaine partie : {x}. Si t\'attends, un point de plus à {cash} gagnés.', {
+          x: facteur(Math.round((apres / avant) * 100) / 100),
+          cash: formatMoney(gainsPourPoints(points + 1)),
+        })
       : t("Disponible à {min} gagnés au total. T'es rendu à {cash}.", { min: formatMoney(PRESTIGE_MIN_EARNED), cash: formatMoney(state.totalEarned) });
     prestigeBtn.disabled = !ready;
   }
@@ -1074,14 +1089,18 @@ saisonBtn.addEventListener('click', () => {
 function renderSaison(): void {
   const x = saisonA(state.lastTick);
   const f = feteA(state.lastTick);
-  const cle = `${x.id}/${f?.id ?? ''}`;
+  // Les 2 dernières minutes avant la fête : le compte à rebours.
+  const avant = Math.ceil(resteSaison(state.lastTick) - FETE_SECONDES);
+  const bientot = !f && avant <= 120 ? ` · ${t('FÊTE DANS {temps}', { temps: `${Math.floor(avant / 60)}:${String(avant % 60).padStart(2, '0')}` })}` : '';
+  const cle = `${x.id}/${f?.id ?? ''}${bientot}`;
   if (cle === lastSaison) return;
-  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom);
+  const debut = !!f && !lastSaison.includes(`/${f.id}`);
+  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom) + bientot;
   saisonBtn.classList.toggle('fete', !!f);
   rang?.setSaison(x.id);
   rang?.setFete(f?.id ?? null);
   // La fête commence : son invitation arrive tout de suite (pas au premier chargement).
-  const fe = f && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
+  const fe = debut && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
   if (fe && !evenement && state.tuto === TUTO_FINI) montrerEvenement(fe, Date.now());
   lastSaison = cle;
 }

@@ -276,6 +276,7 @@ main section:not(.ecran),
 /* Objectif */
 .goal-label {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   font: 400 22px/1 var(--pixel);

@@ -393,10 +393,35 @@ export function buyBuilding(state: GameState, id: BuildingId): boolean {
   return true;
 }
 
+// --- Le prochain objectif (la barre « PROCHAIN » en haut des listes) ---
+
+export interface Objectif {
+  /** Le nom à afficher (passe par t()). */
+  nom: string;
+  cout: number;
+  /** Où t'es rendu : ton cash, ou le total gagné pour le prestige. */
+  avoir: number;
+}
+
+export function prochainObjectif(state: GameState): Objectif | null {
+  if (!state.car.owned) return { nom: 'TON PREMIER BAZOU', cout: CAR_PRICE, avoir: state.cash };
+  const part = PARTS.find((p) => p.essential && !isRepaired(state, p.id));
+  if (part) return { nom: part.name, cout: part.cost, avoir: state.cash };
+  const b = nextBuilding(state);
+  if (b && !prestigeDebloque(state)) return { nom: b.name, cout: b.cost, avoir: state.cash };
+  if (!canPrestige(state)) return { nom: "Vendre l'empire", cout: PRESTIGE_MIN_EARNED, avoir: state.totalEarned };
+  return null;
+}
+
 // --- Prestige ---
 
+/** Le bâtiment qui débloque le prestige est acheté. */
+export function prestigeDebloque(state: GameState): boolean {
+  return state.buildings.arena;
+}
+
 export function canPrestige(state: GameState): boolean {
-  return state.buildings.arena && state.totalEarned >= PRESTIGE_MIN_EARNED;
+  return prestigeDebloque(state) && state.totalEarned >= PRESTIGE_MIN_EARNED;
 }
 
 /** Vend l'empire : tout repart à zéro sauf la réputation. Retourne les points gagnés. */

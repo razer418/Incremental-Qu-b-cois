@@ -222,3 +222,19 @@ describe('virgule flottante', () => {
     expect(s.cash).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe('le prochain objectif', () => {
+  it('suit la partie : bazou, pièces, bâtiments, prestige', async () => {
+    const { prochainObjectif } = await import('./state');
+    const s = newGame(0);
+    expect(prochainObjectif(s)?.nom).toBe('TON PREMIER BAZOU');
+    s.car.owned = true;
+    expect(prochainObjectif(s)?.nom).toBe('Batterie');
+    s.car.parts = { batterie: true, pneus: true, demarreur: true, freins: true };
+    expect(prochainObjectif(s)?.nom).toBe('Le garage à Ti-Guy');
+    s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: true };
+    expect(prochainObjectif(s)?.nom).toBe("Vendre l'empire");
+    s.totalEarned = 1e15;
+    expect(prochainObjectif(s)).toBeNull();
+  });
+});

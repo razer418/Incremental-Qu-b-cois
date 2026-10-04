@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { PAL } from './palette';
 
 // Les chars à retaper en 3D, un modèle à chaque annonce du Face-de-Bouc Marché.
@@ -46,8 +47,8 @@ interface Outils {
   haut: number;
   L: number;
   toit: number;
-  boite(w: number, h: number, d: number, c: number, x: number, y: number, z: number, o?: { rx?: number; ry?: number; rz?: number }): THREE.Mesh;
-  cyl(r: number, h: number, c: number, x: number, y: number, z: number, o?: { rx?: number; rz?: number; cone?: boolean }): THREE.Mesh;
+  boite(w: number, h: number, d: number, c: number, x: number, y: number, z: number, o?: { rx?: number; ry?: number; rz?: number }): void;
+  cyl(r: number, h: number, c: number, x: number, y: number, z: number, o?: { rx?: number; rz?: number; cone?: boolean }): void;
 }
 
 interface Modele {
@@ -376,27 +377,24 @@ export interface Char3D {
 export function creerChar(id: string): Char3D {
   const m = MODELES[id];
   const f = FORMES[m.forme];
-  const geos: THREE.BufferGeometry[] = [];
-  const mats: THREE.Material[] = [];
-  const cache = new Map<number, THREE.Material>();
-  const M = (c: number) => {
-    if (!cache.has(c)) {
-      const mat = new THREE.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0, specular: 0x000000 });
-      mats.push(mat);
-      cache.set(c, mat);
-    }
-    return cache.get(c)!;
-  };
-  const groupe = new THREE.Group();
-  const caisse = new THREE.Group();
-  groupe.add(caisse);
-  const poser = (parent: THREE.Object3D, geo: THREE.BufferGeometry, c: number, x: number, y: number, z: number, o: { rx?: number; ry?: number; rz?: number } = {}) => {
-    geos.push(geo);
-    const mesh = new THREE.Mesh(geo, M(c));
-    mesh.position.set(x, y, z);
-    mesh.rotation.set(o.rx ?? 0, o.ry ?? 0, o.rz ?? 0);
-    parent.add(mesh);
-    return mesh;
+  // Chaque char est fait de dizaines de boîtes, mais on les fusionne en 4 objets (caisse, rouille, roues, blocs) :
+  // sur un cell, c'est le nombre d'objets à dessiner qui coûte cher, pas les triangles.
+  type Tas = THREE.BufferGeometry[];
+  const fixe: Tas = [];
+  const rouilleTas: Tas = [];
+  const rouesTas: Tas = [];
+  const blocsTas: Tas = [];
+  const tmp = new THREE.Object3D();
+  const couleur = new THREE.Color();
+  const poser = (tas: Tas, geo: THREE.BufferGeometry, c: number, x: number, y: number, z: number, o: { rx?: number; ry?: number; rz?: number } = {}) => {
+    tmp.position.set(x, y, z);
+    tmp.rotation.set(o.rx ?? 0, o.ry ?? 0, o.rz ?? 0);
+    tmp.updateMatrix();
+    geo.applyMatrix4(tmp.matrix);
+    couleur.setHex(c);
+    const n = geo.attributes.position.count;
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n }, () => couleur.toArray()).flat(), 3));
+    tas.push(geo);
   };
   const r = m.roue ?? f.r;
   const bas = r * 0.95;
@@ -406,9 +404,8 @@ export function creerChar(id: string): Char3D {
     haut,
     L: f.L,
     toit: haut + cabH + 0.06,
-    boite: (w, h, d, c, x, y, z, o) => poser(caisse, new THREE.BoxGeometry(w, h, d), c, x, y, z, o),
-    cyl: (r, h, c, x, y, z, o = {}) =>
-      poser(caisse, o.cone ? new THREE.ConeGeometry(r, h, 6) : new THREE.CylinderGeometry(r, r, h, 8), c, x, y, z, o),
+    boite: (w, h, d, c, x, y, z, o) => poser(fixe, new THREE.BoxGeometry(w, h, d), c, x, y, z, o),
+    cyl: (r, h, c, x, y, z, o = {}) => poser(fixe, o.cone ? new THREE.ConeGeometry(r, h, 6) : new THREE.CylinderGeometry(r, r, h, 8), c, x, y, z, o),
   };
 
   // La caisse, la cabine (vitres + toit), les pare-chocs pis les phares.
@@ -429,33 +426,43 @@ export function creerChar(id: string): Char3D {
   m.detail?.(outils);
 
   // La rouille, partie quand c'est retapé.
-  const rouille = [
-    outils.boite(0.8, f.h * 0.5, 0.04, PAL.rouille, f.L * 0.25, bas + f.h * 0.4, 0.92),
-    outils.boite(0.5, f.h * 0.4, 0.04, PAL.rouille, -f.L * 0.3, bas + f.h * 0.55, 0.92),
-    outils.boite(0.6, 0.04, 0.5, PAL.rouille, f.L * 0.3, haut + 0.01, -0.3),
-  ];
+  poser(rouilleTas, new THREE.BoxGeometry(0.8, f.h * 0.5, 0.04), PAL.rouille, f.L * 0.25, bas + f.h * 0.4, 0.92);
+  poser(rouilleTas, new THREE.BoxGeometry(0.5, f.h * 0.4, 0.04), PAL.rouille, -f.L * 0.3, bas + f.h * 0.55, 0.92);
+  poser(rouilleTas, new THREE.BoxGeometry(0.6, 0.04, 0.5), PAL.rouille, f.L * 0.3, haut + 0.01, -0.3);
 
   // Roues, ou des blocs de béton tant que c'est pas retapé.
-  const roues: THREE.Mesh[] = [];
-  const blocs: THREE.Mesh[] = [];
   const ex = f.L / 2 - 0.85;
   for (const [x, z] of [[ex, 0.9], [ex, -0.9], [-ex, 0.9], [-ex, -0.9]]) {
-    roues.push(poser(groupe, new THREE.CylinderGeometry(r, r, 0.32, 8), PAL.pneu, x, r, z, { rx: Math.PI / 2 }));
-    blocs.push(poser(groupe, new THREE.BoxGeometry(0.5, bas, 0.5), PAL.gravier, x, bas / 2, z * 0.8));
+    poser(rouesTas, new THREE.CylinderGeometry(r, r, 0.32, 8), PAL.pneu, x, r, z, { rx: Math.PI / 2 });
+    poser(blocsTas, new THREE.BoxGeometry(0.5, bas, 0.5), PAL.gravier, x, bas / 2, z * 0.8);
   }
+
+  const mat = new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, shininess: 0, specular: 0x000000 });
+  const fondre = (tas: Tas) => {
+    const geo = mergeGeometries(tas)!;
+    tas.forEach((g) => g.dispose());
+    return new THREE.Mesh(geo, mat);
+  };
+  const groupe = new THREE.Group();
+  const caisse = new THREE.Group();
+  const rouille = fondre(rouilleTas);
+  const roues = fondre(rouesTas);
+  const blocs = fondre(blocsTas);
+  caisse.add(fondre(fixe), rouille);
+  groupe.add(caisse, roues, blocs);
 
   return {
     groupe,
     setFini(fini) {
-      roues.forEach((x) => (x.visible = fini));
-      blocs.forEach((b) => (b.visible = !fini));
-      rouille.forEach((x) => (x.visible = !fini));
+      roues.visible = fini;
+      blocs.visible = !fini;
+      rouille.visible = !fini;
       // Pas retapé : la caisse penche un peu, comme un vieux char abandonné.
       caisse.rotation.x = fini ? 0 : 0.04;
     },
     dispose() {
-      geos.forEach((g) => g.dispose());
-      mats.forEach((x) => x.dispose());
+      groupe.traverse((o) => o instanceof THREE.Mesh && o.geometry.dispose());
+      mat.dispose();
     },
   };
 }

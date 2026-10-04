@@ -531,7 +531,9 @@ export function creerChar(id: string): Char3D {
     boite(brisTas, capot * 0.7, 0.3, 1.0, PAL.tole, cx, haut + 0.15, 0);
     for (let i = 0; i < 4; i++) cyl(brisTas, 0.08, 0.2, PAL.pneu, cx - capot * 0.25 + i * capot * 0.17, haut + 0.38, 0.25);
     boite(brisTas, 0.3, 0.12, 0.3, PAL.chrome, cx, haut + 0.36, -0.3);
-    boite(brisTas, capot, 0.05, 1.7, m.couleur, cabX + cabL / 2 + 0.1, haut + capot * 0.45, 0, { rz: -1.2 });
+    // Le capot pivote sur sa charnière au pare-brise, le devant levé.
+    const a = 0.7;
+    boite(brisTas, capot, 0.05, 1.7, m.couleur, cabX + cabL / 2 + (capot / 2) * Math.cos(a), haut + (capot / 2) * Math.sin(a), 0, { rz: a });
   }
 
   // La rouille : 6 plaques qui partent une à une à chaque pièce posée.
@@ -550,8 +552,12 @@ export function creerChar(id: string): Char3D {
     cyl(finiTas, r, 0.32, PAL.pneu, x, r, z, { rx: Math.PI / 2 }, 10);
     cyl(finiTas, r * 0.55, 0.34, PAL.chrome, x, r, z, { rx: Math.PI / 2 }, 8);
     cyl(finiTas, r * 0.18, 0.36, PAL.pneu, x, r, z, { rx: Math.PI / 2 }, 6);
-    boite(brisTas, 0.5, bas, 0.5, PAL.gravier, x, bas / 2, z * 0.8);
+    // Deux blocs de béton gris empilés, cachés sous la caisse.
+    boite(brisTas, 0.4, bas / 2, 0.3, PAL.tole, x, bas / 4, z * 0.6);
+    boite(brisTas, 0.4, bas / 2, 0.3, PAL.tole, x, (bas * 3) / 4, z * 0.6, { ry: 0.3 });
   }
+  // Une vieille roue couchée à côté du char.
+  cyl(brisTas, r, 0.3, PAL.pneu, ex + r * 0.6, 0.15, 1.2 + r);
 
   const mat = new THREE.MeshPhongMaterial({ vertexColors: true, map: texture(), flatShading: true, shininess: 0, specular: 0x000000 });
   const verre = new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.45, shininess: 30 });

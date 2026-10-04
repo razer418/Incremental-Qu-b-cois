@@ -1245,6 +1245,30 @@ accordeonBtn.addEventListener('click', () => {
   pref.set('accordeon', accordeon ? 'on' : 'off');
 });
 
+// Descriptions : juste les phrases avec un chiffre d'effet (+1 $/s, x1,5), sans les jokes.
+const stat = (texte: string) =>
+  texte
+    .split(/(?<=\.)\s+/)
+    .filter((x) => /[+x]\s?\$?\d/.test(x))
+    .join(' ');
+const descriptions = ['upgrades', 'parts', 'articles', 'projets-liste'].flatMap((id) =>
+  [...$(id).querySelectorAll('small')].map((el) => ({ el, tout: el.textContent! })),
+);
+const descriptionsBtn = $<HTMLButtonElement>('descriptions');
+const setDescriptions = (stats: boolean) => {
+  for (const d of descriptions) {
+    d.el.textContent = stats ? stat(d.tout) : d.tout;
+    d.el.hidden = !d.el.textContent;
+  }
+  bascule(descriptionsBtn, !stats, 'TOUT', 'STATS');
+};
+setDescriptions(pref.get('descriptions') === 'stats');
+descriptionsBtn.addEventListener('click', () => {
+  const stats = descriptionsBtn.getAttribute('aria-pressed') === 'true';
+  setDescriptions(stats);
+  pref.set('descriptions', stats ? 'stats' : 'tout');
+});
+
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.
 const ecranBtn = $<HTMLButtonElement>('ecran-taille');
 const setEcran = (petit: boolean) => {

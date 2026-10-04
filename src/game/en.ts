@@ -584,4 +584,6 @@ export const EN: Record<string, string> = {
   "NEIGE": "SNOW",
   "GROS VENT": "WINDY",
   "BROUILLARD": "FOG",
+  "Descriptions": "Descriptions",
+  "TOUT": "ALL",
 };

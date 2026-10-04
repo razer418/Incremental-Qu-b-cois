@@ -932,7 +932,7 @@ function render(): void {
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
     look: state.look.choix,
-    chars: PROJETS.filter((p) => state.projets[p.id]).map((p) => ({ id: annonceDe(state, p.id).id, fini: projetFini(state, p) })),
+    chars: PROJETS.filter((p) => state.projets[p.id]).map((p) => ({ id: annonceDe(state, p.id).id, progres: state.projets[p.id].length / p.pieces.length })),
   };
   lieuxEl.hidden = !rang;
   for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];

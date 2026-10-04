@@ -167,7 +167,7 @@ export interface CarLook {
   /** Le look posé (voir game/look.ts). */
   look: ChoixLook;
   /** Les chars à retaper achetés (id de l'annonce), stationnés dans la cour. */
-  chars: { id: string; fini: boolean }[];
+  chars: { id: string; progres: number }[];
 }
 
 export type Lieu = 'maison' | 'magasin' | BuildingId;
@@ -488,7 +488,7 @@ export function createRang(
     { x: ORIGINE.garage - 6.4, z: 3.0, ry: 0.4 },
   ];
   const chars3d = new Map<string, { id: string; c: Char3D }>();
-  const placer = (cle: string, id: string, p: { x: number; z: number; ry: number }, fini: boolean) => {
+  const placer = (cle: string, id: string, p: { x: number; z: number; ry: number }, progres: number) => {
     let x = chars3d.get(cle);
     if (!x) {
       x = { id, c: creerChar(id) };
@@ -498,19 +498,19 @@ export function createRang(
     }
     x.c.groupe.position.set(p.x, 0, p.z);
     x.c.groupe.rotation.y = p.ry;
-    x.c.setFini(fini);
+    x.c.setProgres(progres);
   };
   const majChars = (liste: CarLook['chars']) => {
     const cles = new Set<string>();
     liste.slice(0, COUR.length).forEach((x, i) => {
-      placer(`cour:${x.id}`, x.id, COUR[i], x.fini);
+      placer(`cour:${x.id}`, x.id, COUR[i], x.progres);
       cles.add(`cour:${x.id}`);
     });
     liste
-      .filter((x) => !x.fini)
+      .filter((x) => x.progres < 1)
       .slice(0, GARAGE.length)
       .forEach((x, i) => {
-        placer(`garage:${x.id}`, x.id, GARAGE[i], false);
+        placer(`garage:${x.id}`, x.id, GARAGE[i], x.progres);
         cles.add(`garage:${x.id}`);
       });
     for (const [cle, x] of chars3d)

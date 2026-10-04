@@ -232,9 +232,11 @@ describe('le prochain objectif', () => {
     expect(prochainObjectif(s)?.nom).toBe('Batterie');
     s.car.parts = { batterie: true, pneus: true, demarreur: true, freins: true };
     expect(prochainObjectif(s)?.nom).toBe('Le garage à Ti-Guy');
-    s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: true };
+    s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: false };
     expect(prochainObjectif(s)?.nom).toBe("Vendre l'empire");
     s.totalEarned = 1e15;
+    expect(prochainObjectif(s)?.nom).toBe("L'aréna");
+    s.buildings.arena = true;
     expect(prochainObjectif(s)).toBeNull();
   });
 });

@@ -49,6 +49,8 @@ export interface GameState {
   minijeux: Record<string, number>;
   /** L'expo de chars : la dernière saison où t'es inscrit, pis tes trophées de 1re place. Gardé au prestige. */
   expo: { periode: number; trophees: number };
+  /** Le cadeau du jour à Réjean : la dernière journée (« 2026-10-04 ») pis combien de jours de suite. Gardé au prestige. */
+  cadeau: { jour: string; serie: number };
   lastTick: number;
 }
 
@@ -97,6 +99,7 @@ export function newGame(now: number): GameState {
     look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun', toit: 'aucun', antenne: 'aucune' } },
     minijeux: {},
     expo: { periode: -1, trophees: 0 },
+    cadeau: { jour: '', serie: 0 },
     lastTick: now,
   };
 }
@@ -407,17 +410,16 @@ export function prochainObjectif(state: GameState): Objectif | null {
   if (!state.car.owned) return { nom: 'TON PREMIER BAZOU', cout: CAR_PRICE, avoir: state.cash };
   const part = PARTS.find((p) => p.essential && !isRepaired(state, p.id));
   if (part) return { nom: part.name, cout: part.cost, avoir: state.cash };
+  if (prestigeDebloque(state) && !canPrestige(state)) return { nom: "Vendre l'empire", cout: PRESTIGE_MIN_EARNED, avoir: state.totalEarned };
   const b = nextBuilding(state);
-  if (b && !prestigeDebloque(state)) return { nom: b.name, cout: b.cost, avoir: state.cash };
-  if (!canPrestige(state)) return { nom: "Vendre l'empire", cout: PRESTIGE_MIN_EARNED, avoir: state.totalEarned };
-  return null;
+  return b ? { nom: b.name, cout: b.cost, avoir: state.cash } : null;
 }
 
 // --- Prestige ---
 
-/** Le bâtiment qui débloque le prestige est acheté. */
+/** Le bâtiment qui débloque le prestige (le bar) est acheté. */
 export function prestigeDebloque(state: GameState): boolean {
-  return state.buildings.arena;
+  return state.buildings.bar;
 }
 
 export function canPrestige(state: GameState): boolean {
@@ -437,6 +439,7 @@ export function prestige(state: GameState, now: number): number {
     stats: state.stats,
     look: state.look,
     expo: state.expo,
+    cadeau: state.cadeau,
     tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,

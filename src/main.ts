@@ -9,6 +9,7 @@ import { createSons } from './platform/sons';
 import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
+import { CADEAUX, cadeauDuJour } from './game/cadeau';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './game/car';
@@ -121,6 +122,7 @@ function showMessage(text: string, titre = '', icon = ''): void {
   $('message-titre').textContent = titre;
   $('message-icone').innerHTML = icon;
   $('message-icone').hidden = !icon;
+  $('message-doubler').hidden = true;
   if (!messageDialog.open) messageDialog.showModal();
 }
 
@@ -372,13 +374,6 @@ codeOk.addEventListener('click', async () => {
   render();
 });
 
-const offline = applyOffline(state, Date.now());
-if (offline.gained >= 0.01 && offline.seconds >= 60) {
-  showMessage(
-    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }) +
-      (offline.seconds >= OFFLINE_CAP_SECONDS ? ' ' + t('La gang arrête après {max}, reviens plus souvent!', { max: formatDuration(OFFLINE_CAP_SECONDS) }) : ''),
-  );
-}
 
 // Achat en lot : x1, x10 ou MAX, comme dans les grands jeux du genre.
 const LOTS = [1, 10, Infinity];
@@ -472,6 +467,30 @@ qClaim.addEventListener('click', () => {
 const PUBS = import.meta.env.VITE_PUBS !== 'off';
 const sansPubs = (): boolean => state.noAds || !PUBS;
 boutiqueEl.hidden = !PUBS;
+
+const offline = applyOffline(state, Date.now());
+if (offline.gained >= 0.01 && offline.seconds >= 60) {
+  showMessage(
+    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }) +
+      (offline.seconds >= OFFLINE_CAP_SECONDS ? ' ' + t('La gang arrête après {max}, reviens plus souvent!', { max: formatDuration(OFFLINE_CAP_SECONDS) }) : ''),
+  );
+  // Doubler ce que la gang a ramassé : une pub récompensée, jamais forcée (gratuit avec « pas de pubs »).
+  const doubler = $<HTMLButtonElement>('message-doubler');
+  doubler.textContent = t(sansPubs() ? '[ DOUBLER ]' : '[ PUB : DOUBLER ]');
+  doubler.hidden = false;
+  doubler.onclick = async () => {
+    doubler.disabled = true;
+    if (!sansPubs() && !(await ads.showRewarded())) {
+      doubler.disabled = false;
+      return;
+    }
+    earn(state, offline.gained);
+    sons.jouer('achat');
+    save(localStorage, state);
+    showMessage(t('Doublé! La gang a ramassé {cash} de plus.', { cash: formatMoney(offline.gained) }));
+    render();
+  };
+}
 
 // Boost x2 : jamais forcé, toujours sur demande.
 boostBtn.addEventListener('click', async () => {
@@ -970,13 +989,13 @@ function renderEmpire(roule: boolean): void {
     batName.textContent = t(b.name);
     batDesc.textContent = t(b.description);
     const n = UPGRADES.filter((u) => u.requires === b.id).length;
-    $('bat-stat').textContent = t(b.id === 'arena' ? 'Débloque {n} achats pis le prestige' : 'Débloque {n} achats', { n });
+    $('bat-stat').textContent = t(b.id === 'bar' ? 'Débloque {n} achats pis le prestige' : 'Débloque {n} achats', { n });
     batCost.textContent = formatMoney(b.cost);
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
   }
   prestigeEl.hidden = !prestigeDebloque(state);
-  if (state.buildings.arena) {
+  if (prestigeDebloque(state)) {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
     // L'aperçu : de combien tes gains montent, pis quand tu gagnes le point suivant si t'attends.
@@ -1249,6 +1268,22 @@ function loop(): void {
   render();
   renderToast(now);
   pastilles();
+  // Le cadeau du jour, une fois le tuto fini pis les autres messages fermés.
+  if (state.tuto === TUTO_FINI && !messageDialog.open) {
+    const c = cadeauDuJour(state, now);
+    if (c) {
+      sons.jouer('quete');
+      save(localStorage, state);
+      const article = t(c.article.name);
+      showMessage(
+        t('Réjean : « Cadeau de la maison! » {article} dans ton sac.', { article }) +
+          (c.serie > 1 ? ' ' + t('{n} jours de suite!', { n: c.serie }) : '') +
+          (c.serie < CADEAUX.length ? ' ' + t('Reviens demain pour un plus gros cadeau.') : '') +
+          (c.cash > 0 ? ' ' + t('Ton sac est plein : Réjean te donne {cash} à la place.', { cash: formatMoney(c.cash) }) : ''),
+        t('CADEAU DU JOUR'),
+      );
+    }
+  }
 }
 
 // Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.

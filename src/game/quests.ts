@@ -1,4 +1,4 @@
-import { PRESTIGE_MIN_EARNED, type BuildingId } from './buildings';
+import { EMPIRE_GOAL, type BuildingId } from './buildings';
 
 export interface Character {
   id: string;
@@ -198,7 +198,7 @@ export const QUESTS: readonly Quest[] = [
     ask: "Mon gars, un empire! Mais t'as l'air fatigué. Vends toute un jour, pis recommence plus grand.",
     thanks: "Je l'ai toujours dit que t'irais loin.",
     goal: 'Gagner 1 T $ au total',
-    objective: { kind: 'earned', target: PRESTIGE_MIN_EARNED },
+    objective: { kind: 'earned', target: EMPIRE_GOAL },
     reward: 40_000_000_000,
   },
 ];

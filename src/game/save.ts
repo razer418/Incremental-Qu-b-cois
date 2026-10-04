@@ -62,6 +62,10 @@ export function load(storage: Storage, now: number): GameState {
         periode: Number.isInteger(data.expo?.periode) ? data.expo!.periode : -1,
         trophees: num(data.expo?.trophees),
       },
+      cadeau: {
+        jour: typeof data.cadeau?.jour === 'string' ? data.cadeau.jour : '',
+        serie: num(data.cadeau?.serie),
+      },
       minijeux: Object.fromEntries(Object.entries(data.minijeux ?? {}).filter(([, v]) => typeof v === 'number')),
       // Une partie déjà commencée saute le tuto.
       tuto: Number.isInteger(data.tuto) ? data.tuto! : (data.taps ?? 0) > 0 ? TUTO_FINI : 0,

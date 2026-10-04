@@ -3,7 +3,7 @@
 // à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
 // pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
-import { BUILDINGS, type BuildingId } from './buildings';
+import { BUILDINGS, EMPIRE_GOAL, type BuildingId } from './buildings';
 import { CAR_PRICE, PARTS } from './car';
 import { PROJETS } from './chars';
 import { ARTICLES } from './magasin';
@@ -41,7 +41,7 @@ import {
 
 const PAR_FORCE = [...ARTICLES].sort((a, b) => b.factor - a.factor);
 
-export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige';
+export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige' | 'empire';
 
 /** Coût d'un char à retaper qui reste à payer (achat + pièces). */
 function resteProjet(s: GameState, id: string): number {
@@ -132,8 +132,10 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     if (!temps.bazou && s.car.owned) temps.bazou = t;
     if (!temps.roule && carRuns(s)) temps.roule = t;
     for (const b of BUILDINGS) if (!temps[b.id] && s.buildings[b.id]) temps[b.id] = t;
-    if (!temps.prestige && canPrestige(s)) {
-      temps.prestige = t;
+    // Le premier prestige possible, pis le gros (l'aréna pis 1 T $ gagnés) où il vend.
+    if (!temps.prestige && canPrestige(s)) temps.prestige = t;
+    if (s.buildings.arena && s.totalEarned >= EMPIRE_GOAL) {
+      temps.empire = t;
       break;
     }
   }

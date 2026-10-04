@@ -623,4 +623,12 @@ export const EN: Record<string, string> = {
   "PRÊT!": "READY!",
   "FÊTE DANS {temps}": "PARTY IN {temps}",
   "Tes gains de la prochaine partie : {x}. Si t'attends, un point de plus à {cash} gagnés.": "Your earnings next run: {x}. If you wait, one more point at {cash} earned.",
+  "[ DOUBLER ]": "[ DOUBLE IT ]",
+  "[ PUB : DOUBLER ]": "[ AD: DOUBLE IT ]",
+  "Doublé! La gang a ramassé {cash} de plus.": "Doubled! The gang picked up {cash} more.",
+  "Réjean : « Cadeau de la maison! » {article} dans ton sac.": "Réjean: \"On the house!\" {article} in your bag.",
+  "{n} jours de suite!": "{n} days in a row!",
+  "Reviens demain pour un plus gros cadeau.": "Come back tomorrow for a bigger gift.",
+  "Ton sac est plein : Réjean te donne {cash} à la place.": "Your bag is full: Réjean gives you {cash} instead.",
+  "CADEAU DU JOUR": "DAILY GIFT",
 };

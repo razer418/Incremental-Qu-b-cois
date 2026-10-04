@@ -777,6 +777,15 @@ dialog .message-titre {
   color: var(--gold);
 }
 
+.doubler {
+  display: block;
+  margin: 0 auto 12px;
+}
+dialog .doubler {
+  color: var(--bg);
+  background: var(--gold);
+}
+
 dialog::backdrop {
   background: rgb(0 0 0 / 0.6);
 }

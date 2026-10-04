@@ -48,8 +48,10 @@ export const BUILDINGS: readonly Building[] = [
   },
 ];
 
-/** Prestige : vendre l'empire pis repartir avec de la réputation. */
-export const PRESTIGE_MIN_EARNED = 1_000_000_000_000;
+/** Prestige : vendre l'empire pis repartir avec de la réputation. Débloqué avec le bar, dès 2 points. */
+export const PRESTIGE_MIN_EARNED = 160_000_000_000;
+/** Le « gros » prestige que la quête de ta mère vise. */
+export const EMPIRE_GOAL = 1_000_000_000_000;
 export const PRESTIGE_BONUS_PER_POINT = 0.1;
 
 /** Points de réputation gagnés pour une partie : 5 points à 1 T $, 10 points à 4 T $ (racine carrée). */

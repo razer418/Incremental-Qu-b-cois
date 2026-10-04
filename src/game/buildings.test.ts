@@ -39,7 +39,7 @@ describe('le garage pis le concessionnaire', () => {
     const s = avecBazouQuiRoule(100_000_000_000);
     expect(buyBuilding(s, 'concession')).toBe(false);
     expect(buyBuilding(s, 'garage')).toBe(true);
-    expect(s.cash).toBe(99_997_300_000);
+    expect(s.cash).toBe(99_994_300_000);
     expect(nextBuilding(s)?.id).toBe('cabane');
     expect(buyBuilding(s, 'concession')).toBe(false);
     for (const id of ['cabane', 'concession', 'bar', 'arena'] as const) expect(buyBuilding(s, id)).toBe(true);

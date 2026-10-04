@@ -132,16 +132,16 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'garage',
     giver: 'tiguy',
-    ask: "J'ai une idée de fou : on ouvre un garage. Mais faut du cash. Mettons... 2,7 millions de gagné.",
+    ask: "J'ai une idée de fou : on ouvre un garage. Mais faut du cash. Mettons... 5,7 millions de gagné.",
     thanks: "On a le cash! Astheure, faut juste l'acheter, ce garage-là.",
-    goal: 'Gagner 2,7 M $ au total',
-    objective: { kind: 'earned', target: 2_700_000 },
+    goal: 'Gagner 5,7 M $ au total',
+    objective: { kind: 'earned', target: 5_700_000 },
     reward: 100_000,
   },
   {
     id: 'ouverture',
     giver: 'tiguy',
-    ask: "Le vieux garage au coin du rang est à vendre. 2,7 millions. On le prend-tu?",
+    ask: "Le vieux garage au coin du rang est à vendre. 5,7 millions. On le prend-tu?",
     thanks: "On est ouverts! J'ai déjà accroché le calendrier de pneus.",
     goal: 'Acheter le garage',
     objective: { kind: 'building', id: 'garage' },
@@ -159,7 +159,7 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'sucres',
     giver: 'oncle',
-    ask: "Ma vieille cabane à sucre dort dans le bois depuis dix ans. 20 millions pis a l'est à toé, mais faut la faire bouillir!",
+    ask: "Ma vieille cabane à sucre dort dans le bois depuis dix ans. 60 millions pis a l'est à toé, mais faut la faire bouillir!",
     thanks: "Sens-tu ça? C'est l'odeur du printemps, mon neveu.",
     goal: 'Acheter la cabane à sucre',
     objective: { kind: 'building', id: 'cabane' },
@@ -168,7 +168,7 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'heritage',
     giver: 'gagnon',
-    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 200 millions, pis y'é à toé.",
+    ask: "J'prends ma retraite. Mon terrain sur le bord de la route ferait un beau lot de chars... 450 millions, pis y'é à toé.",
     thanks: "« Chez Gagnon pis fils ». J'ai pas de fils, mais toé, t'es comme.",
     goal: 'Acheter le concessionnaire',
     objective: { kind: 'building', id: 'concession' },
@@ -177,7 +177,7 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'habitues',
     giver: 'rollande',
-    ask: "Trente ans que je sers des draffes au village. Mon bar est à vendre, 4 milliards, mais tu gardes la table de pool!",
+    ask: "Trente ans que je sers des draffes au village. Mon bar est à vendre, 22 milliards, mais tu gardes la table de pool!",
     thanks: "Les habitués t'ont adopté. Ça veut dire qu'y vont te demander du crédit.",
     goal: 'Acheter le bar du village',
     objective: { kind: 'building', id: 'bar' },
@@ -186,7 +186,7 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'hockey',
     giver: 'maire',
-    ask: "La ville peut pu payer l'aréna. 25 milliards pis le hockey du samedi est sauvé. Le village compte sur toé!",
+    ask: "La ville peut pu payer l'aréna. 70 milliards pis le hockey du samedi est sauvé. Le village compte sur toé!",
     thanks: "Le conseil va te nommer citoyen de l'année. Y'a même pas eu de vote.",
     goal: "Acheter l'aréna",
     objective: { kind: 'building', id: 'arena' },

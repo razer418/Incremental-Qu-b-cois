@@ -73,6 +73,7 @@ import { cite, facteur, langue, t } from './game/i18n';
 import { createAtelier } from './atelier';
 import { CATEGORIES, possede, LOOK } from './game/look';
 import { createMiniJeux } from './minijeux-ui';
+import { createMecanique } from './mecanique-ui';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -1204,6 +1205,17 @@ function renderEvenement(): void {
 
 // --- Chars à retaper ---
 
+// Le mini-jeu de mécanique, pour poser les pièces des chars à retaper (MENU > OPTIONS pour le couper).
+let apresMecanique: ((rates: number) => void) | null = null;
+const mecanique = createMecanique({
+  dialog: $<HTMLDialogElement>('mecanique'),
+  fini: (_piece, rates) => {
+    apresMecanique?.(rates);
+    apresMecanique = null;
+  },
+});
+const mecaniqueOn = () => pref.get('mecanique') !== 'off';
+
 // Chaque annonce du Face-de-Bouc Marché a sa ligne, pis ses pièces en dessous une fois le char à toé.
 const projetRows = ANNONCES.map((a) => {
   const p = getProjet(a.projet)!;
@@ -1234,7 +1246,7 @@ const projetRows = ANNONCES.map((a) => {
     pli.querySelector('strong')!.textContent = t(x.nom);
     pli.querySelector('.stat')!.textContent = t('Pièce {i} sur {n} du {x}', { i: i + 1, n: p.pieces.length, x: facteur(p.bonus) });
     const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
-    pbtn.addEventListener('click', () => {
+    const poser = (rates = 0) => {
       const avant = currentRate(state);
       if (!reparerProjet(state, p.id, x.id)) return;
       if (projetFini(state, p)) celebrerTaux(avant, true);
@@ -1242,7 +1254,14 @@ const projetRows = ANNONCES.map((a) => {
       sons.char(a.id, projetFini(state, p) ? 'fini' : 'piece');
       save(localStorage, state);
       if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(a.nom), x: facteur(p.bonus) }));
+      else if (mecaniqueOn()) showMessage(t(rates ? "{piece} : c'est fait. Un peu croche, mais ça tient." : "{piece} : c'est fait. Du travail de pro!", { piece: t(x.nom) }));
       render();
+    };
+    // Avec le mini-jeu de mécanique, la pièce se paye quand elle est posée.
+    pbtn.addEventListener('click', () => {
+      if (!assez(state, coutPiece(state, p.id, x.cost))) return;
+      if (mecaniqueOn() && mecanique.lancer(x.id, t(x.nom))) apresMecanique = poser;
+      else poser();
     });
     return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
   });
@@ -1517,6 +1536,13 @@ queteTexteBtn.addEventListener('click', () => {
   const on = $('quest').classList.contains('sans-texte');
   setQueteTexte(on);
   pref.set('quete-texte', on ? 'on' : 'off');
+});
+
+const mecaniqueBtn = $<HTMLButtonElement>('mecanique-opt');
+bascule(mecaniqueBtn, mecaniqueOn());
+mecaniqueBtn.addEventListener('click', () => {
+  pref.set('mecanique', mecaniqueOn() ? 'off' : 'on');
+  bascule(mecaniqueBtn, mecaniqueOn());
 });
 
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.

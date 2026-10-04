@@ -5,6 +5,7 @@ import { EVENEMENTS, tirerEvenement } from './evenements';
 import { annonceDe, buyProjet, coutPiece, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
 import { MODELES } from '../scene/chars3d';
+import { RECETTES } from './mecanique';
 import { SONS_CHARS } from '../platform/sons';
 
 const memoire = () => {
@@ -90,6 +91,10 @@ describe('Face-de-Bouc Marché', () => {
     expect(Object.keys(SONS_CHARS).sort()).toEqual(ids);
     expect(new Set(Object.values(SONS_CHARS).map((x) => JSON.stringify(x))).size).toBe(ids.length);
     expect(new Set(Object.values(MODELES).map((x) => `${x.forme}:${x.couleur}:${x.detail}`)).size).toBe(ids.length);
+  });
+
+  it('chaque pièce a son mini-jeu de mécanique', () => {
+    for (const p of PROJETS) for (const x of p.pieces) expect(RECETTES[x.id]?.length).toBeGreaterThan(1);
   });
 
   it('chaque annonce coûte le même total que le char d’origine', () => {

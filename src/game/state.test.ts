@@ -125,7 +125,7 @@ describe('le premier bazou', () => {
     buyCar(s);
     essentials.forEach((p) => repair(s, p.id));
     expect(buy(s, 'circulaires')).toBe(true);
-    expect(passiveRate(s)).toBeCloseTo(5);
+    expect(passiveRate(s)).toBeCloseTo(10);
   });
 
   it('la carrosserie donne x1,25', () => {

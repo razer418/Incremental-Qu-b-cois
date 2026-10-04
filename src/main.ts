@@ -26,6 +26,7 @@ import {
   nextBuilding,
   prestige,
   applyOffline,
+  OFFLINE_CAP_SECONDS,
   claimQuest,
   questProgress,
   buyMany,
@@ -373,7 +374,8 @@ codeOk.addEventListener('click', async () => {
 const offline = applyOffline(state, Date.now());
 if (offline.gained >= 0.01 && offline.seconds >= 60) {
   showMessage(
-    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }),
+    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }) +
+      (offline.seconds >= OFFLINE_CAP_SECONDS ? ' ' + t('La gang arrête après {max}, reviens plus souvent!', { max: formatDuration(OFFLINE_CAP_SECONDS) }) : ''),
   );
 }
 

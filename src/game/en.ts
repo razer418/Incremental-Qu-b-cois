@@ -213,6 +213,7 @@ export const EN: Record<string, string> = {
   "Remplacer ta partie par celle du code?": "Replace your game with the one in the code?",
   "Partie chargée!": "Game loaded!",
   "Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.": "While you were gone ({temps}), your crew made {cash}.",
+  "La gang arrête après {max}, reviens plus souvent!": "The crew stops after {max}, come back more often!",
   "Vroum! Ton bazou part du premier coup (ou presque). T'es maintenant livreur de pizza, pis les jobs motorisées sont débloquées.": "Vroom! Your beater starts on the first try (almost). You're a pizza delivery guy now, and driving jobs are unlocked.",
   "« Pas de pubs » ({prix}) va s'acheter dans l'app Android, via Google Play. Sur le web, y'a juste des pubs de démo.": "“No ads” ({prix}) will be sold in the Android app, through Google Play. On the web, there are only demo ads.",
   "Merci! Le boost est gratuit pour toujours, pis y aura pu jamais de pubs.": "Thanks! The boost is free forever, and there'll never be ads again.",

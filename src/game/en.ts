@@ -572,4 +572,16 @@ export const EN: Record<string, string> = {
   "GRAND": "BIG",
   "PETIT": "SMALL",
   "Touche un titre pour replier sa catégorie, pis le nom d'un achat pour rapetisser sa ligne.": "Tap a title to collapse its category, and an item's name to shrink its row.",
+  // L'heure pis la météo
+  "Jour {j} de la saison, {h}, {moment}. Météo : {meteo}. Une journée dure 2 minutes.": "Day {j} of the season, {h}, {moment}. Weather: {meteo}. A day lasts 2 minutes.",
+  "LE MATIN": "MORNING",
+  "MIDI": "NOON",
+  "L'APRÈS-MIDI": "AFTERNOON",
+  "LE SOIR": "EVENING",
+  "LA NUIT": "NIGHT",
+  "BEAU TEMPS": "CLEAR",
+  "PLUIE": "RAIN",
+  "NEIGE": "SNOW",
+  "GROS VENT": "WINDY",
+  "BROUILLARD": "FOG",
 };

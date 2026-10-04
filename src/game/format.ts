@@ -36,7 +36,7 @@ export function formatNombre(n: number): string {
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h} h ${m} min`;
+  if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`;
   if (m > 0) return `${m} min`;
   return `${Math.floor(seconds)} s`;
 }

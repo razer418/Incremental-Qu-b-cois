@@ -614,4 +614,8 @@ export const EN: Record<string, string> = {
   "sur tous tes gains": "on all your earnings",
   "Tapes": "Taps",
   "Passif": "Passive",
+  "Pour que ton bazou roule": "Needed to get your car running",
+  "Pièce {i} sur {n} du {x}": "Part {i} of {n} for the {x}",
+  "Débloque {n} achats pis le prestige": "Unlocks {n} purchases and prestige",
+  "Débloque {n} achats": "Unlocks {n} purchases",
 };

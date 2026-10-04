@@ -1287,16 +1287,11 @@ h2[role='button']::before {
 .replie h2[role='button']::before {
   content: '+ ';
 }
-section.replie > :not(h2, .garage-head, .achats-head) {
+section.replie {
   display: none;
 }
 section.replie h2 {
   margin-bottom: 0;
-}
-.replie h2[data-prets]:not([data-prets='0'])::after {
-  content: ' \2022  ' attr(data-prets);
-  font-size: 22px;
-  color: var(--cash);
 }
 
 /* Lignes compactes : touche le nom, la description s'en va pis tout rapetisse. */
@@ -1330,4 +1325,97 @@ section.replie h2 {
 .reglages .astuce {
   font: 400 16px/1.35 var(--mono);
   color: var(--muted);
+}
+
+/* Barre d'icônes des catégories : allumée = ouverte. */
+.cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 60px;
+  padding: 6px 2px 4px;
+  font: 400 15px/1 var(--pixel);
+  color: var(--muted);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  cursor: pointer;
+}
+.cat[hidden] {
+  display: none;
+}
+.cat svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.5;
+}
+.cat[aria-pressed='true'] {
+  color: var(--gold);
+  background: var(--surface);
+  border-color: var(--gold);
+}
+.cat[aria-pressed='true'] svg {
+  opacity: 1;
+}
+/* Fermée avec des choses prêtes : petit chiffre vert dans le coin, sans clignoter. */
+.cat[aria-pressed='false'][data-prets]:not([data-prets='0'])::after {
+  content: attr(data-prets);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  padding: 1px 3px;
+  font: 400 14px/1 var(--pixel);
+  color: var(--bg);
+  background: var(--cash);
+}
+
+/* L'inventaire, sous LIVRER : petit pis serré. */
+.sac {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: 400 24px/1 var(--pixel);
+  color: var(--gold);
+  cursor: pointer;
+}
+.sac svg {
+  width: 30px;
+  height: 30px;
+}
+.sac[aria-expanded='false'] {
+  opacity: 0.75;
+}
+.inv-line {
+  margin: 0 0 6px;
+  font: 400 18px/1.35 var(--mono);
+  color: var(--muted);
+}
+#inv-corps[hidden],
+.inv-line[hidden] {
+  display: none;
+}
+.inventaire .upgrade {
+  padding: 6px 10px;
+}
+.inventaire .buy {
+  min-width: 0;
+  font-size: 20px;
+}
+
+/* Quête sans texte : juste l'objectif, la barre pis la récompense. */
+.quest.sans-texte .portrait,
+.quest.sans-texte .quest-who,
+.quest.sans-texte .quest-line {
+  display: none;
 }

@@ -519,6 +519,8 @@ for (const a of ARTICLES) {
   btn.addEventListener('click', () => {
     if (buyArticle(state, a.id)) {
       sons.jouer('achat');
+      // Le buff part pas tout de suite : Réjean le dit.
+      mLine.textContent = cite(t("Je te mets ça dans ton sac. Ça part quand tu t'en sers dans ton inventaire."));
       save(localStorage, state);
       render();
     }
@@ -540,9 +542,22 @@ function renderMagasin(): void {
   }
 }
 
-// L'inventaire : ce que t'as acheté chez Réjean, à fumer, boire ou manger à la maison.
-const inventaireEl = $('inventaire');
+// L'inventaire, sous LIVRER : ce que t'as acheté chez Réjean, à fumer, boire ou manger n'importe quand.
 const invLine = $('inv-line');
+let derniereLigne = '';
+// Le sac à dos ouvre pis ferme l'inventaire (gardé sur l'appareil).
+const sacBtn = $('sac');
+$('sac-icone').innerHTML = icone('sac');
+const ouvrirSac = (oui: boolean) => {
+  sacBtn.setAttribute('aria-expanded', String(oui));
+  $('inv-corps').hidden = !oui;
+};
+ouvrirSac(pref.get('sac') !== 'ferme');
+sacBtn.addEventListener('click', () => {
+  const oui = $('inv-corps').hidden;
+  ouvrirSac(oui);
+  pref.set('sac', oui ? 'ouvert' : 'ferme');
+});
 const invRows = new Map<string, { li: HTMLElement; btn: HTMLButtonElement; level: HTMLElement }>();
 for (const a of ARTICLES) {
   const li = document.createElement('li');
@@ -550,15 +565,13 @@ for (const a of ARTICLES) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(a.name)} <span class="level"></span></strong>
-      <small>${t(a.description)}</small>
     </div>
     <button type="button" class="buy">${t(a.verbe)}</button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (useArticle(state, a.id)) {
       sons.jouer('achat');
-      invLine.hidden = false;
-      invLine.textContent = t(a.ligne);
+      derniereLigne = t(a.ligne);
       save(localStorage, state);
       render();
     }
@@ -567,8 +580,11 @@ for (const a of ARTICLES) {
   $('inventaire-liste').append(li);
 }
 function renderInventaire(): void {
-  inventaireEl.hidden = Object.keys(state.inventaire).length === 0 || (!!rang && lieu !== 'maison');
-  if (inventaireEl.hidden) return;
+  const vide = Object.keys(state.inventaire).length === 0;
+  invLine.textContent = vide ? t('Ton sac est vide. Passe voir Réjean au magasin.') : derniereLigne;
+  invLine.hidden = !invLine.textContent;
+  const total = Object.values(state.inventaire).reduce((a, b) => a + b, 0);
+  $('sac-n').textContent = total > 0 ? `x${total}` : '';
   for (const a of ARTICLES) {
     const row = invRows.get(a.id)!;
     const n = state.inventaire[a.id] ?? 0;
@@ -1242,30 +1258,57 @@ const touchable = (el: HTMLElement, f: () => void) => {
 
 const colListes = document.querySelector<HTMLElement>('.col-listes')!;
 const titres = [...colListes.querySelectorAll<HTMLElement>('h2')];
+// Une icône par catégorie, en haut des listes : touche pour ouvrir ou fermer.
+const COURTS: Record<string, string> = {
+  garage: 'BAZOU',
+  look: 'LOOK',
+  minijeux: 'JEUX',
+  empire: 'EMPIRE',
+  projets: 'CHARS',
+  achats: 'ACHATS',
+  boutique: 'BOUTIQUE',
+};
+const cats = new Map<HTMLElement, HTMLButtonElement>();
+for (const h2 of titres) {
+  const s = h2.closest('section')!;
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'cat';
+  b.innerHTML = `${icone(s.id)}<span></span>`;
+  b.querySelector('span')!.textContent = t(COURTS[s.id] ?? h2.textContent!);
+  b.setAttribute('aria-label', h2.textContent!);
+  b.addEventListener('click', () => basculer(h2));
+  $('cats').append(b);
+  cats.set(h2, b);
+}
 const plier = (h2: HTMLElement, replie: boolean) => {
   const s = h2.closest('section')!;
   s.classList.toggle('replie', replie);
   h2.setAttribute('aria-expanded', String(!replie));
+  cats.get(h2)!.setAttribute('aria-pressed', String(!replie));
   if (replie) replies.add(s.id);
   else replies.delete(s.id);
 };
 let accordeon = pref.get('accordeon') === 'on';
+function basculer(h2: HTMLElement): void {
+  const ouvrir = h2.closest('section')!.classList.contains('replie');
+  if (ouvrir && accordeon) titres.forEach((x) => plier(x, true));
+  plier(h2, !ouvrir);
+  garderPlace();
+}
 for (const h2 of titres) {
   plier(h2, replies.has(h2.closest('section')!.id));
-  touchable(h2, () => {
-    const ouvrir = h2.closest('section')!.classList.contains('replie');
-    if (ouvrir && accordeon) titres.forEach((x) => plier(x, true));
-    plier(h2, !ouvrir);
-    garderPlace();
-  });
+  touchable(h2, () => basculer(h2));
 }
 
-// Catégorie repliée : un petit chiffre discret dit combien de choses sont prêtes (mini-jeu, achat).
+// Un petit chiffre discret dit combien de choses sont prêtes (mini-jeu, achat) dans une catégorie fermée.
 function pastilles(): void {
-  for (const h2 of titres) {
+  for (const [h2, b] of cats) {
+    const s = h2.closest('section')!;
+    b.hidden = s.hidden;
     if (h2.closest('#boutique')) continue; // pas de pastille pour de l'argent réel
-    const n = String(h2.closest('section')!.querySelectorAll('.upgrade:not([hidden]) .buy:not(:disabled)').length);
-    if (h2.dataset.prets !== n) h2.dataset.prets = n;
+    const n = String(s.querySelectorAll('.upgrade:not([hidden]) .buy:not(:disabled)').length);
+    if (b.dataset.prets !== n) b.dataset.prets = n;
   }
 }
 
@@ -1325,6 +1368,19 @@ descriptionsBtn.addEventListener('click', () => {
   const stats = descriptionsBtn.getAttribute('aria-pressed') === 'true';
   setDescriptions(stats);
   pref.set('descriptions', stats ? 'stats' : 'tout');
+});
+
+// Texte des quêtes : la réplique pis le portrait s'en vont, l'objectif reste.
+const queteTexteBtn = $<HTMLButtonElement>('quete-texte');
+const setQueteTexte = (on: boolean) => {
+  $('quest').classList.toggle('sans-texte', !on);
+  bascule(queteTexteBtn, on);
+};
+setQueteTexte(pref.get('quete-texte') !== 'off');
+queteTexteBtn.addEventListener('click', () => {
+  const on = $('quest').classList.contains('sans-texte');
+  setQueteTexte(on);
+  pref.set('quete-texte', on ? 'on' : 'off');
 });
 
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.

@@ -28,7 +28,7 @@ function cles(): string[] {
     ...BUILDINGS.flatMap((b) => [b.name, b.description, b.message]),
     ...Object.values(CHARACTERS).map((c) => c.name),
     ...QUESTS.flatMap((q) => [q.ask, q.thanks, q.goal]),
-    ...ARTICLES.flatMap((a) => [a.name, a.description]),
+    ...ARTICLES.flatMap((a) => [a.name, a.description, a.verbe, a.ligne]),
     ...REJEAN,
     ...SUCCES.flatMap((x) => [x.nom, x.description]),
     ...SAISONS.flatMap((x) => [x.nom, x.description]),
@@ -47,7 +47,6 @@ function cles(): string[] {
     ...STATIONS.flatMap((s) => [s.nom, s.slogan, ...s.tounes.map((x) => x.titre)]),
     ...PUBS,
     'FERMÉE',
-    'PRENDRE',
   ];
   // Les t('...') pis les textes du tuto dans le code
   const sources = import.meta.glob<string>(['../**/*.ts', '!../**/*.test.ts', '!./en.ts'], { query: '?raw', import: 'default', eager: true });

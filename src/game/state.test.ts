@@ -70,7 +70,7 @@ describe('ambiance du rang', () => {
   it('se réchauffe avec les gains pis les réparations, plafonné à 0,5', () => {
     const s = newGame(0);
     expect(warmth(s)).toBe(0);
-    s.totalEarned = 1250;
+    s.totalEarned = 1750;
     expect(warmth(s)).toBeCloseTo(0.15);
     s.totalEarned = 10_000;
     expect(warmth(s)).toBeCloseTo(0.3);

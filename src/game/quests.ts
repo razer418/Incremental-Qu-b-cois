@@ -87,7 +87,7 @@ export const QUESTS: readonly Quest[] = [
   {
     id: 'a-vendre',
     giver: 'gagnon',
-    ask: "Mon vieux char dans la cour, y'é à vendre. 2 500 piasses pis y'é à toé. Y roule pas, mais c'est un bon char.",
+    ask: "Mon vieux char dans la cour, y'é à vendre. 3 500 piasses pis y'é à toé. Y roule pas, mais c'est un bon char.",
     thanks: "Fais attention, y'a du millage, mais y'a du cœur. Bonne chance avec!",
     goal: 'Acheter le bazou',
     objective: { kind: 'ownCar' },

@@ -163,7 +163,7 @@ export function addBoost(state: GameState): boolean {
   return true;
 }
 
-/** Le meilleur article encore actif multiplie tes tapes ou ton passif. Ils se cumulent pas entre eux. */
+/** L'article encore actif multiplie tes tapes ou ton passif (un seul par sorte, voir canUseArticle). */
 export function magasinFactor(state: GameState, boosts: Article['boosts'], apres = 0): number {
   let f = 1;
   for (const a of ARTICLES) if (a.boosts === boosts && (state.magasin[a.id] ?? 0) > apres) f = Math.max(f, a.factor);
@@ -198,10 +198,10 @@ export function buyArticle(state: GameState, id: string): boolean {
   return true;
 }
 
-/** On en prend un quand il en reste moins que la durée d'un article (max 2 d'avance). */
+/** Un seul buff de chaque sorte (tapes ou passif) à la fois : faut attendre qu'il finisse. */
 export function canUseArticle(state: GameState, id: string): boolean {
   const a = getArticle(id);
-  return !!a && (state.inventaire[id] ?? 0) > 0 && (state.magasin[id] ?? 0) <= a.seconds;
+  return !!a && (state.inventaire[id] ?? 0) > 0 && magasinFactor(state, a.boosts) === 1;
 }
 
 export function useArticle(state: GameState, id: string): boolean {

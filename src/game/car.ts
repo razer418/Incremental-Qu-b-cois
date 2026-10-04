@@ -7,7 +7,7 @@ export interface CarPart {
   essential: boolean;
 }
 
-export const CAR_PRICE = 2500;
+export const CAR_PRICE = 3500;
 
 // Le bazou du bonhomme Gagnon : y'a pas grand-chose qui marche.
 export const PARTS: readonly CarPart[] = [

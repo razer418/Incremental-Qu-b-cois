@@ -35,7 +35,7 @@ describe('les quêtes', () => {
   it('suit le bazou : achat, pneus, roule', () => {
     const s = newGame(0);
     s.questIndex = QUESTS.findIndex((q) => q.id === 'a-vendre');
-    s.cash = 1250;
+    s.cash = 1750;
     expect(questProgress(s, activeQuest(s)!)).toBeCloseTo(0.5);
     s.cash = 100_000;
     buyCar(s);

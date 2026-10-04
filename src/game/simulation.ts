@@ -15,6 +15,7 @@ import {
   articleCost,
   buyArticle,
   canBuyArticle,
+  magasinFactor,
   useArticle,
   assez,
   buy,
@@ -37,6 +38,8 @@ import {
   tick,
   type GameState,
 } from './state';
+
+const PAR_FORCE = [...ARTICLES].sort((a, b) => b.factor - a.factor);
 
 export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige';
 
@@ -102,9 +105,9 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     while (activeQuest(s) && claimQuest(s));
     // Une pub quand le boost achève, pis un tour au magasin quand c'est pas cher pour lui.
     if (s.boostSeconds < 60) addBoost(s);
-    // Il prend son article drette en l'achetant.
-    for (const a of ARTICLES)
-      if ((s.magasin[a.id] ?? 0) <= a.seconds && canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) {
+    // Quand un buff finit, il achète le plus fort qu'il peut pis le prend drette.
+    for (const a of PAR_FORCE)
+      if (magasinFactor(s, a.boosts) === 1 && canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) {
         buyArticle(s, a.id);
         useArticle(s, a.id);
       }

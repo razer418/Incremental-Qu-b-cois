@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SAISONS, SAISON_SECONDES, saisonA } from './saisons';
-import { PROJETS } from './chars';
+import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce, prixVente } from './chars';
 import { EVENEMENTS, tirerEvenement } from './evenements';
-import { buyProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
+import { annonceDe, buyProjet, coutPiece, vendreProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
+import * as THREE from 'three';
+import { MODELES, creerChar } from '../scene/chars3d';
+import { RECETTES } from './mecanique';
+import { SONS_CHARS } from '../platform/sons';
 
 const memoire = () => {
   const m = new Map<string, string>();
@@ -70,6 +74,78 @@ describe('chars à retaper', () => {
     const st = memoire();
     save(st, s);
     expect(load(st, 0).projets).toEqual({ pickup: ['moteur'] });
+  });
+});
+
+describe('Face-de-Bouc Marché', () => {
+  it('montre 3 annonces, une de chaque état, qui changent aux 10 minutes', () => {
+    for (const p of PROJETS) {
+      const avant = annoncesEnLigne(p.id, 0);
+      expect(new Set(avant.map((a) => a.etat)).size).toBe(3);
+      expect(annoncesEnLigne(p.id, ANNONCES_MS)).not.toEqual(avant);
+    }
+  });
+
+  it('chaque char a son modèle 3D pis son son, tous différents', () => {
+    const ids = ANNONCES.map((a) => a.id).sort();
+    expect(Object.keys(MODELES).sort()).toEqual(ids);
+    expect(Object.keys(SONS_CHARS).sort()).toEqual(ids);
+    expect(new Set(Object.values(SONS_CHARS).map((x) => JSON.stringify(x))).size).toBe(ids.length);
+    expect(new Set(Object.values(MODELES).map((x) => `${x.forme}:${x.couleur}:${x.detail}`)).size).toBe(ids.length);
+  });
+
+  it('chaque char reste dans le budget du guide Bazou VHS (1 500 triangles)', () => {
+    for (const id of Object.keys(MODELES)) {
+      let tris = 0;
+      creerChar(id).groupe.traverse((o) => {
+        if (o instanceof THREE.Mesh) tris += o.geometry.index!.count / 3;
+      });
+      expect(tris).toBeLessThanOrEqual(1500);
+    }
+  });
+
+  it('chaque pièce a son mini-jeu de mécanique', () => {
+    for (const p of PROJETS) for (const x of p.pieces) expect(RECETTES[x.id]?.length).toBeGreaterThan(1);
+  });
+
+  it('un char retapé se revend avec profit, une seule fois', () => {
+    const s = newGame(0);
+    s.car = { owned: true, parts: { batterie: true, pneus: true, demarreur: true, freins: true } };
+    s.cash = 1e6;
+    buyProjet(s, 'van');
+    expect(vendreProjet(s, 'pickup')).toBe(false);
+    for (const x of PROJETS[0].pieces) reparerProjet(s, 'pickup', x.id);
+    const avant = s.cash;
+    expect(vendreProjet(s, 'pickup')).toBe(true);
+    expect(s.cash - avant).toBeCloseTo(prixVente(PROJETS[0]));
+    expect(s.projets.pickup).toBeUndefined();
+    expect(buyProjet(s, 'van')).toBe(false);
+    expect(buyProjet(s, 'castor')).toBe(true);
+  });
+
+  it('chaque annonce coûte le même total que le char d’origine', () => {
+    for (const a of ANNONCES) {
+      const s = newGame(0);
+      s.annonces[a.projet] = a.id;
+      const p = PROJETS.find((x) => x.id === a.projet)!;
+      const total = prixAnnonce(a) + p.pieces.reduce((t, x) => t + coutPiece(s, p.id, x.cost), 0);
+      const origine = p.prix + p.pieces.reduce((t, x) => t + x.cost, 0);
+      expect(Math.abs(total - origine)).toBeLessThan(2);
+    }
+  });
+
+  it('le char acheté vient de son annonce pis se sauvegarde', () => {
+    const s = newGame(0);
+    s.car = { owned: true, parts: { batterie: true, pneus: true, demarreur: true, freins: true } };
+    s.cash = 1e6;
+    expect(buyProjet(s, 'van')).toBe(true);
+    expect(buyProjet(s, 'castor')).toBe(false);
+    expect(annonceDe(s, 'pickup').id).toBe('van');
+    const st = memoire();
+    save(st, s);
+    expect(annonceDe(load(st, 0), 'pickup').id).toBe('van');
+    // Une vieille partie a le char d'origine.
+    expect(annonceDe(newGame(0), 'pickup').id).toBe('pickup');
   });
 });
 

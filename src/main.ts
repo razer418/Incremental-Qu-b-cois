@@ -53,6 +53,9 @@ import {
   warmth,
   assez,
   buyProjet,
+  annonceDe,
+  coutPiece,
+  vendreProjet,
   projetDebloque,
   projetFini,
   reparerProjet,
@@ -63,7 +66,7 @@ import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
 import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
-import { PROJETS } from './game/chars';
+import { ANNONCES, ANNONCES_MS, ETATS, PROJETS, annoncesEnLigne, getProjet, prixAnnonce, prixVente } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
@@ -71,6 +74,7 @@ import { cite, facteur, langue, t } from './game/i18n';
 import { createAtelier } from './atelier';
 import { CATEGORIES, possede, LOOK } from './game/look';
 import { createMiniJeux } from './minijeux-ui';
+import { createMecanique } from './mecanique-ui';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -271,6 +275,7 @@ const rang = createRang($('ecran'), {
   pixelScale: 3,
   reduceMotion,
   onTrajet: (e) => sons.jouer(e === 'coupe' ? 'coupe' : 'moteur'),
+  onChar: (id) => sons.char(id, 'vroum'),
 });
 let lastWarmth = -1;
 let lastLook = '';
@@ -924,6 +929,7 @@ function render(): void {
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
     look: state.look.choix,
+    chars: PROJETS.filter((p) => state.projets[p.id]).map((p) => ({ id: annonceDe(state, p.id).id, progres: state.projets[p.id].length / p.pieces.length })),
   };
   lieuxEl.hidden = !rang;
   for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];
@@ -1201,7 +1207,20 @@ function renderEvenement(): void {
 
 // --- Chars à retaper ---
 
-const projetRows = PROJETS.map((p) => {
+// Le mini-jeu de mécanique, pour poser les pièces des chars à retaper (MENU > OPTIONS pour le couper).
+let apresMecanique: ((rates: number) => void) | null = null;
+const mecanique = createMecanique({
+  dialog: $<HTMLDialogElement>('mecanique'),
+  fini: (_piece, rates) => {
+    apresMecanique?.(rates);
+    apresMecanique = null;
+  },
+});
+const mecaniqueOn = () => pref.get('mecanique') !== 'off';
+
+// Chaque annonce du Face-de-Bouc Marché a sa ligne, pis ses pièces en dessous une fois le char à toé.
+const projetRows = ANNONCES.map((a) => {
+  const p = getProjet(a.projet)!;
   const li = document.createElement('li');
   li.className = 'upgrade';
   li.innerHTML = `
@@ -1211,13 +1230,23 @@ const projetRows = PROJETS.map((p) => {
       <small></small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
-  li.querySelector('strong')!.textContent = t(p.nom);
-  li.querySelector('.stat')!.textContent = t('Une fois retapé : {x} sur tous tes gains.', { x: facteur(p.bonus) });
-  li.querySelector('small')!.textContent = t(p.description);
+  li.querySelector('strong')!.textContent = t(a.nom);
+  li.querySelector('.stat')!.textContent = t('{etat} · {vendeur} · {x} une fois retapé', { etat: t(ETATS[a.etat].nom), vendeur: t(a.vendeur), x: facteur(p.bonus) });
+  li.querySelector('small')!.textContent = t(a.description);
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
-  btn.addEventListener('click', () => {
-    if (!buyProjet(state, p.id)) return;
-    sons.jouer('achat');
+  btn.addEventListener('click', async () => {
+    // Retapé : le bouton le revend (flip). Sinon, il l'achète pis la caméra va te le montrer dans la cour.
+    if (projetFini(state, p)) {
+      const ok = await demander(t('Revendre {nom} pour {cash}? Tu perds son bonus de {x}, pis tu pourras pas racheter ce char-là avant le prestige.', { nom: t(a.nom), cash: formatMoney(prixVente(p)), x: facteur(p.bonus) }));
+      if (!ok || !vendreProjet(state, p.id)) return;
+      sons.jouer('achat');
+      showMessage(t('Vendu! +{cash}. Va voir les annonces pour ton prochain projet.', { cash: formatMoney(prixVente(p)) }));
+    } else {
+      if (!buyProjet(state, a.id)) return;
+      sons.jouer('achat');
+      sons.char(a.id, 'achat');
+      if (lieu !== 'maison') allerA('maison');
+    }
     save(localStorage, state);
     render();
   });
@@ -1228,43 +1257,67 @@ const projetRows = PROJETS.map((p) => {
     pli.querySelector('strong')!.textContent = t(x.nom);
     pli.querySelector('.stat')!.textContent = t('Pièce {i} sur {n} du {x}', { i: i + 1, n: p.pieces.length, x: facteur(p.bonus) });
     const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
-    pbtn.addEventListener('click', () => {
+    const poser = (rates = 0) => {
       const avant = currentRate(state);
       if (!reparerProjet(state, p.id, x.id)) return;
       if (projetFini(state, p)) celebrerTaux(avant, true);
       sons.jouer('achat');
+      sons.char(a.id, projetFini(state, p) ? 'fini' : 'piece');
       save(localStorage, state);
-      if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(p.nom), x: facteur(p.bonus) }));
+      if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(a.nom), x: facteur(p.bonus) }));
+      else if (mecaniqueOn()) showMessage(t(rates ? "{piece} : c'est fait. Un peu croche, mais ça tient." : "{piece} : c'est fait. Du travail de pro!", { piece: t(x.nom) }));
       render();
+    };
+    // Avec le mini-jeu de mécanique, la pièce se paye quand elle est posée.
+    pbtn.addEventListener('click', () => {
+      if (!assez(state, coutPiece(state, p.id, x.cost))) return;
+      if (mecaniqueOn() && mecanique.lancer(x.id, t(x.nom))) apresMecanique = poser;
+      else poser();
     });
     return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
   });
   $('projets-liste').append(li, ...pieces.map((x) => x.li));
-  return { p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
+  return { a, p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
 });
 function renderProjets(): void {
+  const now = Date.now();
   let visible = false;
+  let magasine = false;
   for (const row of projetRows) {
     const ouvert = projetDebloque(state, row.p);
     const faites = state.projets[row.p.id];
-    const fini = projetFini(state, row.p);
+    const aToe = !!faites && annonceDe(state, row.p.id).id === row.a.id;
+    const fini = aToe && projetFini(state, row.p);
     visible ||= ouvert;
-    row.li.hidden = !ouvert;
+    magasine ||= ouvert && !faites;
+    row.li.hidden = !ouvert || (faites ? !aToe : !annoncesEnLigne(row.p.id, now).includes(row.a));
     row.li.classList.toggle('done', fini);
-    row.cost.textContent = fini ? t('RETAPÉ') : faites ? t('À TOÉ') : formatMoney(row.p.prix);
-    row.btn.disabled = !!faites || !assez(state, row.p.prix);
-    if (!faites) progres(row.btn, row.p.prix);
+    const vendu = state.vendus.includes(row.a.id);
+    row.cost.textContent = fini
+      ? t('REVENDRE {cash}', { cash: formatMoney(prixVente(row.p)) })
+      : aToe
+        ? t('À TOÉ')
+        : vendu
+          ? t('VENDU')
+          : formatMoney(prixAnnonce(row.a));
+    row.btn.disabled = !fini && (!!faites || vendu || !assez(state, prixAnnonce(row.a)));
+    if (!faites) progres(row.btn, prixAnnonce(row.a));
     for (const pc of row.pieces) {
       // Les pièces s'affichent quand le char est à toé, pis disparaissent quand il est fini.
-      pc.li.hidden = !faites || fini;
-      const faite = !!faites?.includes(pc.x.id);
+      pc.li.hidden = !aToe || fini;
+      if (pc.li.hidden) continue;
+      const faite = faites.includes(pc.x.id);
+      const cost = coutPiece(state, row.p.id, pc.x.cost);
       pc.li.classList.toggle('done', faite);
-      pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(pc.x.cost);
-      pc.btn.disabled = faite || !assez(state, pc.x.cost);
-      if (!faite) progres(pc.btn, pc.x.cost);
+      pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(cost);
+      pc.btn.disabled = faite || !assez(state, cost);
+      if (!faite) progres(pc.btn, cost);
     }
   }
   $('projets').hidden = !visible;
+  const info = $('marche-info');
+  info.hidden = !magasine;
+  info.textContent = t('Face-de-Bouc Marché : nouvelles annonces dans {m} min', { m: Math.ceil((ANNONCES_MS - (now % ANNONCES_MS)) / 60_000) });
 }
 
 let lastQuestId = '';
@@ -1501,6 +1554,13 @@ queteTexteBtn.addEventListener('click', () => {
   const on = $('quest').classList.contains('sans-texte');
   setQueteTexte(on);
   pref.set('quete-texte', on ? 'on' : 'off');
+});
+
+const mecaniqueBtn = $<HTMLButtonElement>('mecanique-opt');
+bascule(mecaniqueBtn, mecaniqueOn());
+mecaniqueBtn.addEventListener('click', () => {
+  pref.set('mecanique', mecaniqueOn() ? 'off' : 'on');
+  bascule(mecaniqueBtn, mecaniqueOn());
 });
 
 // Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.

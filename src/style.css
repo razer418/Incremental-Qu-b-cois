@@ -1489,3 +1489,13 @@ section.ailleurs {
 .quest.sans-texte .quest-line {
   display: none;
 }
+
+/* Face-de-Bouc Marché : quand les annonces changent */
+.marche-info {
+  display: block;
+  margin: -4px 0 6px;
+  color: var(--muted);
+}
+.marche-info[hidden] {
+  display: none;
+}

@@ -6,9 +6,9 @@ import { TUTO_FINI, type GameState } from './game/state';
 import { formatMoney } from './game/format';
 import { t } from './game/i18n';
 
-const W = 160;
-const H = 120;
-const C = {
+export const W = 160;
+export const H = 120;
+export const C = {
   fond: '#151714',
   ecrit: '#d8d2bf',
   or: '#e8c26a',
@@ -37,7 +37,7 @@ interface Partie {
   score: number | null;
 }
 
-const texte = (g: CanvasRenderingContext2D, s: string, x: number, y: number, couleur = C.ecrit, taille = 14) => {
+export const texte = (g: CanvasRenderingContext2D, s: string, x: number, y: number, couleur = C.ecrit, taille = 14) => {
   g.fillStyle = couleur;
   g.font = `${taille}px VT323, monospace`;
   g.textAlign = 'center';

@@ -54,6 +54,8 @@ export function load(storage: Storage, now: number): GameState {
       projets: Object.fromEntries(
         Object.entries(data.projets ?? {}).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, v.filter((x) => typeof x === 'string')]),
       ),
+      annonces: Object.fromEntries(Object.entries(data.annonces ?? {}).filter(([, v]) => typeof v === 'string')),
+      vendus: Array.isArray(data.vendus) ? data.vendus.filter((x) => typeof x === 'string') : [],
       look: {
         achetes: Array.isArray(data.look?.achetes) ? data.look.achetes.filter((x) => typeof x === 'string') : [],
         choix: { ...newGame(now).look.choix, ...(data.look?.choix ?? {}) },

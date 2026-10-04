@@ -9,6 +9,13 @@ Tout nouveau contenu (achat, bâtiment, article, mini-jeu, événement, source d
 - Si ça sort des bornes, règle les prix ou les gains du nouveau contenu. On touche pas aux bornes sans l'accord d'Etienne.
 - Écris les temps avant/après dans la PR.
 
+## Règle : poser des questions avant de bâtir
+
+Avant de bâtir une nouvelle fonction ou du nouveau contenu, pose à Etienne quelques questions de design courtes.
+
+- Chaque question a des choix A/B/C, une ligne par choix, avec ta reco marquée ⭐.
+- En attendant sa réponse, continue d'explorer le code, mais fige aucun choix avant qu'il réponde.
+
 ## Conventions
 
 - Tout le texte passe par `t()` avec sa traduction dans `src/game/en.ts`.

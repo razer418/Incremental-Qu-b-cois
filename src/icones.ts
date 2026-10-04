@@ -144,6 +144,20 @@ const DESSINS: Record<string, string[]> = {
     '............',
     '............',
   ],
+  sac: [
+    '....tttt....',
+    '...t....t...',
+    '..tuuuuuut..',
+    '.tuuuuuuuut.',
+    '.tubbbbbbut.',
+    '.tuuuuuuuut.',
+    '.tuuuggguuut',
+    '.tuuuuuuuut.',
+    '.tuubbbbuut.',
+    '.tuubuubuut.',
+    '.tuubbbbuut.',
+    '..tttttttt..',
+  ],
 };
 
 /** Le SVG d'une icône (vide si on la connaît pas). */

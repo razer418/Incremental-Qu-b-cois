@@ -538,6 +538,19 @@ function renderMagasin(): void {
 // L'inventaire, sous LIVRER : ce que t'as acheté chez Réjean, à fumer, boire ou manger n'importe quand.
 const invLine = $('inv-line');
 let derniereLigne = '';
+// Le sac à dos ouvre pis ferme l'inventaire (gardé sur l'appareil).
+const sacBtn = $('sac');
+$('sac-icone').innerHTML = icone('sac');
+const ouvrirSac = (oui: boolean) => {
+  sacBtn.setAttribute('aria-expanded', String(oui));
+  $('inv-corps').hidden = !oui;
+};
+ouvrirSac(pref.get('sac') !== 'ferme');
+sacBtn.addEventListener('click', () => {
+  const oui = $('inv-corps').hidden;
+  ouvrirSac(oui);
+  pref.set('sac', oui ? 'ouvert' : 'ferme');
+});
 const invRows = new Map<string, { li: HTMLElement; btn: HTMLButtonElement; level: HTMLElement }>();
 for (const a of ARTICLES) {
   const li = document.createElement('li');
@@ -563,6 +576,8 @@ function renderInventaire(): void {
   const vide = Object.keys(state.inventaire).length === 0;
   invLine.textContent = vide ? t('Ton sac est vide. Passe voir Réjean au magasin.') : derniereLigne;
   invLine.hidden = !invLine.textContent;
+  const total = Object.values(state.inventaire).reduce((a, b) => a + b, 0);
+  $('sac-n').textContent = total > 0 ? `x${total}` : '';
   for (const a of ARTICLES) {
     const row = invRows.get(a.id)!;
     const n = state.inventaire[a.id] ?? 0;

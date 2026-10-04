@@ -1226,6 +1226,11 @@ section.replie > :not(h2, .garage-head, .achats-head) {
 section.replie h2 {
   margin-bottom: 0;
 }
+.replie h2[data-prets]:not([data-prets='0'])::after {
+  content: ' \2022  ' attr(data-prets);
+  font-size: 22px;
+  color: var(--cash);
+}
 
 /* Lignes compactes : touche le nom, la description s'en va pis tout rapetisse. */
 .upgrade-info[role='button'] {

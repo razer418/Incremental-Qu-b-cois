@@ -1144,6 +1144,7 @@ function loop(): void {
   }
   render();
   renderToast(now);
+  pastilles();
 }
 
 // Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.
@@ -1209,6 +1210,15 @@ for (const h2 of titres) {
     plier(h2, !ouvrir);
     garderPlace();
   });
+}
+
+// Catégorie repliée : un petit chiffre discret dit combien de choses sont prêtes (mini-jeu, achat).
+function pastilles(): void {
+  for (const h2 of titres) {
+    if (h2.closest('#boutique')) continue; // pas de pastille pour de l'argent réel
+    const n = String(h2.closest('section')!.querySelectorAll('.upgrade:not([hidden]) .buy:not(:disabled)').length);
+    if (h2.dataset.prets !== n) h2.dataset.prets = n;
+  }
 }
 
 const lignes = [...colListes.querySelectorAll<HTMLElement>('li.upgrade')];

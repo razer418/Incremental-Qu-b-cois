@@ -31,12 +31,24 @@ export const SONS_CHARS: Record<string, SonChar> = {
   fusee: { moteur: 46, onde: 'square', toux: 3, klaxon: [370, 370, 294] },
   requin: { moteur: 33, onde: 'sawtooth', toux: 1, klaxon: [165, 175, 165, 175] },
   phenix: { moteur: 50, onde: 'triangle', toux: 1, klaxon: [659, 784, 988] },
+  autobus: { moteur: 28, onde: 'square', toux: 3, klaxon: [262, 262] },
+  motorise: { moteur: 32, onde: 'triangle', toux: 2, klaxon: [294, 370, 440] },
+  pompier: { moteur: 31, onde: 'sawtooth', toux: 1, klaxon: [440, 330, 440, 330] },
+  depanneuse: { moteur: 29, onde: 'sawtooth', toux: 3, klaxon: [208] },
+  cantine: { moteur: 35, onde: 'square', toux: 2, klaxon: [523, 392, 523] },
+  police: { moteur: 47, onde: 'sawtooth', toux: 1, klaxon: [880, 659, 880, 659] },
+  monstre: { moteur: 26, onde: 'sawtooth', toux: 2, klaxon: [147, 147, 196] },
+  resurfaceuse: { moteur: 58, onde: 'triangle', toux: 1, klaxon: [392, 494, 587, 784] },
+  royale: { moteur: 39, onde: 'triangle', toux: 1, klaxon: [330, 392] },
+  stockcar: { moteur: 43, onde: 'sawtooth', toux: 1, klaxon: [494] },
+  concept: { moteur: 75, onde: 'sine', toux: 1, klaxon: [1047, 1319, 1568] },
+  formule: { moteur: 90, onde: 'sawtooth', toux: 1, klaxon: [698, 698] },
 };
 
 export interface Sons {
   jouer(son: Son): void;
-  /** Un char à retaper : son klaxon quand il arrive, une toux à chaque pièce, pis il démarre quand il est retapé. */
-  char(id: string, moment: 'achat' | 'piece' | 'fini'): void;
+  /** Un char à retaper : son klaxon quand il arrive, une toux à chaque pièce, il démarre quand il est retapé, pis vroum quand tu le touches. */
+  char(id: string, moment: 'achat' | 'piece' | 'fini' | 'vroum'): void;
   /** Volume des effets, de 0 (coupés) à 1. */
   volume: number;
   /** L'AudioContext partagé avec la radio (créé au premier geste). */
@@ -116,6 +128,11 @@ export function createSons(): Sons {
       const t = c.currentTime;
       if (moment === 'achat') klaxon(c, sc, t);
       else if (moment === 'piece') toux(c, sc, t);
+      else if (moment === 'vroum') {
+        // Un coup d'accélérateur dans la cour
+        note(c, sc.onde, sc.moteur, t, 0.9, 0.12, sc.moteur * 2.6);
+        souffle(c, t, 0.9, 0.1, 'lowpass', 500);
+      }
       else {
         // Y tousse, y part, y monte en régime, pis un coup de klaxon.
         const part = toux(c, sc, t);

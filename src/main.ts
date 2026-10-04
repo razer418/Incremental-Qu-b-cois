@@ -55,6 +55,7 @@ import {
   buyProjet,
   annonceDe,
   coutPiece,
+  vendreProjet,
   projetDebloque,
   projetFini,
   reparerProjet,
@@ -65,7 +66,7 @@ import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
 import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
-import { ANNONCES, ANNONCES_MS, ETATS, PROJETS, annoncesEnLigne, getProjet, prixAnnonce } from './game/chars';
+import { ANNONCES, ANNONCES_MS, ETATS, PROJETS, annoncesEnLigne, getProjet, prixAnnonce, prixVente } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
@@ -274,6 +275,7 @@ const rang = createRang($('ecran'), {
   pixelScale: 3,
   reduceMotion,
   onTrajet: (e) => sons.jouer(e === 'coupe' ? 'coupe' : 'moteur'),
+  onChar: (id) => sons.char(id, 'vroum'),
 });
 let lastWarmth = -1;
 let lastLook = '';
@@ -1232,10 +1234,19 @@ const projetRows = ANNONCES.map((a) => {
   li.querySelector('.stat')!.textContent = t('{etat} · {vendeur} · {x} une fois retapé', { etat: t(ETATS[a.etat].nom), vendeur: t(a.vendeur), x: facteur(p.bonus) });
   li.querySelector('small')!.textContent = t(a.description);
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
-  btn.addEventListener('click', () => {
-    if (!buyProjet(state, a.id)) return;
-    sons.jouer('achat');
-    sons.char(a.id, 'achat');
+  btn.addEventListener('click', async () => {
+    // Retapé : le bouton le revend (flip). Sinon, il l'achète pis la caméra va te le montrer dans la cour.
+    if (projetFini(state, p)) {
+      const ok = await demander(t('Revendre {nom} pour {cash}? Tu perds son bonus de {x}, pis tu pourras pas racheter ce char-là avant le prestige.', { nom: t(a.nom), cash: formatMoney(prixVente(p)), x: facteur(p.bonus) }));
+      if (!ok || !vendreProjet(state, p.id)) return;
+      sons.jouer('achat');
+      showMessage(t('Vendu! +{cash}. Va voir les annonces pour ton prochain projet.', { cash: formatMoney(prixVente(p)) }));
+    } else {
+      if (!buyProjet(state, a.id)) return;
+      sons.jouer('achat');
+      sons.char(a.id, 'achat');
+      if (lieu !== 'maison') allerA('maison');
+    }
     save(localStorage, state);
     render();
   });
@@ -1281,8 +1292,15 @@ function renderProjets(): void {
     magasine ||= ouvert && !faites;
     row.li.hidden = !ouvert || (faites ? !aToe : !annoncesEnLigne(row.p.id, now).includes(row.a));
     row.li.classList.toggle('done', fini);
-    row.cost.textContent = fini ? t('RETAPÉ') : aToe ? t('À TOÉ') : formatMoney(prixAnnonce(row.a));
-    row.btn.disabled = !!faites || !assez(state, prixAnnonce(row.a));
+    const vendu = state.vendus.includes(row.a.id);
+    row.cost.textContent = fini
+      ? t('REVENDRE {cash}', { cash: formatMoney(prixVente(row.p)) })
+      : aToe
+        ? t('À TOÉ')
+        : vendu
+          ? t('VENDU')
+          : formatMoney(prixAnnonce(row.a));
+    row.btn.disabled = !fini && (!!faites || vendu || !assez(state, prixAnnonce(row.a)));
     if (!faites) progres(row.btn, prixAnnonce(row.a));
     for (const pc of row.pieces) {
       // Les pièces s'affichent quand le char est à toé, pis disparaissent quand il est fini.

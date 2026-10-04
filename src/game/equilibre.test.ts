@@ -40,4 +40,10 @@ describe('équilibre', () => {
     expect(min(t.empire)).toBeLessThan(760);
     expect(min(pireTrou)).toBeLessThanOrEqual(20);
   }, 60_000);
+
+  it('revendre ses chars retapés (flip) va jamais plus vite que les garder', () => {
+    const garde = simuler(4, 6 * 3600);
+    const flip = simuler(4, 6 * 3600, undefined, true);
+    for (const j of ['garage', 'cabane', 'concession'] as const) expect(flip[j] ?? Infinity).toBeGreaterThanOrEqual(garde[j]!);
+  }, 60_000);
 });

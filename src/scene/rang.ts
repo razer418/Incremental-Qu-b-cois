@@ -208,6 +208,8 @@ export function createRang(
     reduceMotion?: boolean;
     /** Pour les sons : le bazou part, ou la coupure VHS. */
     onTrajet?: (e: 'depart' | 'coupe') => void;
+    /** Un doigt touche un char à retaper (id de l'annonce). */
+    onChar?: (id: string) => void;
   } = {},
 ): Rang | null {
   let renderer: THREE.WebGLRenderer;
@@ -473,31 +475,50 @@ export function createRang(
   scene.add(bazou);
 
   // Les chars à retaper : une place chacun dans la cour, autour de la maison.
-  const PLACES = [
+  // Ceux pas encore retapés sont aussi devant le garage à Ti-Guy.
+  const COUR = [
     { x: -5.6, z: 3.3, ry: 0.25 },
     { x: 9.6, z: -1.4, ry: -0.35 },
     { x: 6.4, z: -4.6, ry: 0.2 },
+    { x: -8.8, z: -0.4, ry: 0.5 },
+    { x: 10.4, z: -6.2, ry: -0.2 },
   ];
-  const chars3d = new Map<string, Char3D>();
+  const GARAGE = [
+    { x: ORIGINE.garage + 0.6, z: 4.2, ry: -0.3 },
+    { x: ORIGINE.garage - 6.4, z: 3.0, ry: 0.4 },
+  ];
+  const chars3d = new Map<string, { id: string; c: Char3D }>();
+  const placer = (cle: string, id: string, p: { x: number; z: number; ry: number }, fini: boolean) => {
+    let x = chars3d.get(cle);
+    if (!x) {
+      x = { id, c: creerChar(id) };
+      x.c.groupe.scale.setScalar(0.85);
+      scene.add(x.c.groupe);
+      chars3d.set(cle, x);
+    }
+    x.c.groupe.position.set(p.x, 0, p.z);
+    x.c.groupe.rotation.y = p.ry;
+    x.c.setFini(fini);
+  };
   const majChars = (liste: CarLook['chars']) => {
-    for (const [id, c] of chars3d)
-      if (!liste.some((x) => x.id === id)) {
-        scene.remove(c.groupe);
-        c.dispose();
-        chars3d.delete(id);
-      }
-    liste.slice(0, PLACES.length).forEach((x, i) => {
-      let c = chars3d.get(x.id);
-      if (!c) {
-        c = creerChar(x.id);
-        c.groupe.scale.setScalar(0.85);
-        scene.add(c.groupe);
-        chars3d.set(x.id, c);
-      }
-      c.groupe.position.set(PLACES[i].x, 0, PLACES[i].z);
-      c.groupe.rotation.y = PLACES[i].ry;
-      c.setFini(x.fini);
+    const cles = new Set<string>();
+    liste.slice(0, COUR.length).forEach((x, i) => {
+      placer(`cour:${x.id}`, x.id, COUR[i], x.fini);
+      cles.add(`cour:${x.id}`);
     });
+    liste
+      .filter((x) => !x.fini)
+      .slice(0, GARAGE.length)
+      .forEach((x, i) => {
+        placer(`garage:${x.id}`, x.id, GARAGE[i], false);
+        cles.add(`garage:${x.id}`);
+      });
+    for (const [cle, x] of chars3d)
+      if (!cles.has(cle)) {
+        scene.remove(x.c.groupe);
+        x.c.dispose();
+        chars3d.delete(cle);
+      }
   };
 
   // Pancarte « à vendre » du bonhomme Gagnon
@@ -782,6 +803,17 @@ export function createRang(
 
   // Caméra : chaque endroit a son cadrage.
   const camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.1, 200);
+  // Toucher un char à retaper : on cherche lequel est sous le doigt.
+  const rayon = new THREE.Raycaster();
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    const r = renderer.domElement.getBoundingClientRect();
+    rayon.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    for (const x of chars3d.values())
+      if (rayon.intersectObject(x.c.groupe, true).length) {
+        opts.onChar?.(x.id);
+        return;
+      }
+  });
   let lieuActuel: Lieu = 'maison';
   const placerCamera = (aspect?: number) => {
     if (aspect) camera.aspect = aspect;
@@ -1375,7 +1407,7 @@ export function createRang(
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => m.dispose());
       leBazou.dispose();
-      chars3d.forEach((c) => c.dispose());
+      chars3d.forEach((x) => x.c.dispose());
       filMat.dispose();
       tombeMat.dispose();
       feuillage.forEach((m) => m.dispose());

@@ -44,6 +44,17 @@ function objet(g: CanvasRenderingContext2D, o: Objet, x: number, y: number, neuv
     r(C.pneu, -36, -18, 72, 36);
     r(VITRE, -33, -15, 66, 30);
     if (!neuve) for (let i = 0; i < 5; i++) r(C.ecrit, -20 + i * 7, -10 + ((i * 7) % 18), 6, 1);
+  } else if (o === 'turbo') {
+    // L'escargot du turbo
+    g.fillStyle = metal;
+    g.beginPath();
+    g.arc(x, y, 16, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = C.pneu;
+    g.beginPath();
+    g.arc(x, y, 7, 0, Math.PI * 2);
+    g.fill();
+    r(metal, 10, -6, 18, 12);
   } else {
     // Le rouleau de vinyle
     r('#2a2a28', -30, -8, 60, 16);

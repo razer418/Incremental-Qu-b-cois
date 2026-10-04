@@ -2,7 +2,7 @@
 // se pose en quelques étapes. Dévisser, sortir la vieille pièce, poser la neuve, serrer au torque.
 // Pas de cash en plus : la pièce se paye au même prix, le mini-jeu c'est la job de la poser.
 
-export type Objet = 'roue' | 'amortisseur' | 'moteur' | 'transmission' | 'tole' | 'vitre' | 'vinyle';
+export type Objet = 'roue' | 'amortisseur' | 'moteur' | 'transmission' | 'tole' | 'vitre' | 'vinyle' | 'turbo';
 
 export type Etape =
   /** Touche chaque boulon pour le dévisser (ou chaque rivet pour le poser). */
@@ -70,6 +70,33 @@ export const RECETTES: Record<string, readonly Etape[]> = {
     { type: 'poser', objet: 'roue', texte: 'Pose la mag chromée.' },
     SERRER,
     { type: 'frotter', couleur: 'chrome', texte: 'Polis les chromes.' },
+  ],
+  diesel: [
+    { type: 'boulons', n: 6, texte: 'Dévisse les supports du vieux diesel.' },
+    { type: 'tirer', objet: 'moteur', texte: 'Sors le diesel avec le palan.' },
+    { type: 'poser', objet: 'moteur', texte: 'Descends le diesel neuf à sa place.' },
+    SERRER,
+  ],
+  roues: [...ROUE_OFF, { type: 'poser', objet: 'roue', texte: 'Pose la roue double neuve.' }, SERRER],
+  interieur: [
+    { type: 'frotter', couleur: 'vinyle', texte: 'Arrache le vieux tapis.' },
+    { type: 'poser', objet: 'vinyle', texte: 'Déroule le tapis neuf.' },
+    { type: 'boulons', n: 4, texte: 'Visse les bancs.' },
+  ],
+  turbo: [
+    { type: 'boulons', n: 4, texte: 'Dévisse le collecteur.' },
+    { type: 'poser', objet: 'turbo', texte: 'Pose le turbo.' },
+    SERRER,
+  ],
+  aileron: [
+    { type: 'boulons', n: 4, texte: 'Perce les trous : touche chaque marque.' },
+    { type: 'poser', objet: 'tole', texte: "Pose l'aileron." },
+    SERRER,
+  ],
+  legende: [
+    { type: 'frotter', couleur: 'rouille', texte: 'Sable la carrosserie.' },
+    { type: 'frotter', couleur: 'chrome', texte: 'Polis les chromes de légende.' },
+    { type: 'frotter', couleur: 'peinture', texte: 'Peinture les bandes de course.' },
   ],
   flammes: [
     { type: 'frotter', couleur: 'rouille', texte: 'Sable le capot.' },

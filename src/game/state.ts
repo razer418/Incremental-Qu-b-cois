@@ -4,7 +4,7 @@ import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
 import { saisonA } from './saisons';
 import { bonusFete, feteA, type FeteId } from './fetes';
-import { PROJETS, facteurPieces, getAnnonce, getProjet, prixAnnonce, type Annonce, type Projet } from './chars';
+import { PROJETS, facteurPieces, getAnnonce, getProjet, prixAnnonce, prixVente, type Annonce, type Projet } from './chars';
 import {
   BUILDINGS,
   PRESTIGE_BONUS_PER_POINT,
@@ -45,6 +45,8 @@ export interface GameState {
   projets: Record<string, string[]>;
   /** L'annonce du Face-de-Bouc Marché d'où vient chaque char à retaper (id du char -> id de l'annonce). */
   annonces: Record<string, string>;
+  /** Les annonces déjà achetées pis revendues : on peut pas flipper le même char deux fois avant le prestige. */
+  vendus: string[];
   /** Le look du bazou (voir look.ts) : options achetées (« peinture:rouge ») pis celles posées. Gardé au prestige. */
   look: { achetes: string[]; choix: Record<'peinture' | 'collant' | 'mags' | 'flaps' | 'toit' | 'antenne', string> };
   /** Mini-jeux : quand chacun est prêt à rejouer (ms, heure de l'appareil). */
@@ -99,6 +101,7 @@ export function newGame(now: number): GameState {
     tuto: 0,
     projets: {},
     annonces: {},
+    vendus: [],
     look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun', toit: 'aucun', antenne: 'aucune' } },
     minijeux: {},
     expo: { periode: -1, trophees: 0 },
@@ -517,7 +520,7 @@ export function coutPiece(state: GameState, id: string, cost: number): number {
 export function buyProjet(state: GameState, annonceId: string): boolean {
   const a = getAnnonce(annonceId);
   const p = a && getProjet(a.projet);
-  if (!a || !p || state.projets[p.id] || !projetDebloque(state, p) || !assez(state, prixAnnonce(a))) return false;
+  if (!a || !p || state.projets[p.id] || state.vendus.includes(a.id) || !projetDebloque(state, p) || !assez(state, prixAnnonce(a))) return false;
   payer(state, prixAnnonce(a));
   state.projets[p.id] = [];
   state.annonces[p.id] = a.id;
@@ -533,5 +536,17 @@ export function reparerProjet(state: GameState, id: string, pieceId: string): bo
   if (!assez(state, cost)) return false;
   payer(state, cost);
   faites.push(pieceId);
+  return true;
+}
+
+/** Revend un char retapé : tu perds son bonus, mais tu fais un profit pis tu peux en acheter un autre. */
+export function vendreProjet(state: GameState, id: string): boolean {
+  const p = getProjet(id);
+  if (!p || !projetFini(state, p)) return false;
+  // Une revente, c'est pas un revenu : ça compte pas dans le total gagné.
+  state.cash += prixVente(p);
+  state.vendus.push(annonceDe(state, id).id);
+  delete state.projets[id];
+  delete state.annonces[id];
   return true;
 }

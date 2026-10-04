@@ -9,7 +9,7 @@ export interface Projet {
   description: string;
   prix: number;
   /** Débloqué quand le bazou roule, ou avec le bâtiment. */
-  requires: 'roule' | 'garage' | 'concession';
+  requires: 'roule' | 'garage' | 'concession' | 'arena';
   pieces: readonly { id: string; nom: string; cost: number }[];
   /** Multiplicateur sur tous tes gains une fois retapé. */
   bonus: number;
@@ -54,6 +54,32 @@ export const PROJETS: readonly Projet[] = [
       { id: 'flammes', nom: 'Des flammes sur le capot', cost: 2_500_000_000 },
     ],
     bonus: 1.5,
+  },
+  {
+    id: 'motorise',
+    nom: 'Le motorisé des Tremblay',
+    description: "Y'a fait la Floride 22 hivers de suite. Le dernier, y'est revenu sur une remorque.",
+    prix: 10_000_000_000,
+    requires: 'arena',
+    pieces: [
+      { id: 'diesel', nom: 'Le diesel', cost: 15_000_000_000 },
+      { id: 'roues', nom: 'Les roues doubles', cost: 25_000_000_000 },
+      { id: 'interieur', nom: "L'intérieur en tapis", cost: 40_000_000_000 },
+    ],
+    bonus: 1.6,
+  },
+  {
+    id: 'resurfaceuse',
+    nom: "La resurfaceuse de l'aréna",
+    description: "Quarante ans à faire la glace entre deux périodes. Est due pour sa retraite... chez vous.",
+    prix: 40_000_000_000,
+    requires: 'arena',
+    pieces: [
+      { id: 'turbo', nom: 'Le turbo', cost: 60_000_000_000 },
+      { id: 'aileron', nom: "L'aileron", cost: 100_000_000_000 },
+      { id: 'legende', nom: 'La peinture de légende', cost: 160_000_000_000 },
+    ],
+    bonus: 1.7,
   },
 ];
 
@@ -105,6 +131,20 @@ export const ANNONCES: readonly Annonce[] = [
   { id: 'fusee', projet: 'bolide', nom: 'La Fusée 1969', vendeur: 'Un fermier de Saint-Clin-Clin', etat: 'finie', description: 'Les poules ont pondu dedans pendant 20 ans. Moteur d\'origine, poules pas incluses.' },
   { id: 'requin', projet: 'bolide', nom: 'Le Requin 1971', vendeur: 'Un collectionneur pressé', etat: 'correct', description: "Ma femme dit que c'est elle ou le char. J'garde le char, mais j'ai besoin de place." },
   { id: 'phenix', projet: 'bolide', nom: 'Le Phénix doré', vendeur: 'Un dentiste de Laval', etat: 'propre', description: 'Dans un garage chauffé depuis 1979. Jamais vu la pluie. Juste un peu de rouille... partout.' },
+
+  { id: 'autobus', projet: 'motorise', nom: "L'autobus jaune", vendeur: 'La commission scolaire', etat: 'finie', description: 'Quarante-deux places, toutes collées de gomme. Le stop sort encore tout seul.' },
+  { id: 'motorise', projet: 'motorise', nom: 'Le motorisé des Tremblay', vendeur: 'Les Tremblay', etat: 'correct', description: PROJETS[3].description },
+  { id: 'pompier', projet: 'motorise', nom: 'Le camion de pompier du village', vendeur: 'Les pompiers volontaires', etat: 'propre', description: "Sirène fonctionnelle. Le voisin est pas d'accord." },
+  { id: 'depanneuse', projet: 'motorise', nom: 'La dépanneuse à Bob', vendeur: 'Bob le ferrailleur', etat: 'finie', description: "A remorqué la moitié du comté. Asteure, c'est elle qui a besoin d'une remorque." },
+  { id: 'cantine', projet: 'motorise', nom: 'Le camion à patates', vendeur: 'La cantine chez Raymonde', etat: 'correct', description: "La friteuse est fournie. L'huile date de 2003." },
+  { id: 'police', projet: 'motorise', nom: 'Le char de police retraité', vendeur: 'La police du village', etat: 'propre', description: 'Les gyrophares marchent. Faut pas s\'en servir. Sérieux.' },
+
+  { id: 'monstre', projet: 'resurfaceuse', nom: 'Le camion-monstre', vendeur: 'Ti-Mé', etat: 'finie', description: "A écrasé 300 chars à l'expo de Saint-Clin-Clin. Le 301e, c'était le sien." },
+  { id: 'resurfaceuse', projet: 'resurfaceuse', nom: "La resurfaceuse de l'aréna", vendeur: "L'aréna municipal", etat: 'correct', description: PROJETS[4].description },
+  { id: 'royale', projet: 'resurfaceuse', nom: 'La Grande Royale 1959', vendeur: 'Un notaire de Québec', etat: 'propre', description: 'Des ailerons gros de même. A jamais dépassé 50 km/h.' },
+  { id: 'stockcar', projet: 'resurfaceuse', nom: 'Le stock-car #27', vendeur: 'La piste de Saint-Clin-Clin', etat: 'finie', description: 'Toutes les tôles sont pliées du même bord. Ça tournait juste à gauche anyway.' },
+  { id: 'concept', projet: 'resurfaceuse', nom: 'Le char du futur 1962', vendeur: "Le Salon de l'auto", etat: 'correct', description: 'Prototype unique. Le futur avait pas prévu la rouille.' },
+  { id: 'formule', projet: 'resurfaceuse', nom: 'Le char de formule à Gilles', vendeur: 'Le neveu à Gilles', etat: 'propre', description: "Une place, quatre roues, zéro coffre. Pour l'épicerie, oublie ça." },
 ];
 
 export function getAnnonce(id: string): Annonce | undefined {
@@ -123,6 +163,12 @@ export function prixAnnonce(a: Annonce): number {
 }
 
 /** Multiplicateur sur les pièces : ce que t'as sauvé (ou payé de trop) à l'achat se répartit sur les pièces. */
+/** Ce que tu reçois en revendant un char retapé : ce qu'il t'a coûté, plus un profit. */
+export const PROFIT_VENTE = 0.1;
+export function prixVente(projet: Projet): number {
+  return (projet.prix + projet.pieces.reduce((t, x) => t + x.cost, 0)) * (1 + PROFIT_VENTE);
+}
+
 export function facteurPieces(a: Annonce): number {
   const p = getProjet(a.projet)!;
   return 1 + (p.prix - prixAnnonce(a)) / p.pieces.reduce((t, x) => t + x.cost, 0);

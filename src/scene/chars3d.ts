@@ -5,7 +5,22 @@ import { PAL } from './palette';
 // Une forme de base, une couleur, pis un détail qui le rend unique. Style Bazou VHS : des boîtes, pas de lissage.
 // Pas encore retapé : sur les blocs, plein de rouille. Retapé : sur ses roues, propre.
 
-type Forme = 'berline' | 'coupe' | 'muscle' | 'familiale' | 'corbillard' | 'limo' | 'pickup' | 'van' | 'quatre' | 'decapotable';
+type Forme =
+  | 'berline'
+  | 'coupe'
+  | 'muscle'
+  | 'familiale'
+  | 'corbillard'
+  | 'limo'
+  | 'pickup'
+  | 'van'
+  | 'quatre'
+  | 'decapotable'
+  | 'autobus'
+  | 'motorise'
+  | 'camion'
+  | 'resurfaceuse'
+  | 'formule';
 
 /** Longueur, hauteur de la caisse, cabine [longueur, décalage, hauteur] pis rayon des roues. */
 const FORMES: Record<Forme, { L: number; h: number; cab: [number, number, number]; r: number }> = {
@@ -19,6 +34,11 @@ const FORMES: Record<Forme, { L: number; h: number; cab: [number, number, number
   van: { L: 4.4, h: 0.8, cab: [3.6, -0.3, 1.1], r: 0.42 },
   quatre: { L: 4.0, h: 0.85, cab: [2.0, -0.4, 0.8], r: 0.6 },
   decapotable: { L: 4.4, h: 0.72, cab: [0, 0, 0], r: 0.42 },
+  autobus: { L: 7.2, h: 1.0, cab: [6.4, -0.2, 0.9], r: 0.5 },
+  motorise: { L: 6.2, h: 1.0, cab: [5.2, -0.4, 1.1], r: 0.5 },
+  camion: { L: 5.6, h: 0.9, cab: [1.3, 1.7, 0.9], r: 0.5 },
+  resurfaceuse: { L: 3.8, h: 1.3, cab: [0.9, 1.0, 0.6], r: 0.4 },
+  formule: { L: 4.4, h: 0.35, cab: [0.7, -0.3, 0.3], r: 0.45 },
 };
 
 /** Ce qu'un détail a besoin pour se bâtir : le haut de la caisse, la longueur, pis de quoi poser des boîtes. */
@@ -33,6 +53,8 @@ interface Outils {
 interface Modele {
   forme: Forme;
   couleur: number;
+  /** Des roues plus grosses que la forme (camion-monstre). */
+  roue?: number;
   detail?: (o: Outils) => void;
 }
 
@@ -215,6 +237,133 @@ export const MODELES: Record<string, Modele> = {
       for (const s of [-1, 1]) o.boite(0.7, 0.02, 0.18, ROUGE, 1.1, o.haut + 0.01, s * 0.3, { ry: s * 0.6 });
     },
   },
+
+  // --- Les gros véhicules ---
+  autobus: {
+    forme: 'autobus',
+    couleur: PAL.autobus,
+    detail: (o) => {
+      // Les bandes noires pis le stop qui sort tout seul
+      for (const z of [0.91, -0.91]) o.boite(o.L, 0.1, 0.03, NOIR, 0, o.haut - 0.3, z);
+      o.boite(0.06, 0.5, 0.5, ROUGE, 2.2, o.haut - 0.1, 1.15, { ry: Math.PI / 2 });
+    },
+  },
+  motorise: {
+    forme: 'motorise',
+    couleur: BLANC,
+    detail: (o) => {
+      // Une bande brune pis le vélo attaché en arrière
+      for (const z of [0.91, -0.91]) o.boite(o.L, 0.25, 0.03, PAL.carrosserie, 0, o.haut - 0.25, z);
+      o.cyl(0.3, 0.04, PAL.pneu, -o.L / 2 - 0.15, o.haut + 0.1, 0.5, { rz: Math.PI / 2 });
+      o.cyl(0.3, 0.04, PAL.pneu, -o.L / 2 - 0.15, o.haut + 0.1, -0.3, { rz: Math.PI / 2 });
+    },
+  },
+  pompier: {
+    forme: 'camion',
+    couleur: ROUGE,
+    detail: (o) => {
+      // La grosse boîte, l'échelle sur le dessus pis le gyrophare
+      o.boite(3.6, 1.0, 1.8, ROUGE, -0.9, o.haut + 0.5, 0);
+      for (const z of [-0.4, 0.4]) o.boite(3.4, 0.06, 0.06, PAL.chrome, -0.9, o.haut + 1.1, z);
+      for (let i = 0; i < 8; i++) o.boite(0.06, 0.06, 0.8, PAL.chrome, -2.4 + i * 0.42, o.haut + 1.1, 0);
+      o.boite(0.3, 0.2, 0.3, PAL.lampe, 1.7, o.toit + 0.1, 0);
+    },
+  },
+  depanneuse: {
+    forme: 'camion',
+    couleur: MOUTARDE,
+    detail: (o) => {
+      // Le bras de remorquage pis le crochet
+      o.boite(2.4, 0.3, 1.6, PAL.pneu, -1.0, o.haut + 0.15, 0);
+      o.boite(2.0, 0.18, 0.18, NOIR, -1.7, o.haut + 0.8, 0, { rz: 0.5 });
+      o.boite(0.04, 0.6, 0.04, PAL.chrome, -2.6, o.haut + 0.9, 0);
+    },
+  },
+  cantine: {
+    forme: 'camion',
+    couleur: BLANC,
+    detail: (o) => {
+      // La boîte avec son comptoir pis l'enseigne de patates
+      o.boite(3.6, 1.2, 1.8, BLANC, -0.9, o.haut + 0.6, 0);
+      o.boite(1.6, 0.5, 0.04, PAL.vitre, -0.9, o.haut + 0.8, 0.92);
+      o.boite(1.8, 0.06, 0.3, ROUGE, -0.9, o.haut + 1.1, 1.05);
+      o.boite(1.2, 0.4, 0.1, PAL.autobus, -0.9, o.haut + 1.5, 0);
+    },
+  },
+  police: {
+    forme: 'berline',
+    couleur: NOIR,
+    detail: (o) => {
+      // Les portes blanches pis les gyrophares
+      for (const z of [0.92, -0.92]) o.boite(1.6, o.haut * 0.6, 0.03, BLANC, -0.2, o.haut * 0.75, z);
+      o.boite(0.25, 0.15, 0.3, ROUGE, -0.2, o.toit + 0.08, 0.35);
+      o.boite(0.25, 0.15, 0.3, PAL.bleu, -0.2, o.toit + 0.08, -0.35);
+    },
+  },
+
+  // --- Les légendes ---
+  monstre: {
+    forme: 'pickup',
+    couleur: BLEU,
+    roue: 1.0,
+    // Des barres de toit pis des flammes
+    detail: (o) => {
+      o.boite(0.1, 0.1, 1.8, PAL.chrome, 0.5, o.toit + 0.2, 0);
+      for (const z of [0.92, -0.92]) o.boite(1.4, 0.3, 0.03, 0xc0702a, 1.4, o.haut - 0.3, z);
+    },
+  },
+  resurfaceuse: {
+    forme: 'resurfaceuse',
+    couleur: BLANC,
+    detail: (o) => {
+      // La bande bleue, le banc en haut pis la lame en arrière
+      for (const z of [0.91, -0.91]) o.boite(o.L, 0.2, 0.03, PAL.bleu, 0, o.haut - 0.4, z);
+      o.boite(0.5, 0.4, 0.6, PAL.pneu, 0.5, o.haut + 0.2, 0);
+      o.boite(0.2, 0.3, 2.0, PAL.chrome, -o.L / 2 - 0.1, 0.4, 0);
+    },
+  },
+  royale: {
+    forme: 'berline',
+    couleur: MOUTARDE,
+    detail: (o) => {
+      // Les gros ailerons en arrière
+      for (const z of [0.82, -0.82]) {
+        o.boite(1.1, 0.5, 0.1, MOUTARDE, -o.L / 2 + 0.45, o.haut + 0.25, z, { rz: -0.35 });
+        o.boite(0.1, 0.16, 0.12, ROUGE, -o.L / 2 - 0.05, o.haut + 0.1, z);
+      }
+      for (const z of [0.92, -0.92]) o.boite(o.L * 0.9, 0.06, 0.03, PAL.chrome, 0, o.haut * 0.6, z);
+    },
+  },
+  stockcar: {
+    forme: 'coupe',
+    couleur: BLANC,
+    detail: (o) => {
+      // Le numéro pis des bandes rouges
+      for (const z of [0.92, -0.92]) {
+        o.cyl(0.32, 0.03, NOIR, 0.1, o.haut * 0.7, z, { rx: Math.PI / 2 });
+        o.boite(o.L, 0.12, 0.03, ROUGE, 0, o.haut - 0.1, z);
+      }
+    },
+  },
+  concept: {
+    forme: 'coupe',
+    couleur: VERT,
+    detail: (o) => {
+      // La bulle de vitre sur le dessus
+      o.cyl(0.9, 0.06, PAL.vitre, -0.4, o.toit + 0.2, 0, { cone: true });
+      o.boite(0.6, 0.3, 0.06, VERT, -o.L / 2 + 0.3, o.haut + 0.2, 0);
+    },
+  },
+  formule: {
+    forme: 'formule',
+    couleur: ROUGE,
+    detail: (o) => {
+      // L'aile en avant pis l'aile en arrière
+      o.boite(0.5, 0.06, 2.0, NOIR, o.L / 2 - 0.1, o.haut - 0.25, 0);
+      o.boite(0.5, 0.06, 1.8, NOIR, -o.L / 2 + 0.2, o.haut + 0.5, 0);
+      for (const z of [-0.6, 0.6]) o.boite(0.08, 0.5, 0.08, NOIR, -o.L / 2 + 0.2, o.haut + 0.25, z);
+    },
+  },
 };
 
 export interface Char3D {
@@ -249,7 +398,8 @@ export function creerChar(id: string): Char3D {
     parent.add(mesh);
     return mesh;
   };
-  const bas = f.r * 0.95;
+  const r = m.roue ?? f.r;
+  const bas = r * 0.95;
   const haut = bas + f.h;
   const [cabL, cabX, cabH] = f.cab;
   const outils: Outils = {
@@ -290,16 +440,16 @@ export function creerChar(id: string): Char3D {
   const blocs: THREE.Mesh[] = [];
   const ex = f.L / 2 - 0.85;
   for (const [x, z] of [[ex, 0.9], [ex, -0.9], [-ex, 0.9], [-ex, -0.9]]) {
-    roues.push(poser(groupe, new THREE.CylinderGeometry(f.r, f.r, 0.32, 8), PAL.pneu, x, f.r, z, { rx: Math.PI / 2 }));
+    roues.push(poser(groupe, new THREE.CylinderGeometry(r, r, 0.32, 8), PAL.pneu, x, r, z, { rx: Math.PI / 2 }));
     blocs.push(poser(groupe, new THREE.BoxGeometry(0.5, bas, 0.5), PAL.gravier, x, bas / 2, z * 0.8));
   }
 
   return {
     groupe,
     setFini(fini) {
-      roues.forEach((r) => (r.visible = fini));
+      roues.forEach((x) => (x.visible = fini));
       blocs.forEach((b) => (b.visible = !fini));
-      rouille.forEach((r) => (r.visible = !fini));
+      rouille.forEach((x) => (x.visible = !fini));
       // Pas retapé : la caisse penche un peu, comme un vieux char abandonné.
       caisse.rotation.x = fini ? 0 : 0.04;
     },

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SAISONS, SAISON_SECONDES, saisonA } from './saisons';
-import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce } from './chars';
+import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce, prixVente } from './chars';
 import { EVENEMENTS, tirerEvenement } from './evenements';
-import { annonceDe, buyProjet, coutPiece, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
+import { annonceDe, buyProjet, coutPiece, vendreProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
 import { MODELES } from '../scene/chars3d';
 import { RECETTES } from './mecanique';
@@ -95,6 +95,21 @@ describe('Face-de-Bouc Marché', () => {
 
   it('chaque pièce a son mini-jeu de mécanique', () => {
     for (const p of PROJETS) for (const x of p.pieces) expect(RECETTES[x.id]?.length).toBeGreaterThan(1);
+  });
+
+  it('un char retapé se revend avec profit, une seule fois', () => {
+    const s = newGame(0);
+    s.car = { owned: true, parts: { batterie: true, pneus: true, demarreur: true, freins: true } };
+    s.cash = 1e6;
+    buyProjet(s, 'van');
+    expect(vendreProjet(s, 'pickup')).toBe(false);
+    for (const x of PROJETS[0].pieces) reparerProjet(s, 'pickup', x.id);
+    const avant = s.cash;
+    expect(vendreProjet(s, 'pickup')).toBe(true);
+    expect(s.cash - avant).toBeCloseTo(prixVente(PROJETS[0]));
+    expect(s.projets.pickup).toBeUndefined();
+    expect(buyProjet(s, 'van')).toBe(false);
+    expect(buyProjet(s, 'castor')).toBe(true);
   });
 
   it('chaque annonce coûte le même total que le char d’origine', () => {

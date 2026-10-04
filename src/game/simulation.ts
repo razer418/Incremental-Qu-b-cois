@@ -38,6 +38,8 @@ import {
   revenuRef,
   tap,
   tick,
+  vendreProjet,
+  projetFini,
   type GameState,
 } from './state';
 
@@ -92,7 +94,7 @@ function meilleurAchat(s: GameState, now: number): { cost: number; faire: () => 
       if (total > 0) essayer(total, (x) => ((x.cash = Math.max(x.cash, total)), finir(x)));
       continue;
     }
-    for (const a of annoncesEnLigne(p.id, now)) {
+    for (const a of annoncesEnLigne(p.id, now).filter((x) => !s.vendus.includes(x.id))) {
       const total = prixAnnonce(a) + p.pieces.reduce((t, x) => t + Math.round(x.cost * facteurPieces(a)), 0);
       essayer(total, (x) => ((x.cash = Math.max(x.cash, total)), buyProjet(x, a.id) && finir(x)));
     }
@@ -101,7 +103,13 @@ function meilleurAchat(s: GameState, now: number): { cost: number; faire: () => 
 }
 
 /** Joue `maxSecondes` secondes. Retourne le temps (s) où chaque jalon est atteint. */
-export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: (t: number, s: GameState) => void): Partial<Record<Jalon, number>> {
+/** `flip` : un joueur qui revend chaque char aussitôt retapé pour le profit, au lieu de garder le bonus. */
+export function simuler(
+  tapesParSeconde: number,
+  maxSecondes: number,
+  journal?: (t: number, s: GameState) => void,
+  flip = false,
+): Partial<Record<Jalon, number>> {
   const s = newGame(0);
   const temps: Partial<Record<Jalon, number>> = {};
   let dette = 0;
@@ -134,6 +142,8 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
       if (!achat || !assez(s, achat.cost) || (onRamasse && achat.cost > jalon.cost * 0.1)) break;
       achat.faire();
     }
+
+    if (flip) for (const p of PROJETS) if (projetFini(s, p)) vendreProjet(s, p.id);
 
     journal?.(t, s);
     if (!temps.bazou && s.car.owned) temps.bazou = t;

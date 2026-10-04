@@ -475,6 +475,8 @@ export const EN: Record<string, string> = {
   "Pas pire pantoute. +{cash}": "Not bad at all. +{cash}",
   "Ouin... Tu feras mieux la prochaine fois. +{cash}": "Yeah... You'll do better next time. +{cash}",
   "JOUER": "PLAY",
+  "TON INVENTAIRE": "YOUR INVENTORY",
+  "PRENDRE": "USE",
   "jusqu'à {cash}": "up to {cash}",
   "{nom} (aperçu)": "{nom} (preview)",
   "POSÉ": "ON",

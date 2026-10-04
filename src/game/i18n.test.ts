@@ -47,6 +47,7 @@ function cles(): string[] {
     ...STATIONS.flatMap((s) => [s.nom, s.slogan, ...s.tounes.map((x) => x.titre)]),
     ...PUBS,
     'FERMÉE',
+    'PRENDRE',
   ];
   // Les t('...') pis les textes du tuto dans le code
   const sources = import.meta.glob<string>(['../**/*.ts', '!../**/*.test.ts', '!./en.ts'], { query: '?raw', import: 'default', eager: true });

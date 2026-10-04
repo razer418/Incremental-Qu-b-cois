@@ -31,6 +31,8 @@ export interface GameState {
   noAds: boolean;
   /** Secondes qui restent sur chaque article du magasin général. */
   magasin: Record<string, number>;
+  /** Articles achetés chez Réjean pas encore pris : id -> combien. */
+  inventaire: Record<string, number>;
   /** Succès débloqués (ids). Gardés au prestige. */
   succes: string[];
   /** Les fêtes que t'as déjà vécues (gardé au prestige). */
@@ -84,6 +86,7 @@ export function newGame(now: number): GameState {
     boostSeconds: 0,
     noAds: false,
     magasin: {},
+    inventaire: {},
     succes: [],
     fetes: [],
     stats: { secondes: 0, tapsVie: 0, gagneVie: 0, boosts: 0, articles: 0, evenements: 0, minijeux: 0 },
@@ -179,17 +182,32 @@ export function articleCost(state: GameState, id: string): number {
   return Math.round(Math.max(a.minCost, a.incomeSeconds * revenuRef(state)) * 100) / 100;
 }
 
-/** On peut en reprendre quand il en reste moins que la durée d'un article (max 2 d'avance). */
+/** Max d'un même article dans l'inventaire. */
+export const INVENTAIRE_MAX = 3;
+
+/** On l'achète pour l'inventaire, tant qu'il reste de la place. */
 export function canBuyArticle(state: GameState, id: string): boolean {
-  const a = getArticle(id);
-  return !!a && (state.magasin[id] ?? 0) <= a.seconds && assez(state, articleCost(state, id));
+  return !!getArticle(id) && (state.inventaire[id] ?? 0) < INVENTAIRE_MAX && assez(state, articleCost(state, id));
 }
 
 export function buyArticle(state: GameState, id: string): boolean {
   if (!canBuyArticle(state, id)) return false;
   payer(state, articleCost(state, id));
-  state.magasin[id] = (state.magasin[id] ?? 0) + getArticle(id)!.seconds;
+  state.inventaire[id] = (state.inventaire[id] ?? 0) + 1;
   state.stats.articles += 1;
+  return true;
+}
+
+/** On en prend un quand il en reste moins que la durée d'un article (max 2 d'avance). */
+export function canUseArticle(state: GameState, id: string): boolean {
+  const a = getArticle(id);
+  return !!a && (state.inventaire[id] ?? 0) > 0 && (state.magasin[id] ?? 0) <= a.seconds;
+}
+
+export function useArticle(state: GameState, id: string): boolean {
+  if (!canUseArticle(state, id)) return false;
+  if (--state.inventaire[id] === 0) delete state.inventaire[id];
+  state.magasin[id] = (state.magasin[id] ?? 0) + getArticle(id)!.seconds;
   return true;
 }
 

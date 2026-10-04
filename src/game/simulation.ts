@@ -15,6 +15,7 @@ import {
   articleCost,
   buyArticle,
   canBuyArticle,
+  useArticle,
   assez,
   buy,
   buyBuilding,
@@ -101,7 +102,12 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     while (activeQuest(s) && claimQuest(s));
     // Une pub quand le boost achève, pis un tour au magasin quand c'est pas cher pour lui.
     if (s.boostSeconds < 60) addBoost(s);
-    for (const a of ARTICLES) if (canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) buyArticle(s, a.id);
+    // Il prend son article drette en l'achetant.
+    for (const a of ARTICLES)
+      if ((s.magasin[a.id] ?? 0) <= a.seconds && canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) {
+        buyArticle(s, a.id);
+        useArticle(s, a.id);
+      }
     for (const m of MINIJEUX) if (peutJouer(s, m.id, t * 1000)) finirPartie(s, m.id, 0.7, t * 1000);
     if (peutInscrire(s, t * 1000)) {
       earn(s, prixExpo(s, 2 / 3));

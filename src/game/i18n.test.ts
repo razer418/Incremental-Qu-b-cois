@@ -28,7 +28,7 @@ function cles(): string[] {
     ...BUILDINGS.flatMap((b) => [b.name, b.description, b.message]),
     ...Object.values(CHARACTERS).map((c) => c.name),
     ...QUESTS.flatMap((q) => [q.ask, q.thanks, q.goal]),
-    ...ARTICLES.flatMap((a) => [a.name, a.description]),
+    ...ARTICLES.flatMap((a) => [a.name, a.description, a.verbe, a.ligne]),
     ...REJEAN,
     ...SUCCES.flatMap((x) => [x.nom, x.description]),
     ...SAISONS.flatMap((x) => [x.nom, x.description]),
@@ -41,7 +41,7 @@ function cles(): string[] {
     ...MINIJEUX.flatMap((m) => [m.nom, m.description]),
     ...THEMES.flatMap((x) => [x.nom, x.demande, ...x.criteres.map((c) => c.texte)]),
     // Les boutons OUI/NON des options
-    'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH', 'GRAND', 'PETIT',
+    'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH', 'GRAND', 'PETIT', 'TOUT', 'STATS',
     NO_ADS_PRICE,
     // La radio du char
     ...STATIONS.flatMap((s) => [s.nom, s.slogan, ...s.tounes.map((x) => x.titre)]),

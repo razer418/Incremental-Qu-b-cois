@@ -61,7 +61,7 @@ p {
   }
   .col-jeu {
     position: sticky;
-    top: 144px;
+    top: 160px;
   }
 }
 
@@ -70,23 +70,44 @@ p {
   position: sticky;
   top: 0;
   z-index: 5;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  /* 3 bandes : ton argent (+ MENU), le temps (saison, heure, buffs), la radio. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'argent menu' 'temps temps' 'radio radio';
+  gap: 6px 12px;
   margin: 0 -16px;
   padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
   background: var(--bg);
   border-bottom: 2px solid var(--line);
 }
 
-.sous-cash {
+.b-gains {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 0 12px;
 }
 
+.b-temps {
+  grid-area: temps;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.b-temps .buffs {
+  margin-left: auto;
+}
+.b-temps .buff {
+  width: 30px;
+  height: 30px;
+}
+
 .options {
+  grid-area: menu;
+  align-self: start;
   flex: none;
   min-height: 44px;
   padding: 6px 12px;
@@ -127,8 +148,16 @@ p {
   display: none;
 }
 
-.hud {
+.b-argent {
+  grid-area: argent;
   min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+}
+.b-argent .job {
+  flex-basis: 100%;
 }
 
 .job {
@@ -943,10 +972,10 @@ dialog p.resume {
 
 /* La radio du char : une ligne sous le cash, qui défile si le texte est trop long. Tape = poste suivant. */
 .radio {
+  grid-area: radio;
   display: block;
   width: 100%;
-  margin-top: 4px;
-  padding: 0;
+  padding: 4px 0 0;
   overflow: hidden;
   white-space: nowrap;
   text-align: left;
@@ -955,6 +984,7 @@ dialog p.resume {
   opacity: 0.85;
   background: none;
   border: 0;
+  border-top: 1px dashed var(--line);
   cursor: pointer;
 }
 .radio.fermee {

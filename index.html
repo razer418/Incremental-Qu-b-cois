@@ -39,6 +39,14 @@
           <span id="tap-value" class="tap-value">+0,10 $</span>
         </button>
 
+        <section id="inventaire" class="inventaire">
+          <button id="sac" type="button" class="sac" aria-expanded="true" aria-controls="inv-corps"><span id="sac-icone"></span><span data-t>TON INVENTAIRE</span> <span id="sac-n" class="level"></span></button>
+          <div id="inv-corps">
+          <p id="inv-line" class="inv-line"></p>
+          <ul id="inventaire-liste" class="upgrades"></ul>
+          </div>
+        </section>
+
         <div class="boost-row">
           <button id="boost" class="boost" type="button">[ BOOST x2 ]</button>
           <span id="boost-sub" class="boost-sub"></span>
@@ -66,12 +74,6 @@
           </div>
         </div>
         <ul id="articles" class="upgrades"></ul>
-      </section>
-
-      <section id="inventaire" class="garage" hidden>
-        <h2 data-t>TON INVENTAIRE</h2>
-        <p id="inv-line" class="quest-line" hidden></p>
-        <ul id="inventaire-liste" class="upgrades"></ul>
       </section>
 
       <section id="quest" class="quest" aria-live="polite">

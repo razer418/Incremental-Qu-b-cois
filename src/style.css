@@ -1337,4 +1337,40 @@ section.replie h2 {
   font: 400 14px/1 var(--pixel);
   color: var(--bg);
   background: var(--cash);
+
+/* L'inventaire, sous LIVRER : petit pis serré. */
+.sac {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: 400 24px/1 var(--pixel);
+  color: var(--gold);
+  cursor: pointer;
+}
+.sac svg {
+  width: 30px;
+  height: 30px;
+}
+.sac[aria-expanded='false'] {
+  opacity: 0.75;
+}
+.inv-line {
+  margin: 0 0 6px;
+  font: 400 18px/1.35 var(--mono);
+  color: var(--muted);
+}
+#inv-corps[hidden],
+.inv-line[hidden] {
+  display: none;
+}
+.inventaire .upgrade {
+  padding: 6px 10px;
+}
+.inventaire .buy {
+  min-width: 0;
+  font-size: 20px;
 }

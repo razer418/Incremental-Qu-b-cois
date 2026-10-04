@@ -4,7 +4,8 @@ import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce, prixVente
 import { EVENEMENTS, tirerEvenement } from './evenements';
 import { annonceDe, buyProjet, coutPiece, vendreProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
-import { MODELES } from '../scene/chars3d';
+import * as THREE from 'three';
+import { MODELES, creerChar } from '../scene/chars3d';
 import { RECETTES } from './mecanique';
 import { SONS_CHARS } from '../platform/sons';
 
@@ -91,6 +92,16 @@ describe('Face-de-Bouc Marché', () => {
     expect(Object.keys(SONS_CHARS).sort()).toEqual(ids);
     expect(new Set(Object.values(SONS_CHARS).map((x) => JSON.stringify(x))).size).toBe(ids.length);
     expect(new Set(Object.values(MODELES).map((x) => `${x.forme}:${x.couleur}:${x.detail}`)).size).toBe(ids.length);
+  });
+
+  it('chaque char reste dans le budget du guide Bazou VHS (1 500 triangles)', () => {
+    for (const id of Object.keys(MODELES)) {
+      let tris = 0;
+      creerChar(id).groupe.traverse((o) => {
+        if (o instanceof THREE.Mesh) tris += o.geometry.index!.count / 3;
+      });
+      expect(tris).toBeLessThanOrEqual(1500);
+    }
   });
 
   it('chaque pièce a son mini-jeu de mécanique', () => {

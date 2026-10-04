@@ -369,24 +369,80 @@ export const MODELES: Record<string, Modele> = {
 
 export interface Char3D {
   groupe: THREE.Group;
-  /** Retapé : sur ses roues pis propre. */
-  setFini(fini: boolean): void;
+  /** Avancement du retapage, de 0 (acheté) à 1 (retapé) : la rouille part pièce par pièce. */
+  setProgres(p: number): void;
   dispose(): void;
 }
+
+// Une petite texture 64×64 faite en code, en 4 cases de 32×32 : grain (tout le char), rouille, plaque, grille.
+// Filtre « nearest » pour le look PS1. Une seule texture pour tous les chars.
+const CASE = { grain: 0, rouille: 1, plaque: 2, grille: 3 } as const;
+type Case = keyof typeof CASE;
+let atlas: THREE.DataTexture | null = null;
+function texture(): THREE.DataTexture {
+  if (atlas) return atlas;
+  const T = 64;
+  const d = new Uint8Array(T * T * 4);
+  let graine = 418;
+  const hasard = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
+  // Un « 418 » en pixels de 3×5, pour la plaque.
+  const CHIFFRES: Record<string, string[]> = { '4': ['101', '101', '111', '001', '001'], '1': ['010', '110', '010', '010', '111'], '8': ['111', '101', '111', '101', '111'] };
+  for (let y = 0; y < T; y++)
+    for (let x = 0; x < T; x++) {
+      const c = (y < 32 ? 0 : 2) + (x < 32 ? 0 : 1);
+      const u = x % 32;
+      const v = 31 - (y % 32);
+      let rgb: [number, number, number];
+      if (c === 0) {
+        const g = 225 + hasard() * 30;
+        rgb = [g, g, g];
+      } else if (c === 1) {
+        const k = hasard();
+        rgb = k < 0.25 ? [110, 60, 35] : k > 0.85 ? [190, 125, 75] : [160, 97, 58];
+      } else if (c === 2) {
+        rgb = [230, 226, 210];
+        if (u === 0 || u === 31 || v === 6 || v === 25) rgb = [60, 74, 110];
+        const i = Math.floor((u - 4) / 8);
+        const ch = '418'[i];
+        const px = (u - 4) % 8;
+        const py = v - 12;
+        if (ch && px < 6 && py >= 0 && py < 10 && CHIFFRES[ch][Math.floor(py / 2)][Math.floor(px / 2)] === '1') rgb = [60, 74, 110];
+      } else rgb = v % 4 < 2 || u % 8 === 0 ? [40, 40, 38] : [215, 215, 205];
+      d.set([...rgb, 255], (y * T + x) * 4);
+    }
+  atlas = new THREE.DataTexture(d, T, T);
+  atlas.magFilter = THREE.NearestFilter;
+  atlas.minFilter = THREE.NearestFilter;
+  atlas.needsUpdate = true;
+  return atlas;
+}
+
+const BLANC_PUR = 0xffffff;
+const ROUGE_FEU = 0x8a2f26;
 
 export function creerChar(id: string): Char3D {
   const m = MODELES[id];
   const f = FORMES[m.forme];
-  // Chaque char est fait de dizaines de boîtes, mais on les fusionne en 4 objets (caisse, rouille, roues, blocs) :
+  // Chaque char est fait de dizaines de boîtes, mais on les fusionne en quelques objets :
   // sur un cell, c'est le nombre d'objets à dessiner qui coûte cher, pas les triangles.
   type Tas = THREE.BufferGeometry[];
   const fixe: Tas = [];
+  const vitresTas: Tas = [];
   const rouilleTas: Tas = [];
-  const rouesTas: Tas = [];
-  const blocsTas: Tas = [];
+  const finiTas: Tas = [];
+  const brisTas: Tas = [];
   const tmp = new THREE.Object3D();
   const couleur = new THREE.Color();
-  const poser = (tas: Tas, geo: THREE.BufferGeometry, c: number, x: number, y: number, z: number, o: { rx?: number; ry?: number; rz?: number } = {}) => {
+  const poser = (
+    tas: Tas,
+    geo: THREE.BufferGeometry,
+    c: number,
+    x: number,
+    y: number,
+    z: number,
+    o: { rx?: number; ry?: number; rz?: number } = {},
+    kase: Case = 'grain',
+  ) => {
     tmp.position.set(x, y, z);
     tmp.rotation.set(o.rx ?? 0, o.ry ?? 0, o.rz ?? 0);
     tmp.updateMatrix();
@@ -394,75 +450,143 @@ export function creerChar(id: string): Char3D {
     couleur.setHex(c);
     const n = geo.attributes.position.count;
     geo.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n }, () => couleur.toArray()).flat(), 3));
+    // Chaque morceau prend sa case dans la texture.
+    const uv = geo.attributes.uv;
+    const k = CASE[kase];
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (k % 2) * 0.5 + uv.getX(i) * 0.5, (k < 2 ? 0 : 0.5) + uv.getY(i) * 0.5);
     tas.push(geo);
   };
+  const boite = (tas: Tas, w: number, h: number, d: number, c: number, x: number, y: number, z: number, o?: { rx?: number; ry?: number; rz?: number }, kase?: Case) =>
+    poser(tas, new THREE.BoxGeometry(w, h, d), c, x, y, z, o, kase);
+  const cyl = (tas: Tas, r: number, h: number, c: number, x: number, y: number, z: number, o?: { rx?: number; ry?: number; rz?: number }, seg = 8) =>
+    poser(tas, new THREE.CylinderGeometry(r, r, h, seg), c, x, y, z, o);
+
   const r = m.roue ?? f.r;
   const bas = r * 0.95;
   const haut = bas + f.h;
   const [cabL, cabX, cabH] = f.cab;
+  const L = f.L;
   const outils: Outils = {
     haut,
-    L: f.L,
+    L,
     toit: haut + cabH + 0.06,
-    boite: (w, h, d, c, x, y, z, o) => poser(fixe, new THREE.BoxGeometry(w, h, d), c, x, y, z, o),
+    boite: (w, h, d, c, x, y, z, o) => boite(fixe, w, h, d, c, x, y, z, o),
     cyl: (r, h, c, x, y, z, o = {}) => poser(fixe, o.cone ? new THREE.ConeGeometry(r, h, 6) : new THREE.CylinderGeometry(r, r, h, 8), c, x, y, z, o),
   };
 
-  // La caisse, la cabine (vitres + toit), les pare-chocs pis les phares.
-  outils.boite(f.L, f.h, 1.8, m.couleur, 0, bas + f.h / 2, 0);
+  // La caisse
+  boite(fixe, L, f.h, 1.8, m.couleur, 0, bas + f.h / 2, 0);
+  // Le bas de caisse plus foncé, pis les ailes au-dessus des roues
+  boite(fixe, L * 0.96, 0.12, 1.84, PAL.pneu, 0, bas + 0.06, 0);
+  const ex = L / 2 - 0.85;
+  for (const x of [ex, -ex]) for (const z of [0.9, -0.9]) boite(fixe, r * 2.3, 0.1, 0.12, m.couleur, x, Math.max(bas + 0.14, 2 * r * 0.98), z);
+
+  // La cabine : des montants, le toit, des vitres qu'on voit au travers, pis l'intérieur.
   if (cabL) {
-    outils.boite(cabL, cabH, 1.6, PAL.vitre, cabX, haut + cabH / 2, 0);
-    outils.boite(cabL + 0.1, 0.12, 1.7, m.couleur, cabX, haut + cabH, 0);
+    const avant = cabX + cabL / 2;
+    const arriere = cabX - cabL / 2;
+    for (const x of [avant - 0.05, arriere + 0.05]) for (const z of [0.76, -0.76]) boite(fixe, 0.1, cabH, 0.08, m.couleur, x, haut + cabH / 2, z);
+    if (cabL > 2.4) for (const z of [0.76, -0.76]) boite(fixe, 0.1, cabH, 0.08, m.couleur, cabX, haut + cabH / 2, z);
+    boite(fixe, cabL + 0.1, 0.12, 1.7, m.couleur, cabX, haut + cabH, 0);
+    boite(vitresTas, cabL - 0.1, cabH - 0.06, 1.5, PAL.vitre, cabX, haut + cabH / 2, 0);
+    // Les miroirs
+    for (const z of [0.95, -0.95]) boite(fixe, 0.1, 0.12, 0.16, PAL.chrome, avant - 0.1, haut + 0.12, z);
+    // Le dash, le volant pis les bancs (avant, pis arrière si ça rentre)
+    boite(fixe, 0.25, 0.18, 1.4, PAL.pneu, avant - 0.2, haut + 0.1, 0);
+    poser(fixe, new THREE.TorusGeometry(0.15, 0.03, 4, 10), PAL.pneu, avant - 0.42, haut + 0.25, 0.35, { ry: Math.PI / 2, rz: 0.4 });
+    const banc = (x: number) => {
+      boite(fixe, 0.4, 0.14, 1.36, PAL.declin, x, haut + 0.07, 0);
+      boite(fixe, 0.1, 0.4, 1.36, PAL.declin, x - 0.2, haut + 0.25, 0);
+    };
+    banc(avant - 0.8);
+    if (cabL > 1.8) banc(avant - 1.6);
   }
-  if (m.forme === 'pickup') {
-    // La boîte ouverte en arrière : on creuse avec un fond foncé pis des côtés.
-    const long = f.L / 2 - cabL / 2 + cabX - 0.1;
-    const x = -f.L / 2 + long / 2;
-    outils.boite(long, 0.04, 1.6, PAL.pneu, x, haut + 0.01, 0);
-    for (const z of [-0.85, 0.85]) outils.boite(long, 0.35, 0.1, m.couleur, x, haut + 0.17, z);
+
+  // Le devant : grille, phares ronds, plaque. L'arrière : feux pis plaque.
+  boite(fixe, 0.06, Math.min(0.3, f.h * 0.45), 1.0, PAL.chrome, L / 2 + 0.02, haut - f.h * 0.35, 0, undefined, 'grille');
+  for (const z of [0.68, -0.68]) {
+    cyl(fixe, 0.13, 0.06, PAL.chrome, L / 2 + 0.02, haut - f.h * 0.3, z, { rz: Math.PI / 2 });
+    cyl(fixe, 0.1, 0.08, PAL.declin, L / 2 + 0.03, haut - f.h * 0.3, z, { rz: Math.PI / 2 });
+    boite(fixe, 0.05, 0.14, 0.24, ROUGE_FEU, -L / 2 - 0.01, haut - 0.2, z);
   }
-  for (const s of [-1, 1]) outils.boite(0.2, 0.25, 1.9, PAL.chrome, s * (f.L / 2 + 0.05), bas + 0.15, 0);
-  for (const z of [-0.6, 0.6]) outils.boite(0.05, 0.18, 0.3, PAL.declin, f.L / 2 + 0.01, haut - 0.2, z);
+  for (const s of [-1, 1]) {
+    boite(fixe, 0.2, 0.25, 1.9, PAL.chrome, s * (L / 2 + 0.05), bas + 0.15, 0);
+    boite(fixe, 0.03, 0.16, 0.4, BLANC_PUR, s * (L / 2 + 0.16), bas + 0.17, 0, undefined, 'plaque');
+  }
+
+  // Les portes : des joints foncés pis des poignées chromées.
+  if (cabL) {
+    const portes = cabL > 2.4 ? [cabX + cabL / 2 - 0.1, cabX, cabX - cabL / 2 + 0.1] : [cabX + cabL / 2 - 0.1, cabX - cabL / 2 + 0.1];
+    for (const z of [0.91, -0.91]) {
+      for (const x of portes) boite(fixe, 0.03, f.h * 0.8, 0.02, PAL.pneu, x, bas + f.h * 0.5, z);
+      for (const x of portes.slice(0, -1)) boite(fixe, 0.16, 0.05, 0.04, PAL.chrome, x - 0.3, haut - 0.15, z * 1.01);
+    }
+  }
   m.detail?.(outils);
 
-  // La rouille, partie quand c'est retapé.
-  poser(rouilleTas, new THREE.BoxGeometry(0.8, f.h * 0.5, 0.04), PAL.rouille, f.L * 0.25, bas + f.h * 0.4, 0.92);
-  poser(rouilleTas, new THREE.BoxGeometry(0.5, f.h * 0.4, 0.04), PAL.rouille, -f.L * 0.3, bas + f.h * 0.55, 0.92);
-  poser(rouilleTas, new THREE.BoxGeometry(0.6, 0.04, 0.5), PAL.rouille, f.L * 0.3, haut + 0.01, -0.3);
-
-  // Roues, ou des blocs de béton tant que c'est pas retapé.
-  const ex = f.L / 2 - 0.85;
-  for (const [x, z] of [[ex, 0.9], [ex, -0.9], [-ex, 0.9], [-ex, -0.9]]) {
-    poser(rouesTas, new THREE.CylinderGeometry(r, r, 0.32, 8), PAL.pneu, x, r, z, { rx: Math.PI / 2 });
-    poser(blocsTas, new THREE.BoxGeometry(0.5, bas, 0.5), PAL.gravier, x, bas / 2, z * 0.8);
+  // Le capot ouvert pis le moteur à l'air tant que c'est pas retapé (si y'a un capot en avant de la cabine).
+  const capot = L / 2 - (cabX + cabL / 2);
+  if (cabL && capot > 0.8) {
+    const cx = cabX + cabL / 2 + capot / 2;
+    boite(brisTas, capot * 0.7, 0.3, 1.0, PAL.tole, cx, haut + 0.15, 0);
+    for (let i = 0; i < 4; i++) cyl(brisTas, 0.08, 0.2, PAL.pneu, cx - capot * 0.25 + i * capot * 0.17, haut + 0.38, 0.25);
+    boite(brisTas, 0.3, 0.12, 0.3, PAL.chrome, cx, haut + 0.36, -0.3);
+    boite(brisTas, capot, 0.05, 1.7, m.couleur, cabX + cabL / 2 + 0.1, haut + capot * 0.45, 0, { rz: -1.2 });
   }
 
-  const mat = new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, shininess: 0, specular: 0x000000 });
-  const fondre = (tas: Tas) => {
+  // La rouille : 6 plaques qui partent une à une à chaque pièce posée.
+  const plaques: [number, number, number, number, number, number][] = [
+    [0.8, f.h * 0.5, 0.04, L * 0.25, bas + f.h * 0.4, 0.93],
+    [0.6, f.h * 0.4, 0.04, -L * 0.3, bas + f.h * 0.55, -0.93],
+    [0.6, 0.04, 0.5, L * 0.3, haut + 0.02, -0.3],
+    [0.5, f.h * 0.4, 0.04, -L * 0.3, bas + f.h * 0.55, 0.93],
+    [0.04, f.h * 0.4, 0.6, -L / 2 - 0.02, bas + f.h * 0.5, 0.3],
+    [0.7, f.h * 0.35, 0.04, L * 0.1, bas + f.h * 0.35, -0.93],
+  ];
+  for (const [w, h, d, x, y, z] of plaques) boite(rouilleTas, w, h, d, BLANC_PUR, x, y, z, undefined, 'rouille');
+
+  // Roues avec jantes, ou des blocs de béton tant que c'est pas retapé.
+  for (const [x, z] of [[ex, 0.9], [ex, -0.9], [-ex, 0.9], [-ex, -0.9]]) {
+    cyl(finiTas, r, 0.32, PAL.pneu, x, r, z, { rx: Math.PI / 2 }, 10);
+    cyl(finiTas, r * 0.55, 0.34, PAL.chrome, x, r, z, { rx: Math.PI / 2 }, 8);
+    cyl(finiTas, r * 0.18, 0.36, PAL.pneu, x, r, z, { rx: Math.PI / 2 }, 6);
+    boite(brisTas, 0.5, bas, 0.5, PAL.gravier, x, bas / 2, z * 0.8);
+  }
+
+  const mat = new THREE.MeshPhongMaterial({ vertexColors: true, map: texture(), flatShading: true, shininess: 0, specular: 0x000000 });
+  const verre = new THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.45, shininess: 30 });
+  const fondre = (tas: Tas, mt = mat) => {
     const geo = mergeGeometries(tas)!;
     tas.forEach((g) => g.dispose());
-    return new THREE.Mesh(geo, mat);
+    return new THREE.Mesh(geo, mt);
   };
   const groupe = new THREE.Group();
   const caisse = new THREE.Group();
   const rouille = fondre(rouilleTas);
-  const roues = fondre(rouesTas);
-  const blocs = fondre(blocsTas);
-  caisse.add(fondre(fixe), rouille);
-  groupe.add(caisse, roues, blocs);
+  const fini = fondre(finiTas);
+  const bris = fondre(brisTas);
+  caisse.add(fondre(fixe), rouille, bris);
+  if (vitresTas.length) caisse.add(fondre(vitresTas, verre));
+  groupe.add(caisse, fini);
+  // Chaque plaque de rouille est une boîte : 36 indices.
+  const parPlaque = rouille.geometry.index!.count / plaques.length;
 
   return {
     groupe,
-    setFini(fini) {
-      roues.visible = fini;
-      blocs.visible = !fini;
-      rouille.visible = !fini;
+    setProgres(p) {
+      const finiOk = p >= 1;
+      fini.visible = finiOk;
+      bris.visible = !finiOk;
+      rouille.geometry.setDrawRange(0, Math.round((1 - p) * plaques.length) * parPlaque);
+      rouille.visible = !finiOk;
       // Pas retapé : la caisse penche un peu, comme un vieux char abandonné.
-      caisse.rotation.x = fini ? 0 : 0.04;
+      caisse.rotation.x = finiOk ? 0 : 0.04;
+      // Les blocs sont dans « bris » avec le capot : la caisse tient dessus.
     },
     dispose() {
       groupe.traverse((o) => o instanceof THREE.Mesh && o.geometry.dispose());
       mat.dispose();
+      verre.dispose();
     },
   };
 }

@@ -595,6 +595,10 @@ h2 {
   color: var(--cash);
 }
 
+.stats-seulement #bat-desc {
+  display: none;
+}
+
 .upgrade-info small {
   font: 400 18px/1.35 var(--mono);
   color: var(--muted);

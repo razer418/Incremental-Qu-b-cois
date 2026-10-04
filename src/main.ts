@@ -11,7 +11,7 @@ import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
 import { NO_ADS_PRICE, webStore } from './platform/store';
 import { UPGRADES } from './game/upgrades';
-import { CAR_PRICE, PARTS } from './game/car';
+import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './game/car';
 import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
 import {
   FIRST_CAR_GOAL,
@@ -437,6 +437,7 @@ for (const p of PARTS) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(p.name)}</strong>
+      <span class="stat">${p.essential ? t('Pour que ton bazou roule') : `${facteur(CAR_TIP_MULT)} ${t('sur tous tes gains')}`}</span>
       <small>${t(p.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
@@ -961,6 +962,8 @@ function renderEmpire(roule: boolean): void {
   if (b) {
     batName.textContent = t(b.name);
     batDesc.textContent = t(b.description);
+    const n = UPGRADES.filter((u) => u.requires === b.id).length;
+    $('bat-stat').textContent = t(b.id === 'arena' ? 'Débloque {n} achats pis le prestige' : 'Débloque {n} achats', { n });
     batCost.textContent = formatMoney(b.cost);
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
@@ -1136,11 +1139,13 @@ const projetRows = PROJETS.map((p) => {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong></strong>
+      <span class="stat"></span>
       <small></small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
   li.querySelector('strong')!.textContent = t(p.nom);
-  li.querySelector('small')!.textContent = `${t(p.description)} ${t('Une fois retapé : {x} sur tous tes gains.', { x: facteur(p.bonus) })}`;
+  li.querySelector('.stat')!.textContent = t('Une fois retapé : {x} sur tous tes gains.', { x: facteur(p.bonus) });
+  li.querySelector('small')!.textContent = t(p.description);
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (!buyProjet(state, p.id)) return;
@@ -1148,11 +1153,12 @@ const projetRows = PROJETS.map((p) => {
     save(localStorage, state);
     render();
   });
-  const pieces = p.pieces.map((x) => {
+  const pieces = p.pieces.map((x, i) => {
     const pli = document.createElement('li');
     pli.className = 'upgrade piece';
-    pli.innerHTML = `<div class="upgrade-info"><strong></strong></div><button type="button" class="buy"><span class="cost"></span></button>`;
+    pli.innerHTML = `<div class="upgrade-info"><strong></strong><span class="stat"></span></div><button type="button" class="buy"><span class="cost"></span></button>`;
     pli.querySelector('strong')!.textContent = t(x.nom);
+    pli.querySelector('.stat')!.textContent = t('Pièce {i} sur {n} du {x}', { i: i + 1, n: p.pieces.length, x: facteur(p.bonus) });
     const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
     pbtn.addEventListener('click', () => {
       if (!reparerProjet(state, p.id, x.id)) return;
@@ -1382,6 +1388,7 @@ const setDescriptions = (stats: boolean) => {
     d.el.textContent = d.aStat ? (stats ? '' : sansStat(d.tout)) : stats ? stat(d.tout) : d.tout;
     d.el.hidden = !d.el.textContent;
   }
+  document.body.classList.toggle('stats-seulement', stats);
   bascule(descriptionsBtn, !stats, 'TOUT', 'STATS');
 };
 setDescriptions(pref.get('descriptions') === 'stats');

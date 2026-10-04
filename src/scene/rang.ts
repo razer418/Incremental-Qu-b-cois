@@ -989,6 +989,192 @@ export function createRang(
     }
   };
 
+  // Le monde qui passe dans le rang devant la maison : chars, vélos, motos, un chien, un renard...
+  // Chaque modèle est bâti une fois pis réutilisé. L'avant est vers +x.
+  interface Passant {
+    type: PassantId;
+    g: THREE.Group;
+    phares: THREE.Object3D[];
+    vitesse: number;
+    /** Sur la route (x qui avance) ou à travers (z qui avance, le renard). */
+    traverse?: boolean;
+    actif: boolean;
+    dir: number;
+    pattes?: THREE.Object3D[];
+  }
+  type PassantId = 'char' | 'pickup' | 'tracteur' | 'scooter' | 'velo' | 'moto' | 'chien' | 'renard' | 'motoneige';
+  const roueMince = G(new THREE.CylinderGeometry(0.34, 0.34, 0.06, 8));
+  const nouveauPassant = (type: PassantId, vitesse: number, bati: (g: THREE.Group, phares: THREE.Object3D[], pattes: THREE.Object3D[]) => void, traverse = false) => {
+    const g = new THREE.Group();
+    g.visible = false;
+    scene.add(g);
+    const phares: THREE.Object3D[] = [];
+    const pattes: THREE.Object3D[] = [];
+    bati(g, phares, pattes);
+    return { type, g, phares, pattes, vitesse, traverse, actif: false, dir: 1 } as Passant;
+  };
+  const roues4 = (g: THREE.Group, x: number, z: number, s = 0.75) => {
+    for (const [wx, wz] of [
+      [x, z],
+      [x, -z],
+      [-x, z],
+      [-x, -z],
+    ])
+      part(g, roue, PAL.pneu, wx, 0.42 * s, wz, { rx: Math.PI / 2, s: [s, s, s] });
+  };
+  const phare = (g: THREE.Group, phares: THREE.Object3D[], x: number, y: number, z: number) =>
+    phares.push(part(g, B(0.08, 0.16, 0.22), PAL.lampe, x, y, z));
+  const pilote = (g: THREE.Group, x: number, y: number, chandail: number, tete: number) => {
+    part(g, B(0.36, 0.62, 0.42), chandail, x, y + 0.31, 0, { rz: -0.2 });
+    part(g, B(0.3, 0.3, 0.3), tete, x + 0.08, y + 0.78, 0);
+  };
+  const passants: Passant[] = [
+    ...[PAL.bleu, PAL.champ, PAL.chrome].map((c) =>
+      nouveauPassant('char', 9, (g, ph) => {
+        part(g, B(3.4, 0.62, 1.5), c, 0, 0.62, 0);
+        part(g, B(1.7, 0.55, 1.36), PAL.vitre, -0.2, 1.2, 0);
+        part(g, B(1.8, 0.1, 1.42), c, -0.2, 1.5, 0);
+        roues4(g, 1.1, 0.72);
+        phare(g, ph, 1.71, 0.7, 0.5);
+        phare(g, ph, 1.71, 0.7, -0.5);
+      }),
+    ),
+    nouveauPassant('pickup', 8, (g, ph) => {
+      part(g, B(1.6, 1.1, 1.6), PAL.rougeGrange, 0.9, 0.85, 0);
+      part(g, B(0.9, 0.45, 1.5), PAL.vitre, 0.75, 1.2, 0);
+      part(g, B(2.2, 0.6, 1.6), PAL.rougeGrange, -1, 0.6, 0);
+      part(g, B(1.2, 0.5, 1.2), PAL.foin, -1.1, 1.1, 0);
+      roues4(g, 1.1, 0.78);
+      phare(g, ph, 1.71, 0.8, 0.55);
+      phare(g, ph, 1.71, 0.8, -0.55);
+    }),
+    nouveauPassant('tracteur', 3, (g, ph) => {
+      part(g, B(1.8, 0.7, 0.9), PAL.rougeGrange, 0.4, 1, 0);
+      part(g, B(0.9, 1.1, 1), PAL.vitre, -0.5, 1.6, 0);
+      part(g, B(1, 0.1, 1.1), PAL.rougeGrange, -0.5, 2.2, 0);
+      part(g, G(new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5)), PAL.pneu, 0.9, 1.6, 0);
+      for (const z of [0.7, -0.7]) {
+        part(g, roue, PAL.pneu, -0.6, 0.7, z, { rx: Math.PI / 2, s: [1.6, 1, 1.6] });
+        part(g, roue, PAL.pneu, 1, 0.4, z * 0.8, { rx: Math.PI / 2, s: [0.9, 0.8, 0.9] });
+      }
+      phare(g, ph, 1.31, 1.1, 0.3);
+    }),
+    nouveauPassant('scooter', 5, (g, ph) => {
+      for (const x of [0.55, -0.55]) part(g, roueMince, PAL.pneu, x, 0.3, 0, { rx: Math.PI / 2, s: [0.9, 1, 0.9] });
+      part(g, B(1.2, 0.35, 0.4), PAL.erables[1], 0, 0.55, 0);
+      part(g, B(0.15, 0.7, 0.3), PAL.erables[1], 0.5, 0.9, 0);
+      pilote(g, -0.15, 0.7, PAL.bleu, PAL.pneu);
+      phare(g, ph, 0.6, 1.1, 0);
+    }),
+    nouveauPassant('velo', 3.5, (g) => {
+      for (const x of [0.55, -0.55]) part(g, roueMince, PAL.pneu, x, 0.34, 0, { rx: Math.PI / 2 });
+      part(g, B(1.1, 0.08, 0.08), PAL.chrome, 0, 0.62, 0, { rz: 0.15 });
+      part(g, B(0.08, 0.5, 0.08), PAL.chrome, 0.45, 0.7, 0);
+      pilote(g, -0.1, 0.75, PAL.champ, PAL.rougeGrange);
+    }),
+    nouveauPassant('moto', 12, (g, ph) => {
+      for (const x of [0.75, -0.75]) part(g, roueMince, PAL.pneu, x, 0.38, 0, { rx: Math.PI / 2, s: [1.1, 2, 1.1] });
+      part(g, B(1.3, 0.4, 0.4), PAL.pneu, 0, 0.75, 0);
+      part(g, B(0.5, 0.3, 0.45), PAL.chrome, 0.1, 0.55, 0);
+      pilote(g, -0.2, 0.9, PAL.tronc, PAL.pneu);
+      phare(g, ph, 0.75, 1, 0);
+    }),
+    nouveauPassant('motoneige', 10, (g, ph) => {
+      for (const z of [0.4, -0.4]) part(g, B(1.6, 0.06, 0.15), PAL.chrome, 0.3, 0.05, z);
+      part(g, B(2, 0.45, 0.9), PAL.erables[1], 0, 0.4, 0);
+      part(g, B(0.5, 0.3, 0.8), PAL.vitre, 0.55, 0.75, 0, { rz: 0.4 });
+      pilote(g, -0.4, 0.62, PAL.bleu, PAL.pneu);
+      phare(g, ph, 1.01, 0.45, 0);
+    }),
+    nouveauPassant('chien', 2.4, (g, _ph, pattes) => {
+      part(g, B(0.8, 0.32, 0.3), PAL.tronc, 0, 0.5, 0);
+      part(g, B(0.3, 0.28, 0.26), PAL.tronc, 0.48, 0.68, 0);
+      part(g, B(0.16, 0.1, 0.14), PAL.pneu, 0.66, 0.62, 0);
+      part(g, B(0.3, 0.06, 0.06), PAL.tronc, -0.5, 0.65, 0, { rz: 0.6 });
+      for (const [x, z] of [[0.3, 0.1], [0.3, -0.1], [-0.3, 0.1], [-0.3, -0.1]])
+        pattes.push(part(g, B(0.08, 0.35, 0.08), PAL.tronc, x, 0.18, z));
+    }),
+    nouveauPassant(
+      'renard',
+      3.2,
+      (g, _ph, pattes) => {
+        part(g, B(0.75, 0.28, 0.26), PAL.rouille, 0, 0.45, 0);
+        part(g, B(0.26, 0.24, 0.24), PAL.rouille, 0.45, 0.6, 0);
+        part(g, G(new THREE.ConeGeometry(0.1, 0.28, 4)), PAL.rouille, 0.68, 0.58, 0, { rz: -Math.PI / 2 });
+        part(g, B(0.55, 0.18, 0.18), PAL.rouille, -0.6, 0.5, 0, { rz: 0.25 });
+        part(g, B(0.16, 0.16, 0.16), PAL.declin, -0.9, 0.58, 0);
+        for (const [x, z] of [[0.25, 0.09], [0.25, -0.09], [-0.25, 0.09], [-0.25, -0.09]])
+          pattes.push(part(g, B(0.07, 0.3, 0.07), PAL.pneu, x, 0.15, z));
+      },
+      true,
+    ),
+  ];
+  // Qui peut passer, selon la saison, la météo pis l'heure (poids : plus gros = plus souvent).
+  const chancesPassants = (): [PassantId, number][] => {
+    const nuit = heure >= 21 || heure < 5;
+    const hiver = saison === 'hiver';
+    const mouille = meteo === 'pluie' || meteo === 'neige';
+    const deux = !hiver && !mouille && !nuit;
+    const liste: [PassantId, number][] = [
+      ['char', 5],
+      ['pickup', 3],
+      ['tracteur', !hiver && !nuit ? 1 : 0],
+      ['scooter', deux ? 1.5 : 0],
+      ['velo', deux ? 1.5 : 0],
+      ['moto', !hiver && !mouille ? 1.5 : 0],
+      ['motoneige', hiver ? 2.5 : 0],
+      ['chien', !nuit ? 1.2 : 0],
+      ['renard', nuit || heure < 8 || heure >= 18 ? 2 : 0.4],
+    ];
+    return liste.filter(([, p]) => p > 0);
+  };
+  let prochainPassant = 0;
+  const lancerPassant = (now: number) => {
+    const nuit = heure >= 21 || heure < 5;
+    // La nuit, ça passe trois fois moins.
+    prochainPassant = now + (4000 + Math.random() * 7000) * (nuit ? 3 : 1);
+    if (passants.filter((p) => p.actif).length >= 3) return;
+    const liste = chancesPassants();
+    let r = Math.random() * liste.reduce((t, [, p]) => t + p, 0);
+    const type = liste.find(([, p]) => (r -= p) < 0)?.[0];
+    const p = passants.find((x) => x.type === type && !x.actif);
+    if (!p) return;
+    p.actif = true;
+    p.g.visible = true;
+    p.dir = Math.random() < 0.5 ? 1 : -1;
+    const ox = ORIGINE.maison;
+    if (p.traverse) {
+      // Le renard traverse le rang, du champ d'en avant vers le bois.
+      p.g.position.set(ox + 13.5, 0, 16);
+      p.g.rotation.y = Math.PI / 2;
+    } else {
+      // Les animaux suivent l'accotement, la motoneige passe dans le champ d'en avant.
+      const z = p.type === 'motoneige' ? 10 : p.type === 'chien' ? 8.1 : p.dir > 0 ? ROUTE_Z + 0.9 : ROUTE_Z - 0.9;
+      p.g.position.set(ox - 40 * p.dir, 0, z);
+      p.g.rotation.y = p.dir > 0 ? 0 : Math.PI;
+    }
+  };
+  const fairePasser = (now: number, dt: number, t: number) => {
+    if (lieuActuel !== 'maison') return;
+    if (now >= prochainPassant) lancerPassant(now);
+    const phares = heure >= 19.5 || heure < 6.5 || meteo === 'brouillard';
+    for (const p of passants) {
+      if (!p.actif) continue;
+      p.phares.forEach((x) => (x.visible = phares));
+      if (p.traverse) {
+        p.g.position.z -= p.vitesse * dt;
+        if (p.g.position.z < -14) p.actif = p.g.visible = false;
+      } else {
+        p.g.position.x += p.vitesse * p.dir * dt;
+        if (Math.abs(p.g.position.x - ORIGINE.maison) > 42) p.actif = p.g.visible = false;
+      }
+      // Les pattes trottent, les deux-roues pis les chars brassent un peu.
+      p.pattes?.forEach((x, i) => (x.rotation.z = Math.sin(t * 14 + (i % 2) * Math.PI) * 0.5));
+      p.g.position.y = p.pattes?.length ? Math.abs(Math.sin(t * 14)) * 0.04 : Math.sin(t * 20 + p.vitesse) * 0.015;
+    }
+  };
+  const cacherPassants = () => passants.forEach((p) => (p.actif = p.g.visible = false));
+
   const t0 = performance.now();
   let raf = 0;
   let tAvant = 0;
@@ -997,6 +1183,7 @@ export function createRang(
     const vent = LOOK_METEO[meteo].vent;
     arbres.forEach((a, i) => (a.rotation.z = Math.sin(t * (1.1 + vent * 20) + i) * vent));
     faireTomber(Math.min(0.1, t - tAvant), t);
+    fairePasser(now, Math.min(0.1, t - tAvant), t);
     tAvant = t;
     carrosserie.position.y = Math.sin(t * 28) * 0.012;
     avancer(now);
@@ -1016,6 +1203,7 @@ export function createRang(
 
   const couper = (l: Lieu) => {
     lieuActuel = l;
+    cacherPassants();
     tombe.position.x = ORIGINE[l];
     placerCamera();
     eclairer();

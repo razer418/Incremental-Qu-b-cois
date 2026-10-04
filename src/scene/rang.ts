@@ -37,6 +37,8 @@ export const PAL = {
   feuilles: [0x4f6a36, 0x5e7a3e, 0x46602f],
   sapinNeige: 0x6f7d72,
   pluie: 0xb4c2c8,
+  // Le jaune de l'autobus scolaire
+  autobus: 0xc9a23c,
 } as const;
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
@@ -1001,8 +1003,9 @@ export function createRang(
     actif: boolean;
     dir: number;
     pattes?: THREE.Object3D[];
+    ailes?: THREE.Object3D[];
   }
-  type PassantId = 'char' | 'pickup' | 'tracteur' | 'scooter' | 'velo' | 'moto' | 'chien' | 'renard' | 'motoneige';
+  type PassantId = 'char' | 'pickup' | 'tracteur' | 'scooter' | 'velo' | 'moto' | 'chien' | 'renard' | 'motoneige' | 'oiseaux' | 'autobus' | 'chevreuil' | 'vtt' | 'joggeur';
   const roueMince = G(new THREE.CylinderGeometry(0.34, 0.34, 0.06, 8));
   const nouveauPassant = (type: PassantId, vitesse: number, bati: (g: THREE.Group, phares: THREE.Object3D[], pattes: THREE.Object3D[]) => void, traverse = false) => {
     const g = new THREE.Group();
@@ -1028,7 +1031,63 @@ export function createRang(
     part(g, B(0.36, 0.62, 0.42), chandail, x, y + 0.31, 0, { rz: -0.2 });
     part(g, B(0.3, 0.3, 0.3), tete, x + 0.08, y + 0.78, 0);
   };
+  // Une volée d'oiseaux en V, haut dans le ciel, qui battent des ailes.
+  const volee = () => {
+    const p = nouveauPassant('oiseaux', 5, () => {});
+    p.ailes = [];
+    [[0, 0], [-0.9, 0.7], [-0.9, -0.7], [-1.8, 1.4], [-1.8, -1.4]].forEach(([x, z]) => {
+      const o = new THREE.Group();
+      o.position.set(x, Math.random() * 0.3, z);
+      p.g.add(o);
+      part(o, B(0.35, 0.1, 0.1), PAL.pneu, 0, 0, 0);
+      for (const c of [1, -1]) {
+        const aile = new THREE.Group();
+        aile.position.z = 0.05 * c;
+        aile.userData.c = c;
+        o.add(aile);
+        part(aile, B(0.18, 0.03, 0.4), PAL.pneu, 0, 0, 0.2 * c);
+        p.ailes!.push(aile);
+      }
+    });
+    return p;
+  };
   const passants: Passant[] = [
+    volee(),
+    nouveauPassant('autobus', 7, (g, ph) => {
+      part(g, B(5.4, 1.5, 1.7), PAL.autobus, 0, 1.25, 0);
+      part(g, B(1, 0.8, 1.66), PAL.autobus, 3.1, 0.85, 0);
+      part(g, B(4.4, 0.45, 1.74), PAL.vitre, -0.3, 1.55, 0);
+      part(g, B(5.42, 0.1, 1.72), PAL.pneu, 0, 1.0, 0);
+      part(g, B(0.08, 0.5, 1.5), PAL.vitre, 2.71, 1.6, 0);
+      for (const x of [1.9, -1.8]) for (const z of [0.8, -0.8]) part(g, roue, PAL.pneu, x, 0.4, z, { rx: Math.PI / 2, s: [0.95, 1, 0.95] });
+      phare(g, ph, 3.61, 0.9, 0.6);
+      phare(g, ph, 3.61, 0.9, -0.6);
+    }),
+    nouveauPassant('vtt', 6, (g, ph) => {
+      part(g, B(1.3, 0.4, 0.9), PAL.rougeGrange, 0, 0.6, 0);
+      part(g, B(0.4, 0.15, 0.95), PAL.pneu, 0.55, 0.85, 0);
+      for (const x of [0.5, -0.5]) for (const z of [0.5, -0.5]) part(g, roue, PAL.pneu, x, 0.3, z, { rx: Math.PI / 2, s: [0.7, 0.8, 0.7] });
+      pilote(g, -0.15, 0.8, PAL.sapin, PAL.declin);
+      phare(g, ph, 0.66, 0.65, 0);
+    }),
+    nouveauPassant('joggeur', 2.8, (g, _ph, pattes) => {
+      part(g, B(0.3, 0.55, 0.36), PAL.rougeGrange, 0, 1.05, 0);
+      part(g, B(0.26, 0.26, 0.26), PAL.declin, 0.04, 1.48, 0);
+      for (const z of [0.1, -0.1]) pattes.push(part(g, B(0.1, 0.75, 0.12), PAL.bleu, 0, 0.4, z));
+    }),
+    nouveauPassant(
+      'chevreuil',
+      4.5,
+      (g, _ph, pattes) => {
+        part(g, B(1.1, 0.45, 0.4), PAL.bois, 0, 1.05, 0);
+        part(g, B(0.2, 0.5, 0.2), PAL.bois, 0.55, 1.35, 0, { rz: -0.4 });
+        part(g, B(0.38, 0.22, 0.22), PAL.bois, 0.75, 1.6, 0);
+        part(g, B(0.14, 0.2, 0.08), PAL.declin, -0.6, 1.15, 0);
+        for (const [x, z] of [[0.4, 0.13], [0.4, -0.13], [-0.4, 0.13], [-0.4, -0.13]])
+          pattes.push(part(g, B(0.08, 0.85, 0.08), PAL.bois, x, 0.42, z));
+      },
+      true,
+    ),
     ...[PAL.bleu, PAL.champ, PAL.chrome].map((c) =>
       nouveauPassant('char', 9, (g, ph) => {
         part(g, B(3.4, 0.62, 1.5), c, 0, 0.62, 0);
@@ -1125,6 +1184,14 @@ export function createRang(
       ['motoneige', hiver ? 2.5 : 0],
       ['chien', !nuit ? 1.2 : 0],
       ['renard', nuit || heure < 8 || heure >= 18 ? 2 : 0.4],
+      // L'autobus scolaire : le matin pis l'après-midi, pas l'été.
+      ['autobus', saison !== 'ete' && ((heure >= 7 && heure < 9) || (heure >= 15 && heure < 17)) ? 4 : 0],
+      ['vtt', !hiver && !nuit ? 1 : 0],
+      ['joggeur', deux ? 1 : 0],
+      // Le chevreuil traverse à l'aube pis à la brunante.
+      ['chevreuil', heure < 8 || heure >= 18 ? 1.5 : 0.3],
+      // Les oiseaux dorment la nuit pis aiment pas la tempête.
+      ['oiseaux', nuit || mouille ? 0 : hiver ? 0.8 : 2],
     ];
     return liste.filter(([, p]) => p > 0);
   };
@@ -1145,12 +1212,12 @@ export function createRang(
     const ox = ORIGINE.maison;
     if (p.traverse) {
       // Le renard traverse le rang, du champ d'en avant vers le bois.
-      p.g.position.set(ox + 13.5, 0, 16);
+      p.g.position.set(ox + (p.type === 'chevreuil' ? -10 : 13.5), 0, 16);
       p.g.rotation.y = Math.PI / 2;
     } else {
       // Les animaux suivent l'accotement, la motoneige passe dans le champ d'en avant.
-      const z = p.type === 'motoneige' ? 10 : p.type === 'chien' ? 8.1 : p.dir > 0 ? ROUTE_Z + 0.9 : ROUTE_Z - 0.9;
-      p.g.position.set(ox - 40 * p.dir, 0, z);
+      const z = p.type === 'oiseaux' ? -3 + Math.random() * 6 : p.type === 'motoneige' ? 10 : p.type === 'chien' || p.type === 'joggeur' ? 8.1 : p.dir > 0 ? ROUTE_Z + 0.9 : ROUTE_Z - 0.9;
+      p.g.position.set(ox - 40 * p.dir, p.type === 'oiseaux' ? 8 + Math.random() * 3 : 0, z);
       p.g.rotation.y = p.dir > 0 ? 0 : Math.PI;
     }
   };
@@ -1170,7 +1237,8 @@ export function createRang(
       }
       // Les pattes trottent, les deux-roues pis les chars brassent un peu.
       p.pattes?.forEach((x, i) => (x.rotation.z = Math.sin(t * 14 + (i % 2) * Math.PI) * 0.5));
-      p.g.position.y = p.pattes?.length ? Math.abs(Math.sin(t * 14)) * 0.04 : Math.sin(t * 20 + p.vitesse) * 0.015;
+      p.ailes?.forEach((a, i) => (a.rotation.x = Math.sin(t * 12 + i * 0.7) * 0.7 * a.userData.c));
+      if (!p.ailes) p.g.position.y = p.pattes?.length ? Math.abs(Math.sin(t * 14)) * 0.04 : Math.sin(t * 20 + p.vitesse) * 0.015;
     }
   };
   const cacherPassants = () => passants.forEach((p) => (p.actif = p.g.visible = false));

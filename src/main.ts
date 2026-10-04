@@ -984,7 +984,7 @@ function renderBuffs(): void {
       buffsEl.append(btn);
       buffIcones.set(b.id, btn);
     }
-    // Pleine quand t'achètes, vide à zéro. Si t'en as cumulé, elle se vide une fois par achat.
+    // L'horloge fait un tour par achat : claire quand t'achètes, toute sombre à zéro.
     btn.style.setProperty('--reste', String(b.left / (Math.ceil(b.left / b.duree) * b.duree)));
     btn.classList.toggle('fin', b.left < 30);
     btn.setAttribute('aria-label', `${t(b.nom)} ${temps(b.left)}`);

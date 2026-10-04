@@ -368,7 +368,7 @@ main section:not(.ecran),
   color: var(--muted);
 }
 
-/* Buffs actifs : l'icône se vide par le haut à mesure que le temps passe. */
+/* Buffs actifs : chaque icône est une horloge qui montre le temps qui reste. */
 .buffs {
   display: flex;
   flex-wrap: wrap;
@@ -391,12 +391,24 @@ main section:not(.ecran),
   width: 100%;
   height: 100%;
 }
+/* Le temps passé s'assombrit en tournant comme une horloge, pis une aiguille suit le bord. */
 .buff::after {
   content: '';
   position: absolute;
-  inset: 0 0 auto;
-  height: calc((1 - var(--reste, 1)) * 100%);
-  background: rgb(21 23 20 / 0.75);
+  inset: 0;
+  background: conic-gradient(rgb(21 23 20 / 0.7) calc((1 - var(--reste, 1)) * 360deg), transparent 0);
+}
+.buff::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: calc(50% - 1px);
+  top: 8%;
+  width: 2px;
+  height: 42%;
+  background: var(--gold);
+  transform-origin: 50% 100%;
+  transform: rotate(calc((1 - var(--reste, 1)) * 360deg));
 }
 .buff.fin {
   border-color: var(--alert);

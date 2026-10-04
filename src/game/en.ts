@@ -602,4 +602,10 @@ export const EN: Record<string, string> = {
   "Descriptions": "Descriptions",
   "TOUT": "ALL",
   "Je te mets ça dans ton sac. Ça part quand tu t'en sers dans ton inventaire.": "I'll put that in your bag. It kicks in when you use it from your inventory.",
+  "SAC": "BAG",
+  "BAZOU": "CAR",
+  "LOOK": "LOOK",
+  "JEUX": "GAMES",
+  "EMPIRE": "EMPIRE",
+  "CHARS": "CARS",
 };

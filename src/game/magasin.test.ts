@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ARTICLES } from './magasin';
+import { saisonA } from './saisons';
 import { BASE_TAP, INVENTAIRE_MAX, articleCost, buyArticle, canBuyArticle, canUseArticle, currentRate, newGame, tapValue, tick, useArticle } from './state';
 import { load, save } from './save';
 
@@ -9,7 +10,7 @@ const memoire = () => {
 };
 
 describe('le magasin général', () => {
-  it('la caisse de 24 double les tapes pendant 5 min', () => {
+  it('la caisse de 24 double les tapes pendant 15 min', () => {
     const s = newGame(0);
     s.cash = 100;
     const prix = articleCost(s, 'biere');
@@ -18,8 +19,8 @@ describe('le magasin général', () => {
     expect(tapValue(s)).toBeCloseTo(BASE_TAP);
     expect(useArticle(s, 'biere')).toBe(true);
     expect(tapValue(s)).toBeCloseTo(BASE_TAP * 2);
-    tick(s, 301_000);
-    expect(tapValue(s)).toBeCloseTo(BASE_TAP);
+    tick(s, 901_000);
+    expect(tapValue(s)).toBeCloseTo(BASE_TAP * saisonA(s.lastTick).tap);
     expect(s.magasin.biere).toBeUndefined();
   });
 
@@ -30,8 +31,8 @@ describe('le magasin général', () => {
     expect(buyArticle(s, 'cafe') && useArticle(s, 'cafe')).toBe(true);
     const avant = s.cash;
     expect(currentRate(s)).toBeCloseTo(1.5);
-    tick(s, 400_000); // 300 s à x1,5 pis 100 s à x1
-    expect(s.cash - avant).toBeCloseTo(550);
+    tick(s, 1_000_000); // 900 s à x1,5 pis 100 s à x1
+    expect(s.cash - avant).toBeCloseTo(1450);
   });
 
   it('se cumule avec le boost de pub', () => {
@@ -68,15 +69,17 @@ describe('le magasin général', () => {
     expect(s.magasin.chips).toBeUndefined();
   });
 
-  it('on en prend max deux d’avance', () => {
+  it('un seul buff de chaque sorte à la fois', () => {
     const s = newGame(0);
-    s.inventaire = { chips: 3 };
-    expect(useArticle(s, 'chips')).toBe(true);
+    s.inventaire = { chips: 3, biere: 1, vin: 1 };
     expect(useArticle(s, 'chips')).toBe(true);
     expect(canUseArticle(s, 'chips')).toBe(false);
-    expect(s.inventaire.chips).toBe(1);
-    expect(s.magasin.chips).toBe(600);
-    expect(canUseArticle(s, 'vin')).toBe(false);
+    expect(canUseArticle(s, 'biere')).toBe(false);
+    expect(s.magasin.chips).toBe(900);
+    // Le vin booste la gang, pas les tapes : correct.
+    expect(useArticle(s, 'vin')).toBe(true);
+    tick(s, 901_000);
+    expect(canUseArticle(s, 'biere')).toBe(true);
   });
 
   it('survit à la sauvegarde', () => {

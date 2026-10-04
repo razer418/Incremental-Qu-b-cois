@@ -515,7 +515,7 @@ for (const a of ARTICLES) {
     if (buyArticle(state, a.id)) {
       sons.jouer('achat');
       // Le buff part pas tout de suite : Réjean le dit.
-      mLine.textContent = cite(t("Je te mets ça dans ton sac. Ça part quand tu t'en sers à la maison, dans ton inventaire."));
+      mLine.textContent = cite(t("Je te mets ça dans ton sac. Ça part quand tu t'en sers dans ton inventaire."));
       save(localStorage, state);
       render();
     }

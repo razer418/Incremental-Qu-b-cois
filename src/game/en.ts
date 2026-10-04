@@ -477,6 +477,7 @@ export const EN: Record<string, string> = {
   "JOUER": "PLAY",
   "TON INVENTAIRE": "YOUR INVENTORY",
   "MANGER": "EAT",
+  "Ton sac est vide. Passe voir Réjean au magasin.": "Your bag is empty. Go see Réjean at the general store.",
   "BOIRE": "DRINK",
   "FUMER": "SMOKE",
   "VAPOTER": "VAPE",

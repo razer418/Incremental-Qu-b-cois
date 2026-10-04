@@ -3,43 +3,10 @@ import type { BuildingId } from '../game/buildings';
 import type { FeteId } from '../game/fetes';
 import type { MeteoId } from '../game/temps';
 import { creerBazou, type ChoixLook } from './bazou';
+import { creerChar, type Char3D } from './chars3d';
 
-// Palette Bazou VHS (voir le guide de style). Rien en dehors de ça.
-export const PAL = {
-  herbe: 0x6b7046,
-  herbeSombre: 0x50573c,
-  champ: 0x8a835a,
-  sapin: 0x2e3b2c,
-  erables: [0x9a5a34, 0xa47a3c, 0x7d4630],
-  tronc: 0x4a3a2c,
-  declin: 0xbfb7a4,
-  tole: 0x5d5f60,
-  brique: 0x6e4a3e,
-  rougeGrange: 0x6e2f28,
-  bois: 0x7a6650,
-  gravier: 0x8c8170,
-  poteau: 0x4f463c,
-  carrosserie: 0x7d4a2e,
-  rouille: 0xa0613a,
-  chrome: 0x7f7f78,
-  pneu: 0x1c1c1a,
-  vitre: 0x1f2526,
-  neige: 0xcfd0c8,
-  neigeOmbre: 0xa9aca3,
-  boue: 0x5f6342,
-  foin: 0x7d7448,
-  // Le bleu du drapeau, juste pour la Saint-Jean
-  bleu: 0x3c4a6e,
-  // Les fenêtres pis l'enseigne allumées du bar : pas d'ombrage, ça luit dans la brunante.
-  lampe: 0xe8c26a,
-  // Les feuilles du printemps pis de l'été, le sapin enneigé, la pluie
-  bourgeons: [0x8a9a56, 0x7d8c4a, 0x97a462],
-  feuilles: [0x4f6a36, 0x5e7a3e, 0x46602f],
-  sapinNeige: 0x6f7d72,
-  pluie: 0xb4c2c8,
-  // Le jaune de l'autobus scolaire
-  autobus: 0xc9a23c,
-} as const;
+import { PAL } from './palette';
+export { PAL };
 
 export type SaisonId = 'printemps' | 'ete' | 'automne' | 'hiver';
 // Le sol pis les buissons changent de couleur avec la saison.
@@ -199,6 +166,8 @@ export interface CarLook {
   runs: boolean;
   /** Le look posé (voir game/look.ts). */
   look: ChoixLook;
+  /** Les chars à retaper achetés (id de l'annonce), stationnés dans la cour. */
+  chars: { id: string; fini: boolean }[];
 }
 
 export type Lieu = 'maison' | 'magasin' | BuildingId;
@@ -502,6 +471,34 @@ export function createRang(
   bazou.position.set(STATIONNEMENT.x, 0, STATIONNEMENT.z);
   bazou.rotation.y = STATIONNEMENT.ry;
   scene.add(bazou);
+
+  // Les chars à retaper : une place chacun dans la cour, autour de la maison.
+  const PLACES = [
+    { x: -5.6, z: 3.3, ry: 0.25 },
+    { x: 9.6, z: -1.4, ry: -0.35 },
+    { x: 6.4, z: -4.6, ry: 0.2 },
+  ];
+  const chars3d = new Map<string, Char3D>();
+  const majChars = (liste: CarLook['chars']) => {
+    for (const [id, c] of chars3d)
+      if (!liste.some((x) => x.id === id)) {
+        scene.remove(c.groupe);
+        c.dispose();
+        chars3d.delete(id);
+      }
+    liste.slice(0, PLACES.length).forEach((x, i) => {
+      let c = chars3d.get(x.id);
+      if (!c) {
+        c = creerChar(x.id);
+        c.groupe.scale.setScalar(0.85);
+        scene.add(c.groupe);
+        chars3d.set(x.id, c);
+      }
+      c.groupe.position.set(PLACES[i].x, 0, PLACES[i].z);
+      c.groupe.rotation.y = PLACES[i].ry;
+      c.setFini(x.fini);
+    });
+  };
 
   // Pancarte « à vendre » du bonhomme Gagnon
   const pancarte = new THREE.Group();
@@ -1289,6 +1286,7 @@ export function createRang(
       pancarte.visible = !look.owned;
       leBazou.setEtat(look);
       leBazou.setLook(look.look);
+      majChars(look.chars);
       if (look.runs && !roule) planifierLivraison(performance.now());
       roule = look.runs;
       // Un bazou qui roule pas reste dans la cour chez vous.
@@ -1377,6 +1375,7 @@ export function createRang(
       geos.forEach((g) => g.dispose());
       mats.forEach((m) => m.dispose());
       leBazou.dispose();
+      chars3d.forEach((c) => c.dispose());
       filMat.dispose();
       tombeMat.dispose();
       feuillage.forEach((m) => m.dispose());

@@ -4,6 +4,8 @@ import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce } from './
 import { EVENEMENTS, tirerEvenement } from './evenements';
 import { annonceDe, buyProjet, coutPiece, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
+import { MODELES } from '../scene/chars3d';
+import { SONS_CHARS } from '../platform/sons';
 
 const memoire = () => {
   const m = new Map<string, string>();
@@ -80,6 +82,14 @@ describe('Face-de-Bouc Marché', () => {
       expect(new Set(avant.map((a) => a.etat)).size).toBe(3);
       expect(annoncesEnLigne(p.id, ANNONCES_MS)).not.toEqual(avant);
     }
+  });
+
+  it('chaque char a son modèle 3D pis son son, tous différents', () => {
+    const ids = ANNONCES.map((a) => a.id).sort();
+    expect(Object.keys(MODELES).sort()).toEqual(ids);
+    expect(Object.keys(SONS_CHARS).sort()).toEqual(ids);
+    expect(new Set(Object.values(SONS_CHARS).map((x) => JSON.stringify(x))).size).toBe(ids.length);
+    expect(new Set(Object.values(MODELES).map((x) => `${x.forme}:${x.couleur}:${x.detail}`)).size).toBe(ids.length);
   });
 
   it('chaque annonce coûte le même total que le char d’origine', () => {

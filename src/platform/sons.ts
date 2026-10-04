@@ -3,8 +3,40 @@
 
 export type Son = 'canette' | 'livraison' | 'achat' | 'quete' | 'boost' | 'moteur' | 'coupe';
 
+/** Le son d'un char à retaper : son moteur (Hz pis forme d'onde), combien de fois il tousse avant de partir, pis son klaxon. */
+export interface SonChar {
+  moteur: number;
+  onde: OscillatorType;
+  toux: number;
+  klaxon: number[];
+}
+
+// Un son à chaque annonce du Face-de-Bouc Marché (même id).
+export const SONS_CHARS: Record<string, SonChar> = {
+  van: { moteur: 52, onde: 'square', toux: 3, klaxon: [330] },
+  pickup: { moteur: 45, onde: 'sawtooth', toux: 2, klaxon: [294, 294] },
+  castor: { moteur: 60, onde: 'triangle', toux: 1, klaxon: [440] },
+  quatre: { moteur: 38, onde: 'sawtooth', toux: 4, klaxon: [220, 220, 220] },
+  tempete: { moteur: 55, onde: 'square', toux: 2, klaxon: [392, 330] },
+  familiale: { moteur: 48, onde: 'triangle', toux: 1, klaxon: [262, 330, 392] },
+  corbillard: { moteur: 34, onde: 'triangle', toux: 2, klaxon: [196, 185] },
+  monarque: { moteur: 42, onde: 'sawtooth', toux: 1, klaxon: [349, 440] },
+  decapotable: { moteur: 66, onde: 'square', toux: 1, klaxon: [523, 659] },
+  limo: { moteur: 40, onde: 'triangle', toux: 1, klaxon: [392, 523, 659, 784] },
+  coupe: { moteur: 70, onde: 'square', toux: 1, klaxon: [587] },
+  grandpapa: { moteur: 44, onde: 'sawtooth', toux: 3, klaxon: [247, 247] },
+  drag: { moteur: 30, onde: 'sawtooth', toux: 2, klaxon: [392, 392, 392, 311] },
+  bolide: { moteur: 36, onde: 'sawtooth', toux: 1, klaxon: [330, 415] },
+  parade: { moteur: 40, onde: 'square', toux: 1, klaxon: [523, 659, 784, 1047] },
+  fusee: { moteur: 46, onde: 'square', toux: 3, klaxon: [370, 370, 294] },
+  requin: { moteur: 33, onde: 'sawtooth', toux: 1, klaxon: [165, 175, 165, 175] },
+  phenix: { moteur: 50, onde: 'triangle', toux: 1, klaxon: [659, 784, 988] },
+};
+
 export interface Sons {
   jouer(son: Son): void;
+  /** Un char à retaper : son klaxon quand il arrive, une toux à chaque pièce, pis il démarre quand il est retapé. */
+  char(id: string, moment: 'achat' | 'piece' | 'fini'): void;
   /** Volume des effets, de 0 (coupés) à 1. */
   volume: number;
   /** L'AudioContext partagé avec la radio (créé au premier geste). */
@@ -58,9 +90,40 @@ export function createSons(): Sons {
     s.stop(t + dur);
   };
 
+  const klaxon = (c: AudioContext, sc: SonChar, t: number) =>
+    sc.klaxon.forEach((f, i) => {
+      // Deux notes en même temps, comme un vrai klaxon
+      note(c, 'square', f, t + i * 0.2, 0.17, 0.05);
+      note(c, 'square', f * 1.26, t + i * 0.2, 0.17, 0.04);
+    });
+  const toux = (c: AudioContext, sc: SonChar, t: number) => {
+    for (let i = 0; i < sc.toux; i++) {
+      note(c, sc.onde, sc.moteur * 1.6, t + i * 0.22, 0.12, 0.1, sc.moteur);
+      souffle(c, t + i * 0.22, 0.1, 0.1, 'lowpass', 500);
+    }
+    return t + sc.toux * 0.22;
+  };
+
   const sons: Sons = {
     volume: 1,
     contexte: audio,
+    char(id, moment) {
+      const sc = SONS_CHARS[id];
+      if (!sc || sons.volume <= 0) return;
+      const c = audio();
+      if (!c) return;
+      sortie!.gain.value = sons.volume;
+      const t = c.currentTime;
+      if (moment === 'achat') klaxon(c, sc, t);
+      else if (moment === 'piece') toux(c, sc, t);
+      else {
+        // Y tousse, y part, y monte en régime, pis un coup de klaxon.
+        const part = toux(c, sc, t);
+        note(c, sc.onde, sc.moteur, part, 1.3, 0.12, sc.moteur * 2.4);
+        souffle(c, part, 1.3, 0.1, 'lowpass', 450);
+        klaxon(c, sc, part + 1.4);
+      }
+    },
     jouer(son) {
       if (sons.volume <= 0) return;
       const c = audio();

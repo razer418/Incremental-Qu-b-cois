@@ -65,7 +65,7 @@ import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
 import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
-import { ANNONCES, ANNONCES_MS, ETATS, annoncesEnLigne, getProjet, prixAnnonce } from './game/chars';
+import { ANNONCES, ANNONCES_MS, ETATS, PROJETS, annoncesEnLigne, getProjet, prixAnnonce } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
@@ -926,6 +926,7 @@ function render(): void {
     clean: isRepaired(state, 'carrosserie'),
     runs: roule,
     look: state.look.choix,
+    chars: PROJETS.filter((p) => state.projets[p.id]).map((p) => ({ id: annonceDe(state, p.id).id, fini: projetFini(state, p) })),
   };
   lieuxEl.hidden = !rang;
   for (const b of BUILDINGS) lieuBtn(b.id).hidden = !state.buildings[b.id];
@@ -1222,6 +1223,7 @@ const projetRows = ANNONCES.map((a) => {
   btn.addEventListener('click', () => {
     if (!buyProjet(state, a.id)) return;
     sons.jouer('achat');
+    sons.char(a.id, 'achat');
     save(localStorage, state);
     render();
   });
@@ -1237,6 +1239,7 @@ const projetRows = ANNONCES.map((a) => {
       if (!reparerProjet(state, p.id, x.id)) return;
       if (projetFini(state, p)) celebrerTaux(avant, true);
       sons.jouer('achat');
+      sons.char(a.id, projetFini(state, p) ? 'fini' : 'piece');
       save(localStorage, state);
       if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(a.nom), x: facteur(p.bonus) }));
       render();

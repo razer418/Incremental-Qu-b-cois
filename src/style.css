@@ -1208,3 +1208,54 @@ dialog .expo-criteres button.ok {
   font: 400 16px/1.35 var(--mono);
   color: var(--muted);
 }
+
+/* Catégories repliables : touche le titre, il reste juste lui. */
+h2[role='button'] {
+  cursor: pointer;
+}
+h2[role='button']::before {
+  content: '- ';
+  color: var(--muted);
+}
+.replie h2[role='button']::before {
+  content: '+ ';
+}
+section.replie > :not(h2, .garage-head, .achats-head) {
+  display: none;
+}
+section.replie h2 {
+  margin-bottom: 0;
+}
+
+/* Lignes compactes : touche le nom, la description s'en va pis tout rapetisse. */
+.upgrade-info[role='button'] {
+  cursor: pointer;
+}
+.upgrade.compacte {
+  padding: 4px 8px;
+  gap: 8px;
+}
+.upgrade.compacte small {
+  display: none;
+}
+.upgrade.compacte .upgrade-info strong {
+  font-size: 20px;
+}
+.upgrade.compacte .buy {
+  min-width: 80px;
+  padding: 4px 8px;
+  font-size: 20px;
+}
+.upgrade.compacte .combien {
+  font-size: 14px;
+}
+
+/* Écran 3D petit : moins haut, la caméra s'ajuste. */
+.ecran.petit {
+  aspect-ratio: 16 / 7;
+}
+
+.reglages .astuce {
+  font: 400 16px/1.35 var(--mono);
+  color: var(--muted);
+}

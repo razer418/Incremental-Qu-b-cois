@@ -133,7 +133,7 @@
         <ul id="projets-liste" class="upgrades"></ul>
       </section>
 
-      <section>
+      <section id="achats">
         <div class="achats-head">
           <h2 data-t>ACHATS</h2>
           <button id="lot-mode" class="lot-mode" type="button" aria-label="Quantité par achat">x1</button>
@@ -191,6 +191,11 @@
         <li><span data-t>Effets sonores</span><button id="effets" type="button" class="bascule"></button></li>
         <li><span data-t>Lignes VHS</span><button id="vhs" type="button" class="bascule" aria-pressed="true"></button></li>
         <li><span data-t>Chiffres</span><button id="nombres" type="button" class="bascule"></button></li>
+        <li><span data-t>Catégories</span><span class="paire"><button id="tout-replier" type="button" class="bascule" data-t>REPLIER</button><button id="tout-deplier" type="button" class="bascule" data-t>DÉPLIER</button></span></li>
+        <li><span data-t>Lignes</span><span class="paire"><button id="tout-compact" type="button" class="bascule" data-t>COMPACTES</button><button id="tout-normal" type="button" class="bascule" data-t>NORMALES</button></span></li>
+        <li><span data-t>Une catégorie à la fois</span><button id="accordeon" type="button" class="bascule"></button></li>
+        <li><span data-t>Écran 3D</span><button id="ecran-taille" type="button" class="bascule"></button></li>
+        <li class="astuce" data-t>Touche un titre pour replier sa catégorie, pis le nom d'un achat pour rapetisser sa ligne.</li>
         <li><span data-t>Sauvegarde</span><span class="paire"><button id="exporter" type="button" class="bascule" data-t>COPIER</button><button id="importer" type="button" class="bascule" data-t>COLLER</button></span></li>
       </ul>
       <textarea id="code" class="code" rows="3" spellcheck="false" hidden aria-label="Code de sauvegarde"></textarea>

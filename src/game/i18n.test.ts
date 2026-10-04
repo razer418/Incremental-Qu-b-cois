@@ -41,7 +41,7 @@ function cles(): string[] {
     ...MINIJEUX.flatMap((m) => [m.nom, m.description]),
     ...THEMES.flatMap((x) => [x.nom, x.demande, ...x.criteres.map((c) => c.texte)]),
     // Les boutons OUI/NON des options
-    'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH',
+    'OUI', 'NON', 'COURTS', 'COMPLETS', 'JOUAL', 'ENGLISH', 'GRAND', 'PETIT',
     NO_ADS_PRICE,
     // La radio du char
     ...STATIONS.flatMap((s) => [s.nom, s.slogan, ...s.tounes.map((x) => x.titre)]),

@@ -1170,6 +1170,94 @@ if (import.meta.env.DEV) {
   outil('dev-tuto', finirTuto);
 }
 
+// --- De la place à l'écran : catégories repliables pis lignes compactes, gardées sur l'appareil ---
+
+const liste = (k: string) => new Set<string>(JSON.parse(pref.get(k) ?? '[]'));
+const replies = liste('replies');
+const compactes = liste('compactes');
+const garderPlace = () => {
+  pref.set('replies', JSON.stringify([...replies]));
+  pref.set('compactes', JSON.stringify([...compactes]));
+};
+// Un élément qui se touche comme un bouton (doigt, souris ou clavier).
+const touchable = (el: HTMLElement, f: () => void) => {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.addEventListener('click', f);
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    f();
+  });
+};
+
+const colListes = document.querySelector<HTMLElement>('.col-listes')!;
+const titres = [...colListes.querySelectorAll<HTMLElement>('h2')];
+const plier = (h2: HTMLElement, replie: boolean) => {
+  const s = h2.closest('section')!;
+  s.classList.toggle('replie', replie);
+  h2.setAttribute('aria-expanded', String(!replie));
+  if (replie) replies.add(s.id);
+  else replies.delete(s.id);
+};
+let accordeon = pref.get('accordeon') === 'on';
+for (const h2 of titres) {
+  plier(h2, replies.has(h2.closest('section')!.id));
+  touchable(h2, () => {
+    const ouvrir = h2.closest('section')!.classList.contains('replie');
+    if (ouvrir && accordeon) titres.forEach((x) => plier(x, true));
+    plier(h2, !ouvrir);
+    garderPlace();
+  });
+}
+
+const lignes = [...colListes.querySelectorAll<HTMLElement>('li.upgrade')];
+const compacter = (li: HTMLElement, oui: boolean) => {
+  li.classList.toggle('compacte', oui);
+  li.querySelector('.upgrade-info')!.setAttribute('aria-expanded', String(!oui));
+  if (oui) compactes.add(li.dataset.cle!);
+  else compactes.delete(li.dataset.cle!);
+};
+for (const li of lignes) {
+  li.dataset.cle = `${li.closest('section')!.id}-${[...li.parentElement!.children].indexOf(li)}`;
+  compacter(li, compactes.has(li.dataset.cle));
+  touchable(li.querySelector('.upgrade-info')!, () => {
+    compacter(li, !li.classList.contains('compacte'));
+    garderPlace();
+  });
+}
+
+const partout = (id: string, f: () => void) =>
+  $(id).addEventListener('click', () => {
+    f();
+    garderPlace();
+  });
+partout('tout-replier', () => titres.forEach((h2) => plier(h2, true)));
+partout('tout-deplier', () => titres.forEach((h2) => plier(h2, false)));
+partout('tout-compact', () => lignes.forEach((li) => compacter(li, true)));
+partout('tout-normal', () => lignes.forEach((li) => compacter(li, false)));
+
+const accordeonBtn = $<HTMLButtonElement>('accordeon');
+bascule(accordeonBtn, accordeon);
+accordeonBtn.addEventListener('click', () => {
+  accordeon = !accordeon;
+  bascule(accordeonBtn, accordeon);
+  pref.set('accordeon', accordeon ? 'on' : 'off');
+});
+
+// Écran 3D plus bas : plus de place pour les listes, surtout sur un téléphone.
+const ecranBtn = $<HTMLButtonElement>('ecran-taille');
+const setEcran = (petit: boolean) => {
+  $('ecran').classList.toggle('petit', petit);
+  bascule(ecranBtn, !petit, 'GRAND', 'PETIT');
+};
+setEcran(pref.get('ecran') === 'petit');
+ecranBtn.addEventListener('click', () => {
+  const petit = !$('ecran').classList.contains('petit');
+  setEcran(petit);
+  pref.set('ecran', petit ? 'petit' : 'grand');
+});
+
 setInterval(loop, 100);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') save(localStorage, state);

@@ -535,9 +535,9 @@ function renderMagasin(): void {
   }
 }
 
-// L'inventaire : ce que t'as acheté chez Réjean, à fumer, boire ou manger à la maison.
-const inventaireEl = $('inventaire');
+// L'inventaire, sous LIVRER : ce que t'as acheté chez Réjean, à fumer, boire ou manger n'importe quand.
 const invLine = $('inv-line');
+let derniereLigne = '';
 const invRows = new Map<string, { li: HTMLElement; btn: HTMLButtonElement; level: HTMLElement }>();
 for (const a of ARTICLES) {
   const li = document.createElement('li');
@@ -545,15 +545,13 @@ for (const a of ARTICLES) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(a.name)} <span class="level"></span></strong>
-      <small>${t(a.description)}</small>
     </div>
     <button type="button" class="buy">${t(a.verbe)}</button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
     if (useArticle(state, a.id)) {
       sons.jouer('achat');
-      invLine.hidden = false;
-      invLine.textContent = t(a.ligne);
+      derniereLigne = t(a.ligne);
       save(localStorage, state);
       render();
     }
@@ -562,8 +560,9 @@ for (const a of ARTICLES) {
   $('inventaire-liste').append(li);
 }
 function renderInventaire(): void {
-  inventaireEl.hidden = Object.keys(state.inventaire).length === 0 || (!!rang && lieu !== 'maison');
-  if (inventaireEl.hidden) return;
+  const vide = Object.keys(state.inventaire).length === 0;
+  invLine.textContent = vide ? t('Ton sac est vide. Passe voir Réjean au magasin.') : derniereLigne;
+  invLine.hidden = !invLine.textContent;
   for (const a of ARTICLES) {
     const row = invRows.get(a.id)!;
     const n = state.inventaire[a.id] ?? 0;

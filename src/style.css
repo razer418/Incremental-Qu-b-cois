@@ -1294,3 +1294,24 @@ section.replie h2 {
   font: 400 16px/1.35 var(--mono);
   color: var(--muted);
 }
+
+/* L'inventaire, sous LIVRER : petit pis serré. */
+.inventaire h2 {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.inv-line {
+  margin: 0 0 6px;
+  font: 400 18px/1.35 var(--mono);
+  color: var(--muted);
+}
+.inv-line[hidden] {
+  display: none;
+}
+.inventaire .upgrade {
+  padding: 6px 10px;
+}
+.inventaire .buy {
+  min-width: 0;
+  font-size: 20px;
+}

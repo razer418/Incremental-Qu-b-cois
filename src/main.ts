@@ -992,10 +992,13 @@ function render(): void {
     row.li.classList.toggle('max', max);
     const bonus = saisonA(state.lastTick).bonus[u.id];
     const vise = prochainPalier(u, level);
-    row.level.textContent =
-      (level > 0 ? `${t('NIV.')} ${level}` : '') +
-      (vise ? ` · ${t('x2 AU {n}', { n: vise })}` : '') +
-      (bonus ? ` ${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '');
+    row.level.textContent = [
+      level > 0 ? `${t('NIV.')} ${level}` : '',
+      vise ? t('x2 AU {n}', { n: vise }) : '',
+      bonus ? `${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
     row.cost.textContent = max ? t('AU MAX') : formatMoney(lot.cost);
     row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} ${t('NIV.')}`;
     row.btn.disabled = max || !assez(state, lot.cost);

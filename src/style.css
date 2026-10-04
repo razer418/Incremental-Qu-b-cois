@@ -182,6 +182,7 @@ p {
 /* Le $/s qui grossit quand un gros achat rentre. */
 .rate.bump {
   display: inline-block;
+  transform-origin: left center;
   animation: bump 0.5s ease-out;
 }
 .rate.bump.gros {

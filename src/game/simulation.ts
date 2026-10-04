@@ -1,11 +1,12 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
 // Il joue comme un vrai : il tape à un rythme fixe, a son boost x2 la moitié du temps, passe au magasin
 // à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
+// achète ses chars à retaper sur le Face-de-Bouc Marché (la meilleure annonce en ligne),
 // pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
 import { BUILDINGS, EMPIRE_GOAL, type BuildingId } from './buildings';
 import { CAR_PRICE, PARTS } from './car';
-import { PROJETS } from './chars';
+import { PROJETS, annoncesEnLigne, facteurPieces, prixAnnonce } from './chars';
 import { ARTICLES } from './magasin';
 import { MINIJEUX, finirPartie, peutJouer } from './minijeux';
 import { periode, peutInscrire, prixExpo } from './expo';
@@ -23,6 +24,7 @@ import {
   buyCar,
   buyProjet,
   canPrestige,
+  coutPiece,
   carRuns,
   claimQuest,
   earn,
@@ -43,11 +45,10 @@ const PAR_FORCE = [...ARTICLES].sort((a, b) => b.factor - a.factor);
 
 export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige' | 'empire';
 
-/** Coût d'un char à retaper qui reste à payer (achat + pièces). */
-function resteProjet(s: GameState, id: string): number {
+/** Coût des pièces qui restent à réparer sur un char déjà acheté. */
+function reste(s: GameState, id: string): number {
   const p = PROJETS.find((x) => x.id === id)!;
-  const faites = s.projets[id];
-  return (faites ? 0 : p.prix) + p.pieces.filter((x) => !faites?.includes(x.id)).reduce((t, x) => t + x.cost, 0);
+  return p.pieces.filter((x) => !s.projets[id].includes(x.id)).reduce((t, x) => t + coutPiece(s, id, x.cost), 0);
 }
 
 /** Le prochain gros achat qui débloque du nouveau : bazou, pièces, bâtiments. */
@@ -61,7 +62,7 @@ function prochainJalon(s: GameState): { cost: number; faire: () => boolean } | n
 }
 
 /** Le meilleur achat en $ de revenu gagné par $ dépensé. */
-function meilleurAchat(s: GameState): { cost: number; faire: () => boolean } | null {
+function meilleurAchat(s: GameState, now: number): { cost: number; faire: () => boolean } | null {
   const avant = revenuRef(s);
   let best: { ratio: number; cost: number; faire: () => boolean } | null = null;
   const essayer = (cost: number, faire: (x: GameState) => boolean) => {
@@ -80,15 +81,21 @@ function meilleurAchat(s: GameState): { cost: number; faire: () => boolean } | n
     essayer(c, (x) => ((x.cash = Math.max(x.cash, c)), repair(x, 'carrosserie')));
   }
   for (const p of PROJETS) {
-    if (!projetDebloque(s, p) || resteProjet(s, p.id) === 0) continue;
-    const total = resteProjet(s, p.id);
-    // Le bonus arrive seulement à la fin : on évalue le char au complet.
-    essayer(total, (x) => {
-      x.cash = Math.max(x.cash, total);
-      if (!x.projets[p.id]) buyProjet(x, p.id);
+    if (!projetDebloque(s, p)) continue;
+    // Le bonus arrive seulement à la fin : on évalue le char au complet, pour chaque annonce en ligne.
+    const finir = (x: GameState) => {
       for (const pc of p.pieces) reparerProjet(x, p.id, pc.id);
       return true;
-    });
+    };
+    if (s.projets[p.id]) {
+      const total = reste(s, p.id);
+      if (total > 0) essayer(total, (x) => ((x.cash = Math.max(x.cash, total)), finir(x)));
+      continue;
+    }
+    for (const a of annoncesEnLigne(p.id, now)) {
+      const total = prixAnnonce(a) + p.pieces.reduce((t, x) => t + Math.round(x.cost * facteurPieces(a)), 0);
+      essayer(total, (x) => ((x.cash = Math.max(x.cash, total)), buyProjet(x, a.id) && finir(x)));
+    }
   }
   return best;
 }
@@ -123,7 +130,7 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
       const jalon = prochainJalon(s);
       const onRamasse = jalon !== null && jalon.cost <= revenuRef(s) * 900;
       if (onRamasse && assez(s, jalon.cost) && jalon.faire()) continue;
-      const achat = meilleurAchat(s);
+      const achat = meilleurAchat(s, t * 1000);
       if (!achat || !assez(s, achat.cost) || (onRamasse && achat.cost > jalon.cost * 0.1)) break;
       achat.faire();
     }

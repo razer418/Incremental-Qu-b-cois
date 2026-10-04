@@ -53,6 +53,8 @@ import {
   warmth,
   assez,
   buyProjet,
+  annonceDe,
+  coutPiece,
   projetDebloque,
   projetFini,
   reparerProjet,
@@ -63,7 +65,7 @@ import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
 import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
-import { PROJETS } from './game/chars';
+import { ANNONCES, ANNONCES_MS, ETATS, annoncesEnLigne, getProjet, prixAnnonce } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
@@ -1201,7 +1203,9 @@ function renderEvenement(): void {
 
 // --- Chars à retaper ---
 
-const projetRows = PROJETS.map((p) => {
+// Chaque annonce du Face-de-Bouc Marché a sa ligne, pis ses pièces en dessous une fois le char à toé.
+const projetRows = ANNONCES.map((a) => {
+  const p = getProjet(a.projet)!;
   const li = document.createElement('li');
   li.className = 'upgrade';
   li.innerHTML = `
@@ -1211,12 +1215,12 @@ const projetRows = PROJETS.map((p) => {
       <small></small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
-  li.querySelector('strong')!.textContent = t(p.nom);
-  li.querySelector('.stat')!.textContent = t('Une fois retapé : {x} sur tous tes gains.', { x: facteur(p.bonus) });
-  li.querySelector('small')!.textContent = t(p.description);
+  li.querySelector('strong')!.textContent = t(a.nom);
+  li.querySelector('.stat')!.textContent = t('{etat} · {vendeur} · {x} une fois retapé', { etat: t(ETATS[a.etat].nom), vendeur: t(a.vendeur), x: facteur(p.bonus) });
+  li.querySelector('small')!.textContent = t(a.description);
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
-    if (!buyProjet(state, p.id)) return;
+    if (!buyProjet(state, a.id)) return;
     sons.jouer('achat');
     save(localStorage, state);
     render();
@@ -1234,37 +1238,46 @@ const projetRows = PROJETS.map((p) => {
       if (projetFini(state, p)) celebrerTaux(avant, true);
       sons.jouer('achat');
       save(localStorage, state);
-      if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(p.nom), x: facteur(p.bonus) }));
+      if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(a.nom), x: facteur(p.bonus) }));
       render();
     });
     return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
   });
   $('projets-liste').append(li, ...pieces.map((x) => x.li));
-  return { p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
+  return { a, p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
 });
 function renderProjets(): void {
+  const now = Date.now();
   let visible = false;
+  let magasine = false;
   for (const row of projetRows) {
     const ouvert = projetDebloque(state, row.p);
     const faites = state.projets[row.p.id];
-    const fini = projetFini(state, row.p);
+    const aToe = !!faites && annonceDe(state, row.p.id).id === row.a.id;
+    const fini = aToe && projetFini(state, row.p);
     visible ||= ouvert;
-    row.li.hidden = !ouvert;
+    magasine ||= ouvert && !faites;
+    row.li.hidden = !ouvert || (faites ? !aToe : !annoncesEnLigne(row.p.id, now).includes(row.a));
     row.li.classList.toggle('done', fini);
-    row.cost.textContent = fini ? t('RETAPÉ') : faites ? t('À TOÉ') : formatMoney(row.p.prix);
-    row.btn.disabled = !!faites || !assez(state, row.p.prix);
-    if (!faites) progres(row.btn, row.p.prix);
+    row.cost.textContent = fini ? t('RETAPÉ') : aToe ? t('À TOÉ') : formatMoney(prixAnnonce(row.a));
+    row.btn.disabled = !!faites || !assez(state, prixAnnonce(row.a));
+    if (!faites) progres(row.btn, prixAnnonce(row.a));
     for (const pc of row.pieces) {
       // Les pièces s'affichent quand le char est à toé, pis disparaissent quand il est fini.
-      pc.li.hidden = !faites || fini;
-      const faite = !!faites?.includes(pc.x.id);
+      pc.li.hidden = !aToe || fini;
+      if (pc.li.hidden) continue;
+      const faite = faites.includes(pc.x.id);
+      const cost = coutPiece(state, row.p.id, pc.x.cost);
       pc.li.classList.toggle('done', faite);
-      pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(pc.x.cost);
-      pc.btn.disabled = faite || !assez(state, pc.x.cost);
-      if (!faite) progres(pc.btn, pc.x.cost);
+      pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(cost);
+      pc.btn.disabled = faite || !assez(state, cost);
+      if (!faite) progres(pc.btn, cost);
     }
   }
   $('projets').hidden = !visible;
+  const info = $('marche-info');
+  info.hidden = !magasine;
+  info.textContent = t('Face-de-Bouc Marché : nouvelles annonces dans {m} min', { m: Math.ceil((ANNONCES_MS - (now % ANNONCES_MS)) / 60_000) });
 }
 
 let lastQuestId = '';

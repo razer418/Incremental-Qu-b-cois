@@ -56,6 +56,7 @@ import {
 } from './game/state';
 import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
+import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
 import { PROJETS } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
@@ -815,6 +816,7 @@ function render(): void {
 
   renderQuest();
   renderSaison();
+  renderTemps();
   renderEvenement();
   renderProjets();
   renderMagasin();
@@ -946,6 +948,32 @@ function renderBuffs(): void {
     btn.setAttribute('aria-label', `${t(b.nom)} ${temps(b.left)}`);
   }
   buffsEl.hidden = actifs.length === 0;
+}
+
+// --- L'heure pis la météo : petit dans la barre du haut, on tape dessus pour les détails ---
+
+const heureBtn = $<HTMLButtonElement>('heure');
+let lastTemps = '';
+heureBtn.addEventListener('click', () => {
+  const ms = state.lastTick;
+  showMessage(
+    t('Jour {j} de la saison, {h}, {moment}. Météo : {meteo}. Une journée dure 2 minutes.', {
+      j: jourA(ms),
+      h: formatHeure(heureA(ms)),
+      moment: t(momentA(ms).nom).toLowerCase(),
+      meteo: t(meteoA(ms).nom).toLowerCase(),
+    }),
+  );
+});
+function renderTemps(): void {
+  const ms = state.lastTick;
+  const h = heureA(ms);
+  const m = meteoA(ms);
+  const texte = `J${jourA(ms)} · ${formatHeure(h)}${m.id === 'beau' ? '' : ` · ${t(m.nom)}`}`;
+  if (texte === lastTemps) return;
+  heureBtn.textContent = texte;
+  rang?.setTemps(Math.floor(h * 6) / 6, m.id);
+  lastTemps = texte;
 }
 
 // --- Saisons ---

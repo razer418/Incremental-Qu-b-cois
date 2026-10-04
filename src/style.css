@@ -1382,18 +1382,16 @@ section.ailleurs {
 .cat[hidden] {
   display: none;
 }
+/* L'icône reste toujours bien visible : c'est le cadre pis le nom qui disent si c'est ouvert. */
 .cat svg {
   width: 28px;
   height: 28px;
-  opacity: 0.5;
 }
 .cat[aria-pressed='true'] {
   color: var(--gold);
   background: var(--surface);
   border-color: var(--gold);
-}
-.cat[aria-pressed='true'] svg {
-  opacity: 1;
+  box-shadow: inset 0 -3px 0 var(--gold);
 }
 /* Fermée avec des choses prêtes : petit chiffre vert dans le coin, sans clignoter. */
 .cat[aria-pressed='false'][data-prets]:not([data-prets='0'])::after {

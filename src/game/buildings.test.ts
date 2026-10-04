@@ -60,7 +60,7 @@ describe('le garage pis le concessionnaire', () => {
     expect(buy(s, 'baie')).toBe(false);
     buyBuilding(s, 'garage');
     expect(buy(s, 'baie')).toBe(true);
-    expect(passiveRate(s)).toBeCloseTo(110 * (saisonA(s.lastTick).bonus.baie ?? 1));
+    expect(passiveRate(s)).toBeCloseTo(120 * (saisonA(s.lastTick).bonus.baie ?? 1));
   });
 
   it('le rang est au plus chaud avec tout', () => {

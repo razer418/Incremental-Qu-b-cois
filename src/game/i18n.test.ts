@@ -28,7 +28,7 @@ function cles(): string[] {
     ...BUILDINGS.flatMap((b) => [b.name, b.description, b.message]),
     ...Object.values(CHARACTERS).map((c) => c.name),
     ...QUESTS.flatMap((q) => [q.ask, q.thanks, q.goal]),
-    ...ARTICLES.flatMap((a) => [a.name, a.description]),
+    ...ARTICLES.flatMap((a) => [a.name, a.description, a.verbe, a.ligne]),
     ...REJEAN,
     ...SUCCES.flatMap((x) => [x.nom, x.description]),
     ...SAISONS.flatMap((x) => [x.nom, x.description]),

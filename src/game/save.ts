@@ -1,4 +1,5 @@
-import { TUTO_FINI, newGame, type GameState } from './state';
+import { INVENTAIRE_MAX, TUTO_FINI, newGame, type GameState } from './state';
+import { getArticle } from './magasin';
 import { BUILDINGS } from './buildings';
 import { FETES } from './fetes';
 
@@ -32,6 +33,11 @@ export function load(storage: Storage, now: number): GameState {
       noAds: data.noAds === true,
       magasin: Object.fromEntries(
         Object.entries(data.magasin ?? {}).filter(([, v]) => typeof v === 'number' && v > 0),
+      ),
+      inventaire: Object.fromEntries(
+        Object.entries(data.inventaire ?? {})
+          .filter(([k, v]) => getArticle(k) && typeof v === 'number' && v >= 1)
+          .map(([k, v]) => [k, Math.min(INVENTAIRE_MAX, Math.floor(v as number))]),
       ),
       succes: Array.isArray(data.succes) ? data.succes.filter((x) => typeof x === 'string') : [],
       fetes: Array.isArray(data.fetes) ? data.fetes.filter((x) => FETES.some((f) => f.id === x)) : [],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ARTICLES } from './magasin';
-import { BASE_TAP, articleCost, buyArticle, canBuyArticle, currentRate, newGame, tapValue, tick } from './state';
+import { BASE_TAP, INVENTAIRE_MAX, articleCost, buyArticle, canBuyArticle, canUseArticle, currentRate, newGame, tapValue, tick, useArticle } from './state';
 import { load, save } from './save';
 
 const memoire = () => {
@@ -15,6 +15,8 @@ describe('le magasin général', () => {
     const prix = articleCost(s, 'biere');
     expect(buyArticle(s, 'biere')).toBe(true);
     expect(s.cash).toBeCloseTo(100 - prix);
+    expect(tapValue(s)).toBeCloseTo(BASE_TAP);
+    expect(useArticle(s, 'biere')).toBe(true);
     expect(tapValue(s)).toBeCloseTo(BASE_TAP * 2);
     tick(s, 301_000);
     expect(tapValue(s)).toBeCloseTo(BASE_TAP);
@@ -25,7 +27,7 @@ describe('le magasin général', () => {
     const s = newGame(0);
     s.upgrades = { chum: 1 }; // 1 $/s
     s.cash = 1000;
-    expect(buyArticle(s, 'cafe')).toBe(true);
+    expect(buyArticle(s, 'cafe') && useArticle(s, 'cafe')).toBe(true);
     const avant = s.cash;
     expect(currentRate(s)).toBeCloseTo(1.5);
     tick(s, 400_000); // 300 s à x1,5 pis 100 s à x1
@@ -56,20 +58,35 @@ describe('le magasin général', () => {
     expect(articleCost(s, 'cafe')).toBeGreaterThan(200);
   });
 
-  it('max deux d’avance pis pas sans cash', () => {
+  it('l’inventaire garde max 3 du même pis pas sans cash', () => {
     const s = newGame(0);
     expect(canBuyArticle(s, 'chips')).toBe(false);
     s.cash = 1000;
-    expect(buyArticle(s, 'chips')).toBe(true);
-    expect(buyArticle(s, 'chips')).toBe(true);
+    for (let i = 0; i < INVENTAIRE_MAX; i++) expect(buyArticle(s, 'chips')).toBe(true);
     expect(buyArticle(s, 'chips')).toBe(false);
+    expect(s.inventaire.chips).toBe(INVENTAIRE_MAX);
+    expect(s.magasin.chips).toBeUndefined();
+  });
+
+  it('on en prend max deux d’avance', () => {
+    const s = newGame(0);
+    s.inventaire = { chips: 3 };
+    expect(useArticle(s, 'chips')).toBe(true);
+    expect(useArticle(s, 'chips')).toBe(true);
+    expect(canUseArticle(s, 'chips')).toBe(false);
+    expect(s.inventaire.chips).toBe(1);
+    expect(s.magasin.chips).toBe(600);
+    expect(canUseArticle(s, 'vin')).toBe(false);
   });
 
   it('survit à la sauvegarde', () => {
     const st = memoire();
     const s = newGame(0);
     s.magasin = { vin: 120, bidon: -3 };
+    s.inventaire = { cafe: 2, bidon: 4, vin: 99, chips: 0 };
     save(st, s);
-    expect(load(st, 0).magasin).toEqual({ vin: 120 });
+    const l = load(st, 0);
+    expect(l.magasin).toEqual({ vin: 120 });
+    expect(l.inventaire).toEqual({ cafe: 2, vin: INVENTAIRE_MAX });
   });
 });

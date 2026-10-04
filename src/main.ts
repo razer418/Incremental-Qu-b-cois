@@ -42,6 +42,8 @@ import {
   articleCost,
   buyArticle,
   canBuyArticle,
+  canUseArticle,
+  useArticle,
   tap,
   tapValue,
   tick,
@@ -524,12 +526,51 @@ function renderMagasin(): void {
   if (magasinEl.hidden) return;
   for (const a of ARTICLES) {
     const row = articleRows.get(a.id)!;
-    const left = Math.ceil(state.magasin[a.id] ?? 0);
-    row.level.textContent = left > 0 ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+    const n = state.inventaire[a.id] ?? 0;
+    row.level.textContent = n > 0 ? `x${n}` : '';
     const cost = articleCost(state, a.id);
     row.cost.textContent = formatMoney(cost);
     row.btn.disabled = !canBuyArticle(state, a.id);
     progres(row.btn, cost);
+  }
+}
+
+// L'inventaire : ce que t'as acheté chez Réjean, à fumer, boire ou manger à la maison.
+const inventaireEl = $('inventaire');
+const invLine = $('inv-line');
+const invRows = new Map<string, { li: HTMLElement; btn: HTMLButtonElement; level: HTMLElement }>();
+for (const a of ARTICLES) {
+  const li = document.createElement('li');
+  li.className = 'upgrade';
+  li.innerHTML = `
+    <div class="upgrade-info">
+      <strong>${t(a.name)} <span class="level"></span></strong>
+      <small>${t(a.description)}</small>
+    </div>
+    <button type="button" class="buy">${t(a.verbe)}</button>`;
+  const btn = li.querySelector<HTMLButtonElement>('.buy')!;
+  btn.addEventListener('click', () => {
+    if (useArticle(state, a.id)) {
+      sons.jouer('achat');
+      invLine.hidden = false;
+      invLine.textContent = t(a.ligne);
+      save(localStorage, state);
+      render();
+    }
+  });
+  invRows.set(a.id, { li, btn, level: li.querySelector('.level')! });
+  $('inventaire-liste').append(li);
+}
+function renderInventaire(): void {
+  inventaireEl.hidden = Object.keys(state.inventaire).length === 0 || (!!rang && lieu !== 'maison');
+  if (inventaireEl.hidden) return;
+  for (const a of ARTICLES) {
+    const row = invRows.get(a.id)!;
+    const n = state.inventaire[a.id] ?? 0;
+    row.li.hidden = n === 0;
+    const left = Math.ceil(state.magasin[a.id] ?? 0);
+    row.level.textContent = `x${n}` + (left > 0 ? ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '');
+    row.btn.disabled = !canUseArticle(state, a.id);
   }
 }
 lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
@@ -820,6 +861,7 @@ function render(): void {
   renderEvenement();
   renderProjets();
   renderMagasin();
+  renderInventaire();
   $('look').hidden = !state.car.owned;
   if (state.car.owned) {
     const n = CATEGORIES.reduce((k, c) => k + LOOK[c].options.filter((x) => x.prix > 0 && possede(state, c, x.id)).length, 0);

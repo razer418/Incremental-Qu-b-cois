@@ -12,6 +12,10 @@ export interface Article {
   /** Le prix suit ta progression : autant de secondes de tes revenus. */
   incomeSeconds: number;
   minCost: number;
+  /** Le bouton dans l'inventaire, à la maison. */
+  verbe: string;
+  /** Ce qui se passe quand tu le prends. */
+  ligne: string;
 }
 
 export const ARTICLES: readonly Article[] = [
@@ -24,6 +28,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 5 * 60,
     incomeSeconds: 20,
     minCost: 1,
+    verbe: 'MANGER',
+    ligne: "Crunch crunch. T'as les doigts orange, mais t'es en forme.",
   },
   {
     id: 'cafe',
@@ -34,6 +40,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 5 * 60,
     incomeSeconds: 30,
     minCost: 2,
+    verbe: 'BOIRE',
+    ligne: 'Une gorgée de café brûlé. Les yeux ronds, la gang se réveille.',
   },
   {
     id: 'biere',
@@ -44,6 +52,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 5 * 60,
     incomeSeconds: 60,
     minCost: 10,
+    verbe: 'BOIRE',
+    ligne: 'Tchssss! Une frette sur la galerie. Envoye Ti-Guy, livre!',
   },
   {
     id: 'cigarettes',
@@ -54,6 +64,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 2 * 60,
     incomeSeconds: 45,
     minCost: 8,
+    verbe: 'FUMER',
+    ligne: 'Une smoke sur le perron. La gang prend une pause, pis repart en feu.',
   },
   {
     id: 'vape',
@@ -64,6 +76,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 15 * 60,
     incomeSeconds: 75,
     minCost: 12,
+    verbe: 'VAPOTER',
+    ligne: 'Un gros nuage barbe à papa dans le salon. Ça sent la cabane.',
   },
   {
     id: 'vin',
@@ -74,6 +88,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 15 * 60,
     incomeSeconds: 90,
     minCost: 10,
+    verbe: 'BOIRE',
+    ligne: "Un verre de rouge de dépanneur avec le souper. C'est pas grand cru, mais c'est bon.",
   },
   {
     id: 'vers',
@@ -84,6 +100,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 30 * 60,
     incomeSeconds: 60,
     minCost: 3,
+    verbe: 'PÊCHER',
+    ligne: 'Ti-Guy part au lac avec sa canne. La gang travaille en paix.',
   },
   {
     id: 'bois',
@@ -94,6 +112,8 @@ export const ARTICLES: readonly Article[] = [
     seconds: 60 * 60,
     incomeSeconds: 120,
     minCost: 20,
+    verbe: 'CHAUFFER',
+    ligne: 'Une bûche dans le poêle. La maison est chaude, la gang est heureuse.',
   },
 ];
 

@@ -610,4 +610,8 @@ export const EN: Record<string, string> = {
   "EMPIRE": "EMPIRE",
   "CHARS": "CARS",
   "Texte des quêtes": "Quest text",
+  "tape": "tap",
+  "sur tous tes gains": "on all your earnings",
+  "Tapes": "Taps",
+  "Passif": "Passive",
 };

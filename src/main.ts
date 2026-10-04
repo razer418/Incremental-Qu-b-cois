@@ -392,6 +392,16 @@ lotBtn.addEventListener('click', () => {
   render();
 });
 
+// La stat d'un achat, bâtie à partir des données : toujours visible, même en ligne compacte.
+const statUpgrade = (u: (typeof UPGRADES)[number]) =>
+  u.effect.kind === 'tapAdd'
+    ? `+${formatMoney(u.effect.amount)} / ${t('tape')}`
+    : u.effect.kind === 'passiveAdd'
+      ? `+${formatMoney(u.effect.amount)}/s`
+      : `${facteur(u.effect.factor)} ${t('sur tous tes gains')}`;
+const statArticle = (a: (typeof ARTICLES)[number]) =>
+  `${t(a.boosts === 'tap' ? 'Tapes' : 'Passif')} ${facteur(a.factor)} / ${formatDuration(a.seconds)}`;
+
 // Une ligne par achat, créée une fois.
 const rows = new Map<
   string,
@@ -403,6 +413,7 @@ for (const u of UPGRADES) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(u.name)} <span class="level"></span></strong>
+      <span class="stat">${statUpgrade(u)}</span>
       <small>${t(u.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span><span class="combien"></span></button>`;
@@ -514,6 +525,7 @@ for (const a of ARTICLES) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(a.name)} <span class="level"></span></strong>
+      <span class="stat">${statArticle(a)}</span>
       <small>${t(a.description)}</small>
     </div>
     <button type="button" class="buy"><span class="cost"></span></button>`;
@@ -567,6 +579,7 @@ for (const a of ARTICLES) {
   li.innerHTML = `
     <div class="upgrade-info">
       <strong>${t(a.name)} <span class="level"></span></strong>
+      <span class="stat">${statArticle(a)}</span>
     </div>
     <button type="button" class="buy">${t(a.verbe)}</button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
@@ -1355,12 +1368,18 @@ const stat = (texte: string) =>
     .filter((x) => /[+x]\s?\$?\d/.test(x))
     .join(' ');
 const descriptions = ['upgrades', 'parts', 'articles', 'projets-liste'].flatMap((id) =>
-  [...$(id).querySelectorAll('small')].map((el) => ({ el, tout: el.textContent! })),
+  [...$(id).querySelectorAll('small')].map((el) => ({ el, tout: el.textContent!, aStat: !!el.closest('li')!.querySelector('.stat') })),
 );
+// Une ligne qui a déjà sa stat garde juste la joke en TOUT, pis rien en STATS.
+const sansStat = (texte: string) =>
+  texte
+    .split(/(?<=\.)\s+/)
+    .filter((x) => !/[+x]\s?\$?\d/.test(x))
+    .join(' ');
 const descriptionsBtn = $<HTMLButtonElement>('descriptions');
 const setDescriptions = (stats: boolean) => {
   for (const d of descriptions) {
-    d.el.textContent = stats ? stat(d.tout) : d.tout;
+    d.el.textContent = d.aStat ? (stats ? '' : sansStat(d.tout)) : stats ? stat(d.tout) : d.tout;
     d.el.hidden = !d.el.textContent;
   }
   bascule(descriptionsBtn, !stats, 'TOUT', 'STATS');

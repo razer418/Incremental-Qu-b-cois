@@ -12,7 +12,7 @@ import { SUCCES } from './succes';
 import { SAISONS } from './saisons';
 import { FETES } from './fetes';
 import { METEOS, MOMENTS } from './temps';
-import { ANNONCES, ETATS, PROJETS } from './chars';
+import { ANNONCES, ETATS, MODS, PROJETS } from './chars';
 import { RECETTES } from './mecanique';
 import { EVENEMENTS } from './evenements';
 import { LOOK } from './look';
@@ -38,6 +38,7 @@ function cles(): string[] {
     ...METEOS.map((x) => x.nom),
     ...PROJETS.flatMap((p) => [p.nom, p.description, ...p.pieces.map((x) => x.nom)]),
     ...ANNONCES.flatMap((a) => [a.nom, a.vendeur, a.description]),
+    ...Object.values(MODS).flatMap((m) => [m.nom, ...m.niveaux]),
     ...Object.values(ETATS).map((x) => x.nom),
     ...Object.values(RECETTES).flatMap((r) => r.map((e) => e.texte)),
     ...EVENEMENTS.flatMap((e) => [e.texte, ...e.choix.map((c) => c.label)]),

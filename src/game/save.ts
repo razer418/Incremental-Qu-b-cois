@@ -2,6 +2,7 @@ import { INVENTAIRE_MAX, TUTO_FINI, newGame, type GameState } from './state';
 import { getArticle } from './magasin';
 import { BUILDINGS } from './buildings';
 import { FETES } from './fetes';
+import { MOD_NIVEAUX, SLOTS } from './chars';
 
 const num = (v: unknown) => Math.max(0, Number(v) || 0);
 
@@ -56,6 +57,13 @@ export function load(storage: Storage, now: number): GameState {
       ),
       annonces: Object.fromEntries(Object.entries(data.annonces ?? {}).filter(([, v]) => typeof v === 'string')),
       vendus: Array.isArray(data.vendus) ? data.vendus.filter((x) => typeof x === 'string') : [],
+      mods: Object.fromEntries(
+        Object.entries(data.mods ?? {}).map(([k, v]) => [
+          k,
+          Object.fromEntries(SLOTS.map((s) => [s, Math.min(MOD_NIVEAUX, Math.floor(num(v?.[s])))]).filter(([, n]) => n)),
+        ]),
+      ),
+      modsPayes: Object.fromEntries(Object.entries(data.modsPayes ?? {}).map(([k, v]) => [k, num(v)])),
       look: {
         achetes: Array.isArray(data.look?.achetes) ? data.look.achetes.filter((x) => typeof x === 'string') : [],
         choix: { ...newGame(now).look.choix, ...(data.look?.choix ?? {}) },

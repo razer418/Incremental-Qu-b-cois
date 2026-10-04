@@ -59,6 +59,9 @@ import {
   projetDebloque,
   projetFini,
   reparerProjet,
+  modifierProjet,
+  niveauMod,
+  prochainMod,
   SUCCES_BONUS,
   TUTO_FINI,
 } from './game/state';
@@ -66,7 +69,7 @@ import { load, save, wipe } from './game/save';
 import { resteSaison, saisonA } from './game/saisons';
 import { formatHeure, heureA, jourA, meteoA, momentA } from './game/temps';
 import { FETE_SECONDES, bonusFete, feteA, grosseFeteA } from './game/fetes';
-import { ANNONCES, ANNONCES_MS, ETATS, PROJETS, annoncesEnLigne, getProjet, prixAnnonce, prixVente } from './game/chars';
+import { ANNONCES, ANNONCES_MS, ETATS, MODS, MOD_BONUS, MOD_NIVEAUX, PROJETS, SLOTS, annoncesEnLigne, bonusChar, getProjet, prixAnnonce, prixVente } from './game/chars';
 import { EVENEMENTS, EVENEMENT_SECONDES, choisir, tirerEvenement, type Evenement } from './game/evenements';
 import { SUCCES, verifierSucces, type Succes } from './game/succes';
 import { formatDuration, formatMoney, formatNombre, notation } from './game/format';
@@ -1237,10 +1240,11 @@ const projetRows = ANNONCES.map((a) => {
   btn.addEventListener('click', async () => {
     // Retapé : le bouton le revend (flip). Sinon, il l'achète pis la caméra va te le montrer dans la cour.
     if (projetFini(state, p)) {
-      const ok = await demander(t('Revendre {nom} pour {cash}? Tu perds son bonus de {x}, pis tu pourras pas racheter ce char-là avant le prestige.', { nom: t(a.nom), cash: formatMoney(prixVente(p)), x: facteur(p.bonus) }));
+      const prix = prixVente(p, state.modsPayes[p.id]);
+      const ok = await demander(t('Revendre {nom} pour {cash}? Tu perds son bonus de {x}, pis tu pourras pas racheter ce char-là avant le prestige.', { nom: t(a.nom), cash: formatMoney(prix), x: facteur(bonusChar(p, state.mods[p.id])) }));
       if (!ok || !vendreProjet(state, p.id)) return;
       sons.jouer('achat');
-      showMessage(t('Vendu! +{cash}. Va voir les annonces pour ton prochain projet.', { cash: formatMoney(prixVente(p)) }));
+      showMessage(t('Vendu! +{cash}. Va voir les annonces pour ton prochain projet.', { cash: formatMoney(prix) }));
     } else {
       if (!buyProjet(state, a.id)) return;
       sons.jouer('achat');
@@ -1276,8 +1280,27 @@ const projetRows = ANNONCES.map((a) => {
     });
     return { x, li: pli, btn: pbtn, cost: pli.querySelector<HTMLElement>('.cost')! };
   });
-  $('projets-liste').append(li, ...pieces.map((x) => x.li));
-  return { a, p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, pieces };
+  // Une fois retapé : les 3 slots de mods, un niveau à la fois.
+  const mods = SLOTS.map((slot) => {
+    const mli = document.createElement('li');
+    mli.className = 'upgrade piece';
+    mli.innerHTML = `<div class="upgrade-info"><strong></strong><span class="stat"></span></div><button type="button" class="buy"><span class="cost"></span></button>`;
+    const mbtn = mli.querySelector<HTMLButtonElement>('.buy')!;
+    mbtn.addEventListener('click', () => {
+      const avant = currentRate(state);
+      const nom = MODS[slot].niveaux[niveauMod(state, p.id, slot)];
+      if (!modifierProjet(state, p.id, slot)) return;
+      celebrerTaux(avant, false);
+      sons.jouer('achat');
+      sons.char(a.id, 'piece');
+      save(localStorage, state);
+      showMessage(t('{mod} sur {nom}! {x} sur tous tes gains.', { mod: t(nom), nom: t(a.nom), x: facteur(bonusChar(p, state.mods[p.id])) }));
+      render();
+    });
+    return { slot, li: mli, btn: mbtn, nom: mli.querySelector('strong')!, stat: mli.querySelector<HTMLElement>('.stat')!, cost: mli.querySelector<HTMLElement>('.cost')! };
+  });
+  $('projets-liste').append(li, ...pieces.map((x) => x.li), ...mods.map((x) => x.li));
+  return { a, p, li, btn, cost: li.querySelector<HTMLElement>('.cost')!, stat: li.querySelector<HTMLElement>('.stat')!, pieces, mods };
 });
 function renderProjets(): void {
   const now = Date.now();
@@ -1293,8 +1316,13 @@ function renderProjets(): void {
     row.li.hidden = !ouvert || (faites ? !aToe : !annoncesEnLigne(row.p.id, now).includes(row.a));
     row.li.classList.toggle('done', fini);
     const vendu = state.vendus.includes(row.a.id);
+    row.stat.textContent = t(fini ? '{etat} · {vendeur} · {x} sur tes gains' : '{etat} · {vendeur} · {x} une fois retapé', {
+      etat: t(ETATS[row.a.etat].nom),
+      vendeur: t(row.a.vendeur),
+      x: facteur(fini ? bonusChar(row.p, state.mods[row.p.id]) : row.p.bonus),
+    });
     row.cost.textContent = fini
-      ? t('REVENDRE {cash}', { cash: formatMoney(prixVente(row.p)) })
+      ? t('REVENDRE {cash}', { cash: formatMoney(prixVente(row.p, state.modsPayes[row.p.id])) })
       : aToe
         ? t('À TOÉ')
         : vendu
@@ -1312,6 +1340,21 @@ function renderProjets(): void {
       pc.cost.textContent = faite ? t('RÉPARÉ') : formatMoney(cost);
       pc.btn.disabled = faite || !assez(state, cost);
       if (!faite) progres(pc.btn, cost);
+    }
+    for (const m of row.mods) {
+      m.li.hidden = !fini;
+      if (m.li.hidden) continue;
+      const n = niveauMod(state, row.p.id, m.slot);
+      const cost = prochainMod(state, row.p.id, m.slot);
+      const x = bonusChar(row.p, state.mods[row.p.id]);
+      m.nom.textContent = `${t(MODS[m.slot].nom)} : ${t(MODS[m.slot].niveaux[Math.min(n, MOD_NIVEAUX - 1)])}`;
+      m.stat.textContent = cost === null
+        ? t('Niveau {n} sur {max}', { n, max: MOD_NIVEAUX })
+        : t('Niveau {n} sur {max} · {x} -> {y}', { n, max: MOD_NIVEAUX, x: facteur(x), y: facteur(Math.round((x + MOD_BONUS) * 100) / 100) });
+      m.li.classList.toggle('done', cost === null);
+      m.cost.textContent = cost === null ? t('AU MAX') : formatMoney(cost);
+      m.btn.disabled = cost === null || !assez(state, cost);
+      if (cost !== null) progres(m.btn, cost);
     }
   }
   $('projets').hidden = !visible;

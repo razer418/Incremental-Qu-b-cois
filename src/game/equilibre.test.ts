@@ -14,7 +14,7 @@ describe('équilibre', () => {
     let dernier = 0;
     let pireTrou = 0;
     const t = simuler(4, 16 * 3600, (sec, s) => {
-      const achats = JSON.stringify([s.upgrades, s.car, s.buildings, s.projets]);
+      const achats = JSON.stringify([s.upgrades, s.car, s.buildings, s.projets, s.mods]);
       if (achats === sig) return;
       pireTrou = Math.max(pireTrou, sec - dernier);
       dernier = sec;

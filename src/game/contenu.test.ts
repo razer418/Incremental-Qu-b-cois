@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SAISONS, SAISON_SECONDES, saisonA } from './saisons';
-import { ANNONCES, ANNONCES_MS, PROJETS, annoncesEnLigne, prixAnnonce, prixVente } from './chars';
+import { ANNONCES, ANNONCES_MS, MOD_BONUS, MOD_NIVEAUX, PROJETS, annoncesEnLigne, prixAnnonce, prixVente } from './chars';
 import { EVENEMENTS, tirerEvenement } from './evenements';
-import { annonceDe, buyProjet, coutPiece, vendreProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
+import { annonceDe, buyProjet, coutPiece, modifierProjet, niveauMod, prochainMod, vendreProjet, multiplier, newGame, passiveRate, reparerProjet, tapValue, revenuRef } from './state';
 import { load, save } from './save';
 import { MODELES } from '../scene/chars3d';
 import { RECETTES } from './mecanique';
@@ -110,6 +110,31 @@ describe('Face-de-Bouc Marché', () => {
     expect(s.projets.pickup).toBeUndefined();
     expect(buyProjet(s, 'van')).toBe(false);
     expect(buyProjet(s, 'castor')).toBe(true);
+  });
+
+  it('un char retapé se modifie : 3 slots, 5 niveaux, le bonus pis la revente montent', () => {
+    const s = newGame(0);
+    s.car = { owned: true, parts: { batterie: true, pneus: true, demarreur: true, freins: true } };
+    s.cash = 1e12;
+    buyProjet(s, 'pickup');
+    expect(modifierProjet(s, 'pickup', 'moteur')).toBe(false);
+    for (const x of PROJETS[0].pieces) reparerProjet(s, 'pickup', x.id);
+    const avant = multiplier(s);
+    const cout = prochainMod(s, 'pickup', 'moteur')!;
+    const cash = s.cash;
+    expect(modifierProjet(s, 'pickup', 'moteur')).toBe(true);
+    expect(cash - s.cash).toBeCloseTo(cout);
+    expect(multiplier(s)).toBeCloseTo((avant / PROJETS[0].bonus) * (PROJETS[0].bonus + MOD_BONUS));
+    for (let i = 1; i < MOD_NIVEAUX; i++) modifierProjet(s, 'pickup', 'moteur');
+    expect(niveauMod(s, 'pickup', 'moteur')).toBe(MOD_NIVEAUX);
+    expect(prochainMod(s, 'pickup', 'moteur')).toBeNull();
+    expect(modifierProjet(s, 'pickup', 'moteur')).toBe(false);
+    expect(prixVente(PROJETS[0], s.modsPayes.pickup)).toBeGreaterThan(prixVente(PROJETS[0]));
+    const st = memoire();
+    save(st, s);
+    expect(load(st, 0).mods).toEqual({ pickup: { moteur: MOD_NIVEAUX } });
+    expect(vendreProjet(s, 'pickup')).toBe(true);
+    expect(s.mods.pickup).toBeUndefined();
   });
 
   it('chaque annonce coûte le même total que le char d’origine', () => {

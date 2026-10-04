@@ -742,6 +742,31 @@ dialog p {
   margin-bottom: 16px;
 }
 
+/* Titre (pis icône) en haut du message, la description en dessous. */
+.message-tete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed var(--line);
+}
+.message-tete[hidden],
+.message-icone[hidden] {
+  display: none;
+}
+.message-icone svg {
+  display: block;
+  width: 72px;
+  height: 72px;
+}
+dialog .message-titre {
+  margin: 0;
+  font: 400 30px/1 var(--pixel);
+  color: var(--gold);
+}
+
 dialog::backdrop {
   background: rgb(0 0 0 / 0.6);
 }

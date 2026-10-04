@@ -112,8 +112,13 @@ const store = webStore;
 const messageDialog = $<HTMLDialogElement>('message');
 const messageText = $('message-text');
 
-function showMessage(text: string): void {
+/** Un message, avec un titre en haut (pis une icône) si on en donne un. */
+function showMessage(text: string, titre = '', icon = ''): void {
   messageText.textContent = text;
+  $('message-tete').hidden = !titre;
+  $('message-titre').textContent = titre;
+  $('message-icone').innerHTML = icon;
+  $('message-icone').hidden = !icon;
   if (!messageDialog.open) messageDialog.showModal();
 }
 
@@ -979,7 +984,7 @@ function renderBuffs(): void {
       btn.innerHTML = icone(b.id);
       btn.addEventListener('click', () => {
         const now = buffsActifs().find((y) => y.id === b.id);
-        if (now) showMessage(`${t(now.nom)} : ${t(now.description)} ${t('Il reste {temps}.', { temps: temps(now.left) })}`);
+        if (now) showMessage(`${t(now.description)} ${t('Il reste {temps}.', { temps: temps(now.left) })}`, t(now.nom), icone(b.id));
       });
       buffsEl.append(btn);
       buffIcones.set(b.id, btn);
@@ -1027,8 +1032,9 @@ saisonBtn.addEventListener('click', () => {
   const f = feteA(state.lastTick);
   showMessage(
     f
-      ? `${t(f.nom)} : ${t(f.description)} ${t('Gains {x}.', { x: facteur(bonusFete(state.lastTick)) })} ${t(grosseFeteA(state.lastTick) ? "C'est la vraie date : la fête dure toute la journée!" : 'La fête dure 3 minutes.')}`
-      : `${t(x.nom)} : ${t(x.description)} ${t('Chaque saison dure 10 minutes, pis finit avec une fête.')}`,
+      ? `${t(f.description)} ${t('Gains {x}.', { x: facteur(bonusFete(state.lastTick)) })} ${t(grosseFeteA(state.lastTick) ? "C'est la vraie date : la fête dure toute la journée!" : 'La fête dure 3 minutes.')}`
+      : `${t(x.description)} ${t('Chaque saison dure 10 minutes, pis finit avec une fête.')}`,
+    t(f ? f.nom : x.nom),
   );
 });
 function renderSaison(): void {

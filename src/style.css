@@ -1337,10 +1337,31 @@ section.replie h2 {
 }
 
 /* Barre d'icônes des catégories : allumée = ouverte. */
+/* Collée en bas de l'écran, comme une app. */
 .cats {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 2px solid var(--line);
+}
+.cats:not(:has(.cat:not([hidden]))) {
+  display: none;
+}
+body:has(.cats .cat:not([hidden])) #app {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+body:has(.cats .cat:not([hidden])) .toast {
+  bottom: calc(84px + env(safe-area-inset-bottom));
+}
+section.ailleurs {
+  display: none;
 }
 .cat {
   position: relative;
@@ -1348,7 +1369,9 @@ section.replie h2 {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  width: 60px;
+  flex: 1;
+  max-width: 80px;
+  min-width: 0;
   padding: 6px 2px 4px;
   font: 400 15px/1 var(--pixel);
   color: var(--muted);

@@ -1289,8 +1289,11 @@ const COURTS: Record<string, string> = {
   achats: 'ACHATS',
   boutique: 'BOUTIQUE',
 };
+// De gauche à droite, dans l'ordre où tu les débloques.
+const ORDRE = ['achats', 'garage', 'look', 'minijeux', 'projets', 'empire', 'boutique'];
+const rangDe = (h2: HTMLElement) => (ORDRE.indexOf(h2.closest('section')!.id) + 1 || 99);
 const cats = new Map<HTMLElement, HTMLButtonElement>();
-for (const h2 of titres) {
+for (const h2 of [...titres].sort((a, b) => rangDe(a) - rangDe(b))) {
   const s = h2.closest('section')!;
   const b = document.createElement('button');
   b.type = 'button';
@@ -1326,7 +1329,10 @@ for (const h2 of titres) {
 function pastilles(): void {
   for (const [h2, b] of cats) {
     const s = h2.closest('section')!;
-    b.hidden = s.hidden;
+    // Le look se change juste à la maison ou au garage.
+    const ailleurs = s.id === 'look' && !!rang && lieu !== 'maison' && lieu !== 'garage';
+    s.classList.toggle('ailleurs', ailleurs);
+    b.hidden = s.hidden || ailleurs;
     if (h2.closest('#boutique')) continue; // pas de pastille pour de l'argent réel
     const n = String(s.querySelectorAll('.upgrade:not([hidden]) .buy:not(:disabled)').length);
     if (b.dataset.prets !== n) b.dataset.prets = n;

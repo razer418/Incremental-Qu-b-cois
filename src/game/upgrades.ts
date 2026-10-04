@@ -212,6 +212,20 @@ export const UPGRADES: readonly Upgrade[] = [
   },
 ];
 
+/** Les paliers : au niveau 10 pis au niveau 25, ce que l'achat rapporte double. */
+export const PALIERS = [10, 25] as const;
+
+/** x1, x2 ou x4 selon les paliers atteints. */
+export function palier(level: number): number {
+  return 2 ** PALIERS.filter((p) => level >= p).length;
+}
+
+/** Le prochain palier à viser, ou null (achats x, ou déjà passé le dernier). */
+export function prochainPalier(u: Upgrade, level: number): number | null {
+  if (u.effect.kind === 'globalMult') return null;
+  return PALIERS.find((p) => p > level && p <= u.maxLevel) ?? null;
+}
+
 export function getUpgrade(id: string): Upgrade | undefined {
   return UPGRADES.find((u) => u.id === id);
 }

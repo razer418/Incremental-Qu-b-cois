@@ -11,7 +11,7 @@ import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
 import { CADEAUX, cadeauDuJour } from './game/cadeau';
 import { NO_ADS_PRICE, webStore } from './platform/store';
-import { UPGRADES } from './game/upgrades';
+import { UPGRADES, palier, prochainPalier } from './game/upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './game/car';
 import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, gainsPourPoints, prestigePointsFor } from './game/buildings';
 import {
@@ -415,7 +415,13 @@ for (const u of UPGRADES) {
     <button type="button" class="buy"><span class="cost"></span><span class="combien"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
+    const avant = currentRate(state);
+    const niveau = levelOf(state, u.id);
     if (buyMany(state, u.id, LOTS[lotMode])) {
+      // Un palier passé (x2) : on le fête comme un bâtiment.
+      const gros = palier(levelOf(state, u.id)) > palier(niveau);
+      celebrerTaux(avant, gros);
+      if (gros) sons.jouer('boost');
       sons.jouer('achat');
       save(localStorage, state);
       render();
@@ -632,9 +638,26 @@ function renderInventaire(): void {
 }
 lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
 
+// Les gros moments : le $/s grossit une seconde pis le « +X $/s » gagné apparaît à côté.
+function celebrerTaux(avant: number, gros: boolean): void {
+  const plus = currentRate(state) - avant;
+  if (plus <= 0) return;
+  rateEl.classList.remove('bump', 'gros');
+  void rateEl.offsetWidth;
+  if (!reduceMotion) rateEl.classList.add('bump', ...(gros ? ['gros'] : []));
+  const span = document.createElement('span');
+  span.className = 'taux-plus';
+  span.textContent = `+${formatMoney(plus)}/s`;
+  rateEl.after(span);
+  setTimeout(() => span.remove(), gros ? 2500 : 1500);
+}
+
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
+  const avant = currentRate(state);
   if (!b || !buyBuilding(state, b.id)) return;
+  celebrerTaux(avant, true);
+  sons.jouer('boost');
   sons.jouer('achat');
   save(localStorage, state);
   allerA(b.id);
@@ -968,7 +991,11 @@ function render(): void {
     const lot = bulkCost(state, u.id, LOTS[lotMode]);
     row.li.classList.toggle('max', max);
     const bonus = saisonA(state.lastTick).bonus[u.id];
-    row.level.textContent = (level > 0 ? `${t('NIV.')} ${level}` : '') + (bonus ? ` ${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '');
+    const vise = prochainPalier(u, level);
+    row.level.textContent =
+      (level > 0 ? `${t('NIV.')} ${level}` : '') +
+      (vise ? ` · ${t('x2 AU {n}', { n: vise })}` : '') +
+      (bonus ? ` ${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '');
     row.cost.textContent = max ? t('AU MAX') : formatMoney(lot.cost);
     row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} ${t('NIV.')}`;
     row.btn.disabled = max || !assez(state, lot.cost);
@@ -1199,7 +1226,9 @@ const projetRows = PROJETS.map((p) => {
     pli.querySelector('.stat')!.textContent = t('Pièce {i} sur {n} du {x}', { i: i + 1, n: p.pieces.length, x: facteur(p.bonus) });
     const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
     pbtn.addEventListener('click', () => {
+      const avant = currentRate(state);
       if (!reparerProjet(state, p.id, x.id)) return;
+      if (projetFini(state, p)) celebrerTaux(avant, true);
       sons.jouer('achat');
       save(localStorage, state);
       if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(p.nom), x: facteur(p.bonus) }));

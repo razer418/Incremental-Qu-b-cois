@@ -240,3 +240,15 @@ describe('le prochain objectif', () => {
     expect(prochainObjectif(s)).toBeNull();
   });
 });
+
+describe('les paliers', () => {
+  it('x2 au niveau 10, x4 au niveau 25', () => {
+    const s = newGame(0);
+    s.upgrades = { chum: 9 };
+    expect(passiveRate(s)).toBeCloseTo(9);
+    s.upgrades = { chum: 10 };
+    expect(passiveRate(s)).toBeCloseTo(20);
+    s.upgrades = { chum: 25 };
+    expect(passiveRate(s)).toBeCloseTo(100);
+  });
+});

@@ -1,4 +1,4 @@
-import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
+import { UPGRADES, getUpgrade, palier, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
@@ -137,7 +137,7 @@ export function multiplier(state: GameState): number {
 function baseTapValue(state: GameState): number {
   let value = carRuns(state) ? DELIVERY_TAP : BASE_TAP;
   for (const u of UPGRADES) {
-    if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
+    if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id) * palier(levelOf(state, u.id));
   }
   return (value * multiplier(state) + TAP_PART_PASSIF * passiveRate(state)) * saisonA(state.lastTick).tap;
 }
@@ -239,7 +239,7 @@ export function passiveRate(state: GameState): number {
   const saison = saisonA(state.lastTick);
   let rate = 0;
   for (const u of UPGRADES) {
-    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id) * (saison.bonus[u.id] ?? 1);
+    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id) * palier(levelOf(state, u.id)) * (saison.bonus[u.id] ?? 1);
   }
   return rate * multiplier(state);
 }

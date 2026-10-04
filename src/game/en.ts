@@ -631,4 +631,5 @@ export const EN: Record<string, string> = {
   "Reviens demain pour un plus gros cadeau.": "Come back tomorrow for a bigger gift.",
   "Ton sac est plein : Réjean te donne {cash} à la place.": "Your bag is full: Réjean gives you {cash} instead.",
   "CADEAU DU JOUR": "DAILY GIFT",
+  "x2 AU {n}": "x2 AT {n}",
 };

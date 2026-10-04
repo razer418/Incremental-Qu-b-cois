@@ -90,7 +90,7 @@ export const UPGRADES: readonly Upgrade[] = [
     name: 'Remorquage chez les voisins',
     description: "+70 $/s. Tout le monde reste pogné dans le fossé l'hiver.",
     baseCost: 3_000_000,
-    costGrowth: 1.7,
+    costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 70 },
     requires: 'roule',
@@ -100,7 +100,7 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'baie',
     name: 'Une baie de plus',
     description: '+120 $/s. Un pont élévateur usagé pis un char de plus à la fois.',
-    baseCost: 10_000_000,
+    baseCost: 7_000_000,
     costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 120 },
@@ -152,8 +152,8 @@ export const UPGRADES: readonly Upgrade[] = [
     id: 'radio',
     name: 'Une pub à la radio locale',
     description: "x1,5 sur tous tes gains. « Chez Gagnon pis fils, on vous fait un prix! »",
-    baseCost: 2_000_000_000,
-    costGrowth: 10,
+    baseCost: 1_000_000_000,
+    costGrowth: 3,
     maxLevel: 3,
     effect: { kind: 'globalMult', factor: 1.5 },
     requires: 'concession',
@@ -163,7 +163,7 @@ export const UPGRADES: readonly Upgrade[] = [
     name: 'Un vendeur de chars',
     description: '+1 800 $/s. Y parle vite pis y a une moustache.',
     baseCost: 1_500_000_000,
-    costGrowth: 1.7,
+    costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 1_800 },
     requires: 'concession',
@@ -195,7 +195,7 @@ export const UPGRADES: readonly Upgrade[] = [
     name: 'Louer la glace',
     description: "+10 000 $/s. Les ligues de garage jouent jusqu'à minuit.",
     baseCost: 50_000_000_000,
-    costGrowth: 1.7,
+    costGrowth: 1.6,
     maxLevel: 25,
     effect: { kind: 'passiveAdd', amount: 10_000 },
     requires: 'arena',
@@ -211,6 +211,20 @@ export const UPGRADES: readonly Upgrade[] = [
     requires: 'arena',
   },
 ];
+
+/** Les paliers : au niveau 10 pis au niveau 25, ce que l'achat rapporte double. */
+export const PALIERS = [10, 25] as const;
+
+/** x1, x2 ou x4 selon les paliers atteints. */
+export function palier(level: number): number {
+  return 2 ** PALIERS.filter((p) => level >= p).length;
+}
+
+/** Le prochain palier à viser, ou null (achats x, ou déjà passé le dernier). */
+export function prochainPalier(u: Upgrade, level: number): number | null {
+  if (u.effect.kind === 'globalMult') return null;
+  return PALIERS.find((p) => p > level && p <= u.maxLevel) ?? null;
+}
 
 export function getUpgrade(id: string): Upgrade | undefined {
   return UPGRADES.find((u) => u.id === id);

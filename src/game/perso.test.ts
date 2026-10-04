@@ -73,7 +73,7 @@ describe('les mini-jeux', () => {
     const s = newGame(0);
     s.car.owned = true;
     s.upgrades.velo = 10;
-    const parfait = revenuRef(s) * 60;
+    const parfait = revenuRef(s) * 120;
     expect(recompense(s, 'moteur', 1)).toBeCloseTo(parfait);
     expect(recompense(s, 'moteur', 0)).toBeCloseTo(parfait * SCORE_MIN);
     expect(finirPartie(s, 'moteur', 0.5, 1000)).toBeCloseTo(parfait * 0.5);

@@ -1,4 +1,4 @@
-import { UPGRADES, getUpgrade, upgradeCost, type Upgrade } from './upgrades';
+import { UPGRADES, getUpgrade, palier, upgradeCost, type Upgrade } from './upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './car';
 import { QUESTS, type Quest } from './quests';
 import { ARTICLES, getArticle, type Article } from './magasin';
@@ -49,6 +49,8 @@ export interface GameState {
   minijeux: Record<string, number>;
   /** L'expo de chars : la dernière saison où t'es inscrit, pis tes trophées de 1re place. Gardé au prestige. */
   expo: { periode: number; trophees: number };
+  /** Le cadeau du jour à Réjean : la dernière journée (« 2026-10-04 ») pis combien de jours de suite. Gardé au prestige. */
+  cadeau: { jour: string; serie: number };
   lastTick: number;
 }
 
@@ -69,6 +71,8 @@ export const SUCCES_BONUS = 0.02;
 
 export const BASE_TAP = 0.1; // une canette consignée
 export const DELIVERY_TAP = 1.5; // une livraison de pizza
+/** Chaque tape ajoute aussi 2 % de ton revenu passif : taper vaut la peine toute la partie. */
+export const TAP_PART_PASSIF = 0.02;
 export const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
 export const FIRST_CAR_GOAL = CAR_PRICE;
 
@@ -95,6 +99,7 @@ export function newGame(now: number): GameState {
     look: { achetes: [], choix: { peinture: 'brun', collant: 'aucun', mags: 'aucun', flaps: 'aucun', toit: 'aucun', antenne: 'aucune' } },
     minijeux: {},
     expo: { periode: -1, trophees: 0 },
+    cadeau: { jour: '', serie: 0 },
     lastTick: now,
   };
 }
@@ -132,9 +137,9 @@ export function multiplier(state: GameState): number {
 function baseTapValue(state: GameState): number {
   let value = carRuns(state) ? DELIVERY_TAP : BASE_TAP;
   for (const u of UPGRADES) {
-    if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id);
+    if (u.effect.kind === 'tapAdd') value += u.effect.amount * levelOf(state, u.id) * palier(levelOf(state, u.id));
   }
-  return value * multiplier(state) * saisonA(state.lastTick).tap;
+  return (value * multiplier(state) + TAP_PART_PASSIF * passiveRate(state)) * saisonA(state.lastTick).tap;
 }
 
 export function tapValue(state: GameState): number {
@@ -147,15 +152,15 @@ export function currentRate(state: GameState): number {
 }
 
 export const BOOST_FACTOR = 2;
-export const BOOST_SECONDS = 10 * 60;
-/** On peut cumuler jusqu'à une heure de boost. */
-export const BOOST_MAX_SECONDS = 60 * 60;
+export const BOOST_SECONDS = 60 * 60;
+/** On peut cumuler jusqu'à 4 h de boost. */
+export const BOOST_MAX_SECONDS = 4 * 60 * 60;
 
 export function boostFactor(state: GameState): number {
   return state.boostSeconds > 0 ? BOOST_FACTOR : 1;
 }
 
-/** Ajoute 10 min de boost x2 (après une pub récompensée, ou gratuit avec « pas de pubs »). */
+/** Ajoute 1 h de boost x2 (après une pub récompensée, ou gratuit avec « pas de pubs »). */
 export function addBoost(state: GameState): boolean {
   if (state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS) return false;
   state.boostSeconds += BOOST_SECONDS;
@@ -234,7 +239,7 @@ export function passiveRate(state: GameState): number {
   const saison = saisonA(state.lastTick);
   let rate = 0;
   for (const u of UPGRADES) {
-    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id) * (saison.bonus[u.id] ?? 1);
+    if (u.effect.kind === 'passiveAdd') rate += u.effect.amount * levelOf(state, u.id) * palier(levelOf(state, u.id)) * (saison.bonus[u.id] ?? 1);
   }
   return rate * multiplier(state);
 }
@@ -391,10 +396,34 @@ export function buyBuilding(state: GameState, id: BuildingId): boolean {
   return true;
 }
 
+// --- Le prochain objectif (la barre « PROCHAIN » en haut des listes) ---
+
+export interface Objectif {
+  /** Le nom à afficher (passe par t()). */
+  nom: string;
+  cout: number;
+  /** Où t'es rendu : ton cash, ou le total gagné pour le prestige. */
+  avoir: number;
+}
+
+export function prochainObjectif(state: GameState): Objectif | null {
+  if (!state.car.owned) return { nom: 'TON PREMIER BAZOU', cout: CAR_PRICE, avoir: state.cash };
+  const part = PARTS.find((p) => p.essential && !isRepaired(state, p.id));
+  if (part) return { nom: part.name, cout: part.cost, avoir: state.cash };
+  if (prestigeDebloque(state) && !canPrestige(state)) return { nom: "Vendre l'empire", cout: PRESTIGE_MIN_EARNED, avoir: state.totalEarned };
+  const b = nextBuilding(state);
+  return b ? { nom: b.name, cout: b.cost, avoir: state.cash } : null;
+}
+
 // --- Prestige ---
 
+/** Le bâtiment qui débloque le prestige (le bar) est acheté. */
+export function prestigeDebloque(state: GameState): boolean {
+  return state.buildings.bar;
+}
+
 export function canPrestige(state: GameState): boolean {
-  return state.buildings.arena && state.totalEarned >= PRESTIGE_MIN_EARNED;
+  return prestigeDebloque(state) && state.totalEarned >= PRESTIGE_MIN_EARNED;
 }
 
 /** Vend l'empire : tout repart à zéro sauf la réputation. Retourne les points gagnés. */
@@ -410,6 +439,7 @@ export function prestige(state: GameState, now: number): number {
     stats: state.stats,
     look: state.look,
     expo: state.expo,
+    cadeau: state.cadeau,
     tuto: TUTO_FINI,
     // Les quêtes racontent la première partie; on les rejoue pas.
     questIndex: QUESTS.length,

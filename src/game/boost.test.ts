@@ -9,6 +9,7 @@ import {
   tapValue,
   tick,
   BASE_TAP,
+  TAP_PART_PASSIF,
 } from './state';
 
 describe('le boost x2', () => {
@@ -16,7 +17,8 @@ describe('le boost x2', () => {
     const s = newGame(0);
     s.upgrades = { chum: 1 };
     expect(addBoost(s)).toBe(true);
-    expect(tapValue(s)).toBeCloseTo(BASE_TAP * 2);
+    // Une canette pis 2 % du passif (1 $/s), le tout x2.
+    expect(tapValue(s)).toBeCloseTo((BASE_TAP + TAP_PART_PASSIF * 1) * 2);
     tick(s, 10_000);
     expect(s.cash).toBeCloseTo(20);
     expect(s.boostSeconds).toBeCloseTo(BOOST_SECONDS - 10);
@@ -29,7 +31,7 @@ describe('le boost x2', () => {
     tick(s, 10_000);
     expect(s.cash).toBeCloseTo(15);
     expect(s.boostSeconds).toBe(0);
-    expect(tapValue(s)).toBeCloseTo(BASE_TAP);
+    expect(tapValue(s)).toBeCloseTo(BASE_TAP + TAP_PART_PASSIF * 1);
   });
 
   it('compte aussi hors-ligne', () => {

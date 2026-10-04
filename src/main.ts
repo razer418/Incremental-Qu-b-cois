@@ -9,12 +9,14 @@ import { createSons } from './platform/sons';
 import { createRadio, STATIONS } from './platform/radio';
 import { CHARACTERS } from './game/quests';
 import { createDemoAds } from './platform/ads';
+import { CADEAUX, cadeauDuJour } from './game/cadeau';
 import { NO_ADS_PRICE, webStore } from './platform/store';
-import { UPGRADES } from './game/upgrades';
+import { UPGRADES, palier, prochainPalier } from './game/upgrades';
 import { CAR_PRICE, CAR_TIP_MULT, PARTS } from './game/car';
-import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, prestigePointsFor } from './game/buildings';
+import { BUILDINGS, PRESTIGE_BONUS_PER_POINT, PRESTIGE_MIN_EARNED, gainsPourPoints, prestigePointsFor } from './game/buildings';
 import {
-  FIRST_CAR_GOAL,
+  prochainObjectif,
+  prestigeDebloque,
   activeQuest,
   addBoost,
   BOOST_MAX_SECONDS,
@@ -120,6 +122,7 @@ function showMessage(text: string, titre = '', icon = ''): void {
   $('message-titre').textContent = titre;
   $('message-icone').innerHTML = icon;
   $('message-icone').hidden = !icon;
+  $('message-doubler').hidden = true;
   if (!messageDialog.open) messageDialog.showModal();
 }
 
@@ -371,13 +374,6 @@ codeOk.addEventListener('click', async () => {
   render();
 });
 
-const offline = applyOffline(state, Date.now());
-if (offline.gained >= 0.01 && offline.seconds >= 60) {
-  showMessage(
-    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }) +
-      (offline.seconds >= OFFLINE_CAP_SECONDS ? ' ' + t('La gang arrête après {max}, reviens plus souvent!', { max: formatDuration(OFFLINE_CAP_SECONDS) }) : ''),
-  );
-}
 
 // Achat en lot : x1, x10 ou MAX, comme dans les grands jeux du genre.
 const LOTS = [1, 10, Infinity];
@@ -419,7 +415,13 @@ for (const u of UPGRADES) {
     <button type="button" class="buy"><span class="cost"></span><span class="combien"></span></button>`;
   const btn = li.querySelector<HTMLButtonElement>('.buy')!;
   btn.addEventListener('click', () => {
+    const avant = currentRate(state);
+    const niveau = levelOf(state, u.id);
     if (buyMany(state, u.id, LOTS[lotMode])) {
+      // Un palier passé (x2) : on le fête comme un bâtiment.
+      const gros = palier(levelOf(state, u.id)) > palier(niveau);
+      celebrerTaux(avant, gros);
+      if (gros) sons.jouer('boost');
       sons.jouer('achat');
       save(localStorage, state);
       render();
@@ -471,6 +473,30 @@ qClaim.addEventListener('click', () => {
 const PUBS = import.meta.env.VITE_PUBS !== 'off';
 const sansPubs = (): boolean => state.noAds || !PUBS;
 boutiqueEl.hidden = !PUBS;
+
+const offline = applyOffline(state, Date.now());
+if (offline.gained >= 0.01 && offline.seconds >= 60) {
+  showMessage(
+    t("Pendant que t'étais parti ({temps}), ta gang a ramassé {cash}.", { temps: formatDuration(offline.seconds), cash: formatMoney(offline.gained) }) +
+      (offline.seconds >= OFFLINE_CAP_SECONDS ? ' ' + t('La gang arrête après {max}, reviens plus souvent!', { max: formatDuration(OFFLINE_CAP_SECONDS) }) : ''),
+  );
+  // Doubler ce que la gang a ramassé : une pub récompensée, jamais forcée (gratuit avec « pas de pubs »).
+  const doubler = $<HTMLButtonElement>('message-doubler');
+  doubler.textContent = t(sansPubs() ? '[ DOUBLER ]' : '[ PUB : DOUBLER ]');
+  doubler.hidden = false;
+  doubler.onclick = async () => {
+    doubler.disabled = true;
+    if (!sansPubs() && !(await ads.showRewarded())) {
+      doubler.disabled = false;
+      return;
+    }
+    earn(state, offline.gained);
+    sons.jouer('achat');
+    save(localStorage, state);
+    showMessage(t('Doublé! La gang a ramassé {cash} de plus.', { cash: formatMoney(offline.gained) }));
+    render();
+  };
+}
 
 // Boost x2 : jamais forcé, toujours sur demande.
 boostBtn.addEventListener('click', async () => {
@@ -612,9 +638,26 @@ function renderInventaire(): void {
 }
 lieuBtns.forEach((b) => b.addEventListener('click', () => allerA(b.dataset.lieu as Lieu)));
 
+// Les gros moments : le $/s grossit une seconde pis le « +X $/s » gagné apparaît à côté.
+function celebrerTaux(avant: number, gros: boolean): void {
+  const plus = currentRate(state) - avant;
+  if (plus <= 0) return;
+  rateEl.classList.remove('bump', 'gros');
+  void rateEl.offsetWidth;
+  if (!reduceMotion) rateEl.classList.add('bump', ...(gros ? ['gros'] : []));
+  const span = document.createElement('span');
+  span.className = 'taux-plus';
+  span.textContent = `+${formatMoney(plus)}/s`;
+  rateEl.after(span);
+  setTimeout(() => span.remove(), gros ? 2500 : 1500);
+}
+
 batBuy.addEventListener('click', () => {
   const b = nextBuilding(state);
+  const avant = currentRate(state);
   if (!b || !buyBuilding(state, b.id)) return;
+  celebrerTaux(avant, true);
+  sons.jouer('boost');
   sons.jouer('achat');
   save(localStorage, state);
   allerA(b.id);
@@ -912,16 +955,22 @@ function render(): void {
   renderMenu();
   renderEmpire(roule);
 
-  // Avant l'achat : la barre d'objectif. Après : le garage avec les pièces.
-  goalEl.hidden = state.car.owned;
+  // La barre du prochain objectif, toujours là, avec le temps qui reste à ton $/s.
+  const obj = prochainObjectif(state);
+  goalEl.hidden = !obj;
+  if (obj) {
+    const reste = obj.cout - obj.avoir;
+    const taux = currentRate(state);
+    $('goal-nom').textContent = t('PROCHAIN : {nom}', { nom: t(obj.nom).toUpperCase() });
+    goalBar.style.width = `${Math.min(1, obj.avoir / obj.cout) * 100}%`;
+    goalText.textContent =
+      `${formatMoney(obj.avoir)} / ${formatMoney(obj.cout)}` +
+      (reste <= 0 ? ` · ${t('PRÊT!')}` : taux > 0 && reste / taux < 100 * 3600 ? ` · ~${formatDuration(reste / taux)}` : '');
+  }
+  buyCarBtn.hidden = state.car.owned || !assez(state, CAR_PRICE);
   // Tout réparé : la section disparaît, le bouton LIVRER dit déjà que ça roule.
   garageEl.hidden = !state.car.owned || PARTS.every((p) => isRepaired(state, p.id));
-  if (!state.car.owned) {
-    const progress = Math.min(1, state.cash / FIRST_CAR_GOAL);
-    goalBar.style.width = `${progress * 100}%`;
-    goalText.textContent = `${formatMoney(state.cash)} / ${formatMoney(FIRST_CAR_GOAL)}`;
-    buyCarBtn.hidden = !assez(state, CAR_PRICE);
-  } else {
+  if (state.car.owned) {
     carStatus.textContent = t(roule ? 'ÇA ROULE!' : 'SUR LES BLOCS');
     carStatus.classList.toggle('roule', roule);
     for (const p of PARTS) {
@@ -942,7 +991,14 @@ function render(): void {
     const lot = bulkCost(state, u.id, LOTS[lotMode]);
     row.li.classList.toggle('max', max);
     const bonus = saisonA(state.lastTick).bonus[u.id];
-    row.level.textContent = (level > 0 ? `${t('NIV.')} ${level}` : '') + (bonus ? ` ${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '');
+    const vise = prochainPalier(u, level);
+    row.level.textContent = [
+      level > 0 ? `${t('NIV.')} ${level}` : '',
+      vise ? t('x2 AU {n}', { n: vise }) : '',
+      bonus ? `${t(saisonA(state.lastTick).nom)} ${facteur(bonus)}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
     row.cost.textContent = max ? t('AU MAX') : formatMoney(lot.cost);
     row.combien.textContent = max || LOTS[lotMode] === 1 ? '' : `+${lot.count} ${t('NIV.')}`;
     row.btn.disabled = max || !assez(state, lot.cost);
@@ -963,17 +1019,25 @@ function renderEmpire(roule: boolean): void {
     batName.textContent = t(b.name);
     batDesc.textContent = t(b.description);
     const n = UPGRADES.filter((u) => u.requires === b.id).length;
-    $('bat-stat').textContent = t(b.id === 'arena' ? 'Débloque {n} achats pis le prestige' : 'Débloque {n} achats', { n });
+    $('bat-stat').textContent = t(b.id === 'bar' ? 'Débloque {n} achats pis le prestige' : 'Débloque {n} achats', { n });
     batCost.textContent = formatMoney(b.cost);
     batBuy.disabled = !canBuyBuilding(state, b.id);
     progres(batBuy, b.cost);
   }
-  prestigeEl.hidden = !state.buildings.arena;
-  if (state.buildings.arena) {
+  prestigeEl.hidden = !prestigeDebloque(state);
+  if (prestigeDebloque(state)) {
     const ready = canPrestige(state);
     const points = prestigePointsFor(state.totalEarned);
+    // L'aperçu : de combien tes gains montent, pis quand tu gagnes le point suivant si t'attends.
+    const avant = 1 + pts * PRESTIGE_BONUS_PER_POINT;
+    const apres = 1 + (pts + points) * PRESTIGE_BONUS_PER_POINT;
     prestigeDesc.textContent = ready
-      ? t('Tu repars à zéro avec {points} points de réputation (+{pc} % pour toujours).', { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 })
+      ? t('Tu repars à zéro avec {points} points de réputation (+{pc} % pour toujours).', { points, pc: points * PRESTIGE_BONUS_PER_POINT * 100 }) +
+        ' ' +
+        t('Tes gains de la prochaine partie : {x}. Si t\'attends, un point de plus à {cash} gagnés.', {
+          x: facteur(Math.round((apres / avant) * 100) / 100),
+          cash: formatMoney(gainsPourPoints(points + 1)),
+        })
       : t("Disponible à {min} gagnés au total. T'es rendu à {cash}.", { min: formatMoney(PRESTIGE_MIN_EARNED), cash: formatMoney(state.totalEarned) });
     prestigeBtn.disabled = !ready;
   }
@@ -983,7 +1047,7 @@ function renderBoost(): void {
   const full = state.boostSeconds + BOOST_SECONDS > BOOST_MAX_SECONDS;
   boostBtn.disabled = full;
   boostBtn.textContent = t(sansPubs() ? '[ BOOST x2 ]' : '[ PUB : BOOST x2 ]');
-  boostSub.textContent = t(sansPubs() ? '10 MIN GRATUITES' : '10 MIN POUR UNE PUB');
+  boostSub.textContent = t(sansPubs() ? '1 H GRATUITE' : '1 H POUR UNE PUB');
   noAdsBuy.textContent = t(state.noAds ? 'ACHETÉ' : NO_ADS_PRICE);
   noAdsBuy.disabled = state.noAds;
 }
@@ -1074,14 +1138,18 @@ saisonBtn.addEventListener('click', () => {
 function renderSaison(): void {
   const x = saisonA(state.lastTick);
   const f = feteA(state.lastTick);
-  const cle = `${x.id}/${f?.id ?? ''}`;
+  // Les 2 dernières minutes avant la fête : le compte à rebours.
+  const avant = Math.ceil(resteSaison(state.lastTick) - FETE_SECONDES);
+  const bientot = !f && avant <= 120 ? ` · ${t('FÊTE DANS {temps}', { temps: `${Math.floor(avant / 60)}:${String(avant % 60).padStart(2, '0')}` })}` : '';
+  const cle = `${x.id}/${f?.id ?? ''}${bientot}`;
   if (cle === lastSaison) return;
-  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom);
+  const debut = !!f && !lastSaison.includes(`/${f.id}`);
+  saisonBtn.textContent = f ? `${t(f.nom)} ${facteur(bonusFete(state.lastTick))}` : t(x.nom) + bientot;
   saisonBtn.classList.toggle('fete', !!f);
   rang?.setSaison(x.id);
   rang?.setFete(f?.id ?? null);
   // La fête commence : son invitation arrive tout de suite (pas au premier chargement).
-  const fe = f && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
+  const fe = debut && lastSaison && EVENEMENTS.find((e) => e.fete === f.id);
   if (fe && !evenement && state.tuto === TUTO_FINI) montrerEvenement(fe, Date.now());
   lastSaison = cle;
 }
@@ -1161,7 +1229,9 @@ const projetRows = PROJETS.map((p) => {
     pli.querySelector('.stat')!.textContent = t('Pièce {i} sur {n} du {x}', { i: i + 1, n: p.pieces.length, x: facteur(p.bonus) });
     const pbtn = pli.querySelector<HTMLButtonElement>('.buy')!;
     pbtn.addEventListener('click', () => {
+      const avant = currentRate(state);
       if (!reparerProjet(state, p.id, x.id)) return;
+      if (projetFini(state, p)) celebrerTaux(avant, true);
       sons.jouer('achat');
       save(localStorage, state);
       if (projetFini(state, p)) showMessage(t('{nom} est retapé! Il reste dans ta cour : {x} sur tous tes gains.', { nom: t(p.nom), x: facteur(p.bonus) }));
@@ -1230,6 +1300,22 @@ function loop(): void {
   render();
   renderToast(now);
   pastilles();
+  // Le cadeau du jour, une fois le tuto fini pis les autres messages fermés.
+  if (state.tuto === TUTO_FINI && !messageDialog.open) {
+    const c = cadeauDuJour(state, now);
+    if (c) {
+      sons.jouer('quete');
+      save(localStorage, state);
+      const article = t(c.article.name);
+      showMessage(
+        t('Réjean : « Cadeau de la maison! » {article} dans ton sac.', { article }) +
+          (c.serie > 1 ? ' ' + t('{n} jours de suite!', { n: c.serie }) : '') +
+          (c.serie < CADEAUX.length ? ' ' + t('Reviens demain pour un plus gros cadeau.') : '') +
+          (c.cash > 0 ? ' ' + t('Ton sac est plein : Réjean te donne {cash} à la place.', { cash: formatMoney(c.cash) }) : ''),
+        t('CADEAU DU JOUR'),
+      );
+    }
+  }
 }
 
 // Outils de dev : un onglet DEV dans le MENU, jamais dans la version en ligne.

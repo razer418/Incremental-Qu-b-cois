@@ -92,7 +92,7 @@ export const THEMES: readonly Theme[] = [
 ];
 
 /** Une partie parfaite rapporte autant de secondes de tes revenus. */
-export const EXPO_SECONDES = 120;
+export const EXPO_SECONDES = 300;
 
 /** Le numéro de la saison en cours : une expo par saison. */
 export function periode(ms: number): number {

@@ -1,9 +1,9 @@
 // Un joueur simulé, pour vérifier le rythme du jeu (voir equilibre.test.ts).
-// Il joue comme un vrai : il tape à un rythme fixe, garde son boost x2 allumé, passe au magasin
+// Il joue comme un vrai : il tape à un rythme fixe, a son boost x2 la moitié du temps, passe au magasin
 // à Réjean, joue les mini-jeux (70 %), va à l'expo (2 critères sur 3), réclame ses quêtes,
 // pis achète ce qui rapporte le plus vite.
 import { UPGRADES } from './upgrades';
-import { BUILDINGS, type BuildingId } from './buildings';
+import { BUILDINGS, EMPIRE_GOAL, type BuildingId } from './buildings';
 import { CAR_PRICE, PARTS } from './car';
 import { PROJETS } from './chars';
 import { ARTICLES } from './magasin';
@@ -41,7 +41,7 @@ import {
 
 const PAR_FORCE = [...ARTICLES].sort((a, b) => b.factor - a.factor);
 
-export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige';
+export type Jalon = 'bazou' | 'roule' | BuildingId | 'prestige' | 'empire';
 
 /** Coût d'un char à retaper qui reste à payer (achat + pièces). */
 function resteProjet(s: GameState, id: string): number {
@@ -103,8 +103,8 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     dette += tapesParSeconde;
     for (; dette >= 1; dette--) tap(s);
     while (activeQuest(s) && claimQuest(s));
-    // Une pub quand le boost achève, pis un tour au magasin quand c'est pas cher pour lui.
-    if (s.boostSeconds < 60) addBoost(s);
+    // Une pub (1 h de boost) une heure sur deux : le boost est allumé la moitié du temps.
+    if (s.boostSeconds <= 0 && Math.floor(t / 3600) % 2 === 0) addBoost(s);
     // Quand un buff finit, il achète le plus fort qu'il peut pis le prend drette.
     for (const a of PAR_FORCE)
       if (magasinFactor(s, a.boosts) === 1 && canBuyArticle(s, a.id) && articleCost(s, a.id) <= s.cash * 0.25) {
@@ -132,8 +132,10 @@ export function simuler(tapesParSeconde: number, maxSecondes: number, journal?: 
     if (!temps.bazou && s.car.owned) temps.bazou = t;
     if (!temps.roule && carRuns(s)) temps.roule = t;
     for (const b of BUILDINGS) if (!temps[b.id] && s.buildings[b.id]) temps[b.id] = t;
-    if (!temps.prestige && canPrestige(s)) {
-      temps.prestige = t;
+    // Le premier prestige possible, pis le gros (l'aréna pis 1 T $ gagnés) où il vend.
+    if (!temps.prestige && canPrestige(s)) temps.prestige = t;
+    if (s.buildings.arena && s.totalEarned >= EMPIRE_GOAL) {
+      temps.empire = t;
       break;
     }
   }

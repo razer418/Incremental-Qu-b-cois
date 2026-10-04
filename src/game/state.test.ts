@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BASE_TAP,
+  TAP_PART_PASSIF,
   OFFLINE_CAP_SECONDS,
   applyOffline,
   buy,
@@ -55,7 +56,7 @@ describe('boucle de base', () => {
     const s = newGame(0);
     s.upgrades = { velo: 1, depanneur: 1 };
     expect(passiveRate(s)).toBeCloseTo(0.375);
-    expect(tapValue(s)).toBeCloseTo(0.15);
+    expect(tapValue(s)).toBeCloseTo(0.15 + TAP_PART_PASSIF * 0.375);
   });
 
   it('le revenu passif suit le temps', () => {
@@ -219,5 +220,35 @@ describe('virgule flottante', () => {
     for (let i = 0; i < 50; i++) tap(s);
     expect(buyMany(s, 'sac', 1)).toBe(1);
     expect(s.cash).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('le prochain objectif', () => {
+  it('suit la partie : bazou, pièces, bâtiments, prestige', async () => {
+    const { prochainObjectif } = await import('./state');
+    const s = newGame(0);
+    expect(prochainObjectif(s)?.nom).toBe('TON PREMIER BAZOU');
+    s.car.owned = true;
+    expect(prochainObjectif(s)?.nom).toBe('Batterie');
+    s.car.parts = { batterie: true, pneus: true, demarreur: true, freins: true };
+    expect(prochainObjectif(s)?.nom).toBe('Le garage à Ti-Guy');
+    s.buildings = { garage: true, cabane: true, concession: true, bar: true, arena: false };
+    expect(prochainObjectif(s)?.nom).toBe("Vendre l'empire");
+    s.totalEarned = 1e15;
+    expect(prochainObjectif(s)?.nom).toBe("L'aréna");
+    s.buildings.arena = true;
+    expect(prochainObjectif(s)).toBeNull();
+  });
+});
+
+describe('les paliers', () => {
+  it('x2 au niveau 10, x4 au niveau 25', () => {
+    const s = newGame(0);
+    s.upgrades = { chum: 9 };
+    expect(passiveRate(s)).toBeCloseTo(9);
+    s.upgrades = { chum: 10 };
+    expect(passiveRate(s)).toBeCloseTo(20);
+    s.upgrades = { chum: 25 };
+    expect(passiveRate(s)).toBeCloseTo(100);
   });
 });

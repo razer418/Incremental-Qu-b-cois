@@ -39,7 +39,7 @@ describe('le garage pis le concessionnaire', () => {
     const s = avecBazouQuiRoule(100_000_000_000);
     expect(buyBuilding(s, 'concession')).toBe(false);
     expect(buyBuilding(s, 'garage')).toBe(true);
-    expect(s.cash).toBe(99_997_300_000);
+    expect(s.cash).toBe(99_994_300_000);
     expect(nextBuilding(s)?.id).toBe('cabane');
     expect(buyBuilding(s, 'concession')).toBe(false);
     for (const id of ['cabane', 'concession', 'bar', 'arena'] as const) expect(buyBuilding(s, id)).toBe(true);
@@ -79,13 +79,13 @@ describe('le prestige', () => {
     expect(prestigePointsFor(4e12)).toBe(10);
   });
 
-  it("seulement avec l'aréna pis 1 T$ de gagné", () => {
+  it('seulement avec le bar pis 160 G$ de gagné (2 points)', () => {
     const s = avecBazouQuiRoule(100_000_000_000);
     s.totalEarned = 1.2e12;
     expect(canPrestige(s)).toBe(false);
-    for (const b of BUILDINGS) buyBuilding(s, b.id);
+    for (const id of ['garage', 'cabane', 'concession', 'bar'] as const) buyBuilding(s, id);
     expect(canPrestige(s)).toBe(true);
-    s.totalEarned = 0.9e12;
+    s.totalEarned = 1.5e11;
     expect(canPrestige(s)).toBe(false);
   });
 

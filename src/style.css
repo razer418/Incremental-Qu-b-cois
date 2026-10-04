@@ -179,6 +179,36 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/* Le $/s qui grossit quand un gros achat rentre. */
+.rate.bump {
+  display: inline-block;
+  transform-origin: left center;
+  animation: bump 0.5s ease-out;
+}
+.rate.bump.gros {
+  animation: bump 1s ease-out;
+}
+@keyframes bump {
+  30% {
+    transform: scale(1.35);
+    color: var(--gold);
+  }
+}
+.taux-plus {
+  margin-left: 6px;
+  font: 400 20px/1 var(--pixel);
+  color: var(--gold);
+  animation: taux-plus 1.5s ease-out forwards;
+}
+@keyframes taux-plus {
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 .rep {
   font: 400 20px/1 var(--pixel);
   color: var(--gold);
@@ -276,6 +306,7 @@ main section:not(.ecran),
 /* Objectif */
 .goal-label {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   font: 400 22px/1 var(--pixel);
@@ -774,6 +805,15 @@ dialog .message-titre {
   margin: 0;
   font: 400 30px/1 var(--pixel);
   color: var(--gold);
+}
+
+.doubler {
+  display: block;
+  margin: 0 auto 12px;
+}
+dialog .doubler {
+  color: var(--bg);
+  background: var(--gold);
 }
 
 dialog::backdrop {
